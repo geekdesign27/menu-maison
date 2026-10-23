@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Warm, food-friendly palette: cream background, carrot orange, herb green */
+@theme {
+  --font-sans: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-cream: #fff7ee;
+  --color-paper: #ffffff;
+  --color-ink: #2b2420;
+  --color-muted: #6b6058;
+  --color-line: #efe3d6;
+  --color-carrot: #e8762f;
+  --color-carrot-dark: #c65d1c;
+  --color-carrot-soft: #fde9da;
+  --color-herb: #2f8a57;
+  --color-herb-soft: #def3e6;
+  --color-berry: #c2415d;
+  --color-berry-soft: #fbe2e8;
+  --color-sun: #f2b632;
+  --color-sun-soft: #fdf1cf;
+  --radius-card: 1.25rem;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  min-height: 100dvh;
+}
+
+/* Inputs never below 16px, otherwise iOS zooms on focus */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  font-size: max(16px, 1em);
+}
+
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-sheet {
+  animation: sheet-in 0.22s ease-out;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pop {
+  animation: pop 0.25s ease-out;
+}
