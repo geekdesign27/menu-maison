@@ -1,3 +1,4 @@
+import { TAGS } from "./domain/tags";
 /**
  * Seed data for Menu Maison: aisles, ingredients, recipes, stores, members.
  * All content is original (written for this app, not copied from any source).
@@ -305,23 +306,7 @@ export const INGREDIENTS: SeedIngredient[] = [
 // Tags
 // ---------------------------------------------------------------------------
 
-export const TAGS: string[] = [
-  "Suisse",
-  "Express",
-  "Familial",
-  "Healthy",
-  "Végé",
-  "Réconfort",
-  "Mijoté",
-  "Four",
-  "Poisson",
-  "Italien",
-  "Asiatique",
-  "Mexicain",
-  "Soupe",
-  "Été",
-  "Hiver",
-];
+export { TAGS };
 
 // ---------------------------------------------------------------------------
 // Recipes (quantities are per person)

@@ -16,6 +16,7 @@ import type * as domain_leftovers from "../domain/leftovers.js";
 import type * as domain_quantities from "../domain/quantities.js";
 import type * as domain_shopping from "../domain/shopping.js";
 import type * as domain_stats from "../domain/stats.js";
+import type * as domain_tags from "../domain/tags.js";
 import type * as lib from "../lib.js";
 import type * as meals from "../meals.js";
 import type * as recipes from "../recipes.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   "domain/quantities": typeof domain_quantities;
   "domain/shopping": typeof domain_shopping;
   "domain/stats": typeof domain_stats;
+  "domain/tags": typeof domain_tags;
   lib: typeof lib;
   meals: typeof meals;
   recipes: typeof recipes;

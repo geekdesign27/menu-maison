@@ -200,7 +200,9 @@ describe("seed data: stores and members", () => {
 
 describe("seed data: typography", () => {
   it("contains no em dash nor en dash", () => {
-    const bad = allTexts().filter(({ text }) => /[—–]/.test(text));
+    // Built from code points so this test file itself stays free of those dashes
+    const dashes = new RegExp(`[${String.fromCharCode(0x2014, 0x2013)}]`);
+    const bad = allTexts().filter(({ text }) => dashes.test(text));
     expect(bad).toEqual([]);
   });
 

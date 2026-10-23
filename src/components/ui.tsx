@@ -381,6 +381,9 @@ export function Segmented<T extends string>({
 
 // ---------- Overlays ----------
 
+// Open sheets, topmost last: stacked sheets must not all close on Escape
+const openSheets: symbol[] = [];
+
 /** Bottom sheet, the main pattern for actions on a phone. */
 export function Sheet({
   open,
@@ -397,11 +400,18 @@ export function Sheet({
 }) {
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const id = Symbol("sheet");
+    openSheets.push(id);
+    // Only the topmost sheet reacts to Escape
+    const onKey = (e: KeyboardEvent) =>
+      e.key === "Escape" &&
+      openSheets[openSheets.length - 1] === id &&
+      onClose();
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      openSheets.splice(openSheets.indexOf(id), 1);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };

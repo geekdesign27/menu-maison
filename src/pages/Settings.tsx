@@ -1,6 +1,354 @@
-import { Page } from "../components/ui";
+import { useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { useMutation } from "convex/react";
+import { ChevronRight, LogOut, Plus, UserRound } from "lucide-react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { useBase, useSession, type Base } from "../lib/session";
+import { useRun } from "../lib/toast";
+import { formatChf } from "../lib/format";
+import { BackButton } from "../components/Layout";
+import {
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Loading,
+  Page,
+  SearchInput,
+  SectionTitle,
+  Stepper,
+} from "../components/ui";
+import { ChainMark } from "../components/shopping/chains";
+import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
+import { MemberSheet } from "../components/shopping/MemberSheet";
+import { AisleSheet } from "../components/shopping/AisleSheet";
+import { IngredientSheet } from "../components/shopping/IngredientSheet";
+import { amountLabel } from "../components/shopping/units";
+import { searchKey } from "../components/shopping/search";
 
-// Placeholder, replaced by the real screen
+// Monday first, as on a Swiss calendar; values follow Date.getDay()
+const DAYS = [
+  { value: 1, short: "Lun", long: "lundi" },
+  { value: 2, short: "Mar", long: "mardi" },
+  { value: 3, short: "Mer", long: "mercredi" },
+  { value: 4, short: "Jeu", long: "jeudi" },
+  { value: 5, short: "Ven", long: "vendredi" },
+  { value: 6, short: "Sam", long: "samedi" },
+  { value: 0, short: "Dim", long: "dimanche" },
+];
+
+const INGREDIENTS_SHOWN = 30;
+
+type Editing =
+  | { kind: "member"; id?: Id<"members"> }
+  | { kind: "aisle"; id?: Id<"aisles"> }
+  | { kind: "ingredient"; id?: Id<"ingredients"> }
+  | null;
+
 export function SettingsPage() {
-  return <Page title="Réglages">À venir</Page>;
+  const base = useBase();
+  return (
+    <Page title="Réglages" back={<BackButton fallback="/plus" />}>
+      {base ? <SettingsContent base={base} /> : <Loading />}
+    </Page>
+  );
+}
+
+function SettingsContent({ base }: { base: Base }) {
+  const { token, setToken, setMemberId } = useSession();
+  const run = useRun();
+  const updateSettings = useMutation(api.catalog.updateSettings);
+  const logout = useMutation(api.access.logout);
+  const [editing, setEditing] = useState<Editing>(null);
+  const [search, setSearch] = useState("");
+  const [confirmLogout, setConfirmLogout] = useState(false);
+
+  const { settings } = base;
+  const shoppingDayName =
+    DAYS.find((d) => d.value === settings.shoppingDay)?.long ?? "samedi";
+  const aisleById = new Map(base.aisles.map((a) => [a._id, a]));
+  const needle = searchKey(search);
+  const ingredients = base.ingredients.filter((i) =>
+    searchKey(i.name).includes(needle),
+  );
+  const close = () => setEditing(null);
+
+  return (
+    <>
+      <SectionTitle>Profils</SectionTitle>
+      <Card className="overflow-hidden">
+        <ul className="divide-y divide-line">
+          {base.members.map((m) => (
+            <li key={m._id}>
+              <Row
+                onClick={() => setEditing({ kind: "member", id: m._id })}
+                icon={<Avatar member={m} size={40} />}
+                title={m.name}
+              />
+            </li>
+          ))}
+          <li>
+            <AddRow
+              label="Ajouter un profil"
+              onClick={() => setEditing({ kind: "member" })}
+            />
+          </li>
+        </ul>
+      </Card>
+
+      <SectionTitle>Jour des courses</SectionTitle>
+      <Card className="p-4">
+        <div className="grid grid-cols-7 gap-1.5">
+          {DAYS.map((d) => (
+            <button
+              key={d.value}
+              type="button"
+              aria-pressed={settings.shoppingDay === d.value}
+              aria-label={d.long}
+              onClick={() =>
+                settings.shoppingDay !== d.value &&
+                run(() => updateSettings({ token, shoppingDay: d.value }))
+              }
+              className={
+                settings.shoppingDay === d.value
+                  ? "min-h-12 rounded-2xl bg-carrot text-[15px] font-black text-white shadow-sm"
+                  : "min-h-12 rounded-2xl bg-cream text-[15px] font-extrabold text-ink ring-1 ring-line active:bg-carrot-soft"
+              }
+            >
+              {d.short}
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-[15px] text-muted">
+          La semaine du planning commence le {shoppingDayName} : la liste de
+          courses couvre les sept jours qui suivent.
+        </p>
+      </Card>
+
+      <SectionTitle>Nombre de personnes par défaut</SectionTitle>
+      <Card className="flex items-center gap-3 p-4">
+        <p className="min-w-0 flex-1 text-[15px] text-muted">
+          Proposé à chaque nouveau repas planifié.
+        </p>
+        <Stepper
+          label="Personnes par défaut"
+          value={settings.defaultPersons}
+          min={1}
+          max={12}
+          onChange={(n) =>
+            run(() => updateSettings({ token, defaultPersons: n }))
+          }
+        />
+      </Card>
+
+      <SectionTitle
+        action={
+          <Link
+            to="/magasins"
+            className="inline-flex min-h-11 items-center gap-1 rounded-2xl px-2 text-[15px] font-extrabold text-carrot-dark active:bg-carrot-soft"
+          >
+            Gérer <ChevronRight size={18} />
+          </Link>
+        }
+      >
+        Magasin par défaut
+      </SectionTitle>
+      {base.stores.length === 0 ? (
+        <p className="px-1 text-[15px] text-muted">
+          Aucun magasin pour l'instant.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {base.stores.map((s) => (
+            <Chip
+              key={s._id}
+              selected={settings.defaultStoreId === s._id}
+              onClick={() =>
+                settings.defaultStoreId !== s._id &&
+                run(() => updateSettings({ token, defaultStoreId: s._id }))
+              }
+              className="min-h-11 pl-1.5"
+            >
+              <ChainMark chain={s.chain} size={30} />
+              {s.name}
+            </Chip>
+          ))}
+        </div>
+      )}
+
+      <SectionTitle>Rayons</SectionTitle>
+      <Card className="overflow-hidden">
+        <ul className="divide-y divide-line">
+          {base.aisles.map((a) => (
+            <li key={a._id}>
+              <Row
+                onClick={() => setEditing({ kind: "aisle", id: a._id })}
+                icon={
+                  <span className="text-2xl" aria-hidden>
+                    {a.emoji}
+                  </span>
+                }
+                title={a.name}
+              />
+            </li>
+          ))}
+          <li>
+            <AddRow
+              label="Ajouter un rayon"
+              onClick={() => setEditing({ kind: "aisle" })}
+            />
+          </li>
+        </ul>
+      </Card>
+
+      <SectionTitle>Ingrédients et prix</SectionTitle>
+      <p className="mb-3 px-1 text-[15px] text-muted">
+        Prix estimés, indicatifs : ajuste-les à tes tickets de caisse.
+      </p>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Chercher un ingrédient"
+      />
+      <Card className="mt-3 overflow-hidden">
+        <ul className="divide-y divide-line">
+          {ingredients.slice(0, INGREDIENTS_SHOWN).map((i) => {
+            const aisle = aisleById.get(i.aisleId);
+            const price =
+              i.priceChf !== undefined && i.priceQty !== undefined
+                ? `${formatChf(i.priceChf)} pour ${amountLabel(i.priceQty, i.unit)}`
+                : "Pas de prix";
+            return (
+              <li key={i._id}>
+                <Row
+                  onClick={() => setEditing({ kind: "ingredient", id: i._id })}
+                  icon={
+                    <span className="text-2xl" aria-hidden>
+                      {aisle?.emoji ?? "🛒"}
+                    </span>
+                  }
+                  title={i.name}
+                  subtitle={price}
+                />
+              </li>
+            );
+          })}
+          {ingredients.length === 0 && (
+            <li className="px-4 py-5 text-center text-[15px] text-muted">
+              Aucun ingrédient ne correspond.
+            </li>
+          )}
+          {ingredients.length > INGREDIENTS_SHOWN && (
+            <li className="px-4 py-3 text-center text-[15px] text-muted">
+              Et {ingredients.length - INGREDIENTS_SHOWN} autres : affine la
+              recherche.
+            </li>
+          )}
+          <li>
+            <AddRow
+              label="Ajouter un ingrédient"
+              onClick={() => setEditing({ kind: "ingredient" })}
+            />
+          </li>
+        </ul>
+      </Card>
+
+      <SectionTitle>Ce téléphone</SectionTitle>
+      <div className="grid gap-2">
+        <Button variant="secondary" size="lg" onClick={() => setMemberId(null)}>
+          <UserRound size={20} /> Changer de profil
+        </Button>
+        <Button
+          variant="danger"
+          size="lg"
+          onClick={() => setConfirmLogout(true)}
+        >
+          <LogOut size={20} /> Déconnecter ce téléphone
+        </Button>
+      </div>
+
+      {editing?.kind === "member" && (
+        <MemberSheet
+          member={base.members.find((m) => m._id === editing.id)}
+          onClose={close}
+        />
+      )}
+      {editing?.kind === "aisle" && (
+        <AisleSheet
+          aisle={base.aisles.find((a) => a._id === editing.id)}
+          onClose={close}
+        />
+      )}
+      {editing?.kind === "ingredient" && (
+        <IngredientSheet
+          ingredient={base.ingredients.find((i) => i._id === editing.id)}
+          aisles={base.aisles}
+          onClose={close}
+        />
+      )}
+      <ConfirmSheet
+        open={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        title="Déconnecter ce téléphone ?"
+        text="Il faudra saisir à nouveau le code famille pour retrouver les menus et la liste de courses."
+        confirmLabel="Déconnecter"
+        danger
+        onConfirm={async () => {
+          await run(() => logout({ token }));
+          setToken("");
+        }}
+      />
+    </>
+  );
+}
+
+function Row({
+  onClick,
+  icon,
+  title,
+  subtitle,
+}: {
+  onClick: () => void;
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left active:bg-cream"
+    >
+      <span className="flex w-10 shrink-0 justify-center">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[17px] font-extrabold">
+          {title}
+        </span>
+        {subtitle && (
+          <span className="block truncate text-[15px] text-muted">
+            {subtitle}
+          </span>
+        )}
+      </span>
+      <ChevronRight className="shrink-0 text-muted" size={20} />
+    </button>
+  );
+}
+
+function AddRow({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-14 w-full items-center gap-3 px-4 text-left font-extrabold text-carrot-dark active:bg-carrot-soft"
+    >
+      <span className="flex w-10 shrink-0 justify-center">
+        <span className="flex size-9 items-center justify-center rounded-full bg-carrot-soft">
+          <Plus size={20} strokeWidth={3} />
+        </span>
+      </span>
+      {label}
+    </button>
+  );
 }

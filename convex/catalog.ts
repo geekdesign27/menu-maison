@@ -129,7 +129,8 @@ export const upsertIngredient = mutation({
     if (duplicate && duplicate._id !== id)
       throw new ConvexError(`« ${name} » existe déjà.`);
     if (id) {
-      await ctx.db.patch(id, { ...data, name });
+      // Explicit undefined so that clearing a price removes it
+      await ctx.db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty });
       return id;
     }
     return ctx.db.insert("ingredients", { ...data, name });
