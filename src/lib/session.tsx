@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -30,7 +31,12 @@ function write(key: string, value: string) {
 }
 
 interface SessionValue {
+  /** Device token, only exposed once the server confirmed it: queries skip until then. */
   token: string;
+  /** True while the stored token is being checked. */
+  checking: boolean;
+  /** True when the stored token was refused (expired, revoked, code changed). */
+  expired: boolean;
   setToken: (t: string) => void;
   memberId: Id<"members"> | null;
   setMemberId: (id: Id<"members"> | null) => void;
@@ -39,25 +45,35 @@ interface SessionValue {
 const SessionContext = createContext<SessionValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [token, setTokenState] = useState(() => read(TOKEN_KEY));
-  const [memberId, setMemberState] = useState(
-    () => (read(MEMBER_KEY) || null) as Id<"members"> | null,
-  );
+  const [stored, setStored] = useState(() => read(TOKEN_KEY));
+  const [expired, setExpired] = useState(false);
+  const [memberId, setMemberState] = useState(() => (read(MEMBER_KEY) || null) as Id<"members"> | null);
+  const valid = useQuery(api.access.check, stored ? { token: stored } : "skip");
+
+  // A refused token is dropped, so that no screen keeps querying with it
+  useEffect(() => {
+    if (stored && valid === false) {
+      write(TOKEN_KEY, "");
+      setStored("");
+      setExpired(true);
+    }
+  }, [stored, valid]);
+
   const setToken = useCallback((t: string) => {
     write(TOKEN_KEY, t);
-    setTokenState(t);
+    setStored(t);
+    if (t) setExpired(false);
   }, []);
   const setMemberId = useCallback((id: Id<"members"> | null) => {
     write(MEMBER_KEY, id ?? "");
     setMemberState(id);
   }, []);
+  const ready = !!stored && valid === true;
   const value = useMemo(
-    () => ({ token, setToken, memberId, setMemberId }),
-    [token, setToken, memberId, setMemberId],
+    () => ({ token: ready ? stored : "", checking: !!stored && valid === undefined, expired, setToken, memberId, setMemberId }),
+    [ready, stored, valid, expired, setToken, memberId, setMemberId],
   );
-  return (
-    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
-  );
+  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
 export function useSession() {

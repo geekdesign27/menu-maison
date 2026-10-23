@@ -82,7 +82,9 @@ function PickerBody({
   const recipes = useRecipes();
   const overview = useOverview();
   const wishes = useQuery(api.wishes.list, token ? { token } : "skip");
-  const [filter, setFilter] = useState<Filter>("saved");
+  const [chosenFilter, setFilter] = useState<Filter | null>(null);
+  // First use: "Nos recettes" is still empty, so start on the whole catalog
+  const filter: Filter = chosenFilter ?? (recipes && !recipes.some((r) => r.saved) ? "all" : "saved");
   const [search, setSearch] = useState("");
   const [tag, setTag] = useState<string | null>(null);
   const [freeTitle, setFreeTitle] = useState("");

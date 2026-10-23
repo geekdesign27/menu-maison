@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useBase, useSession } from "../lib/session";
 import { errorMessage } from "../lib/format";
@@ -7,18 +7,13 @@ import { Avatar, Button, ErrorBox, Loading, TextInput } from "./ui";
 
 /** Family code once per device, then "who are you?" in one tap. */
 export function Gate({ children }: { children: ReactNode }) {
-  const { token, setToken, memberId } = useSession();
-  const valid = useQuery(api.access.check, token ? { token } : "skip");
+  const { token, checking, expired, setToken, memberId } = useSession();
   const base = useBase();
 
-  if (!token || valid === false)
-    return (
-      <CodeScreen onToken={setToken} expired={!!token && valid === false} />
-    );
-  if (valid === undefined || base === undefined)
-    return <Loading label="Ouverture" />;
-  if (!memberId || !base.members.some((m) => m._id === memberId))
-    return <ProfilePicker />;
+  if (checking) return <Loading label="Ouverture" />;
+  if (!token) return <CodeScreen onToken={setToken} expired={expired} />;
+  if (base === undefined) return <Loading label="Ouverture" />;
+  if (!memberId || !base.members.some((m) => m._id === memberId)) return <ProfilePicker />;
   return <>{children}</>;
 }
 

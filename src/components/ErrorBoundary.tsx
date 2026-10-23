@@ -1,6 +1,10 @@
 import { Component, type ReactNode } from "react";
 import { Button, ErrorBox } from "./ui";
 
+function isSessionError(error: Error) {
+  return error.message.includes("Session expirée");
+}
+
 /** Last-resort screen: a crash in one screen never leaves a blank page. */
 export class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -12,8 +16,21 @@ export class ErrorBoundary extends Component<
     return { error };
   }
 
+  componentDidCatch(error: Error) {
+    // A session revoked while the app was open: back to the family code screen
+    if (isSessionError(error)) {
+      try {
+        localStorage.removeItem("mm.token");
+      } catch {
+        // Nothing stored, nothing to clear
+      }
+      window.location.reload();
+    }
+  }
+
   render() {
     if (!this.state.error) return this.props.children;
+    if (isSessionError(this.state.error)) return null;
     return (
       <div className="mx-auto max-w-md space-y-4 p-6 pt-16">
         <ErrorBox>

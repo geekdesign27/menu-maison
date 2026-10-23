@@ -265,7 +265,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
                   <span className="min-w-0 flex-1 font-bold">
                     {ing?.name ?? "Ingrédient supprimé"}
                   </span>
-                  {cost !== undefined && (
+                  {cost !== undefined && cost >= 0.05 && (
                     <span className="text-[15px] text-muted tabular-nums">
                       {formatChf(cost)}
                     </span>

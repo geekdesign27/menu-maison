@@ -103,7 +103,7 @@ export function ShoppingRow({
       )}
       {onMore && (
         <IconButton
-          label={`Rayon de ${item.label} dans ce magasin`}
+          label={`Changer le rayon dans ce magasin : ${item.label}`}
           onClick={onMore}
           className="my-auto mr-1 text-muted"
         >
