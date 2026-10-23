@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertSession } from "./lib";
+import { assertSession, cleanText } from "./lib";
 
 export const list = query({
   args: { token: v.string() },
@@ -35,6 +35,7 @@ export const add = mutation({
   },
   handler: async (ctx, { token, memberId, recipeId, text }) => {
     await assertSession(ctx, token);
+    if (text) text = cleanText(text, 200, "Envie");
     if (!recipeId && !text?.trim())
       throw new ConvexError("Écris ton envie ou choisis une recette.");
     return ctx.db.insert("wishes", {

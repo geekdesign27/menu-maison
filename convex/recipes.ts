@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertSession } from "./lib";
+import { assertEmoji, assertInt, assertPositive, assertSession, cleanText } from "./lib";
 import { unitValidator } from "./schema";
 
 const itemValidator = v.object({
@@ -46,18 +46,24 @@ export const get = query({
 
 function validate(data: {
   name: string;
+  emoji: string;
+  description?: string;
+  tags: string[];
   prepMinutes: number;
   fridgeDays: number;
   items: { qtyPerPerson: number }[];
+  steps: string[];
 }) {
-  if (!data.name.trim())
-    throw new ConvexError("Le nom de la recette est obligatoire.");
-  if (data.prepMinutes < 0 || data.fridgeDays < 0)
-    throw new ConvexError("Les durées ne peuvent pas être négatives.");
-  if (data.items.some((i) => !(i.qtyPerPerson > 0)))
-    throw new ConvexError(
-      "Chaque ingrédient doit avoir une quantité positive.",
-    );
+  if (!cleanText(data.name, 100, "Nom de la recette")) throw new ConvexError("Le nom de la recette est obligatoire.");
+  assertEmoji(data.emoji);
+  if (data.description) cleanText(data.description, 500, "Description");
+  if (data.tags.length > 20 || data.tags.some((t) => t.length > 40)) throw new ConvexError("Trop de tags ou tag trop long.");
+  assertInt(data.prepMinutes, 0, 1440, "Temps de préparation");
+  assertInt(data.fridgeDays, 0, 30, "Conservation au frigo");
+  if (data.items.length > 60) throw new ConvexError("60 ingrédients au maximum.");
+  for (const i of data.items) assertPositive(i.qtyPerPerson, 100000, "Quantité");
+  if (data.steps.length > 50) throw new ConvexError("50 étapes au maximum.");
+  for (const step of data.steps) cleanText(step, 2000, "Étape");
 }
 
 const recipeFields = {

@@ -1,6 +1,20 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertSession, getSettings } from "./lib";
+import {
+  assertColor,
+  assertEmoji,
+  assertInt,
+  assertPositive,
+  assertSession,
+  cleanText,
+  getSettings,
+} from "./lib";
+
+function memberName(name: string) {
+  const n = cleanText(name, 40, "Prénom");
+  if (!n) throw new ConvexError("Le prénom est obligatoire.");
+  return n;
+}
 import { chainValidator, unitValidator } from "./schema";
 
 /** Everything small the UI needs on every screen, in one subscription. */
@@ -38,12 +52,10 @@ export const updateSettings = mutation({
   },
   handler: async (ctx, { token, ...patch }) => {
     await assertSession(ctx, token);
-    if (
-      patch.shoppingDay !== undefined &&
-      (patch.shoppingDay < 0 || patch.shoppingDay > 6)
-    ) {
-      throw new ConvexError("Jour des courses invalide.");
-    }
+    if (patch.shoppingDay !== undefined)
+      assertInt(patch.shoppingDay, 0, 6, "Jour des courses");
+    if (patch.defaultPersons !== undefined)
+      assertInt(patch.defaultPersons, 1, 30, "Nombre de personnes");
     const row = await ctx.db.query("settings").first();
     if (row) await ctx.db.patch(row._id, patch);
     else
@@ -65,8 +77,9 @@ export const updateMember = mutation({
   },
   handler: async (ctx, { token, id, ...patch }) => {
     await assertSession(ctx, token);
-    if (!patch.name.trim()) throw new ConvexError("Le prénom est obligatoire.");
-    await ctx.db.patch(id, { ...patch, name: patch.name.trim() });
+    assertColor(patch.color);
+    assertEmoji(patch.emoji);
+    await ctx.db.patch(id, { ...patch, name: memberName(patch.name) });
   },
 });
 
@@ -79,11 +92,13 @@ export const addMember = mutation({
   },
   handler: async (ctx, { token, ...m }) => {
     await assertSession(ctx, token);
-    if (!m.name.trim()) throw new ConvexError("Le prénom est obligatoire.");
+    assertColor(m.color);
+    assertEmoji(m.emoji);
     const count = (await ctx.db.query("members").collect()).length;
+    if (count >= 12) throw new ConvexError("12 profils au maximum.");
     return ctx.db.insert("members", {
       ...m,
-      name: m.name.trim(),
+      name: memberName(m.name),
       order: count,
     });
   },
@@ -101,8 +116,12 @@ export const upsertIngredient = mutation({
   },
   handler: async (ctx, { token, id, ...data }) => {
     await assertSession(ctx, token);
-    const name = data.name.trim();
+    const name = cleanText(data.name, 80, "Nom de l'ingrédient");
     if (!name) throw new ConvexError("Le nom de l'ingrédient est obligatoire.");
+    if (data.priceChf !== undefined)
+      assertPositive(data.priceChf, 10000, "Prix");
+    if (data.priceQty !== undefined)
+      assertPositive(data.priceQty, 100000, "Quantité de référence du prix");
     const duplicate = await ctx.db
       .query("ingredients")
       .withIndex("by_name", (q) => q.eq("name", name))
@@ -123,10 +142,12 @@ export const addAisle = mutation({
   args: { token: v.string(), name: v.string(), emoji: v.string() },
   handler: async (ctx, { token, name, emoji }) => {
     await assertSession(ctx, token);
-    if (!name.trim()) throw new ConvexError("Le nom du rayon est obligatoire.");
+    const clean = cleanText(name, 60, "Nom du rayon");
+    if (!clean) throw new ConvexError("Le nom du rayon est obligatoire.");
+    if (emoji) assertEmoji(emoji);
     const order = (await ctx.db.query("aisles").collect()).length;
     const id = await ctx.db.insert("aisles", {
-      name: name.trim(),
+      name: clean,
       emoji: emoji || "🛒",
       order,
     });
@@ -147,8 +168,10 @@ export const renameAisle = mutation({
   },
   handler: async (ctx, { token, id, name, emoji }) => {
     await assertSession(ctx, token);
-    if (!name.trim()) throw new ConvexError("Le nom du rayon est obligatoire.");
-    await ctx.db.patch(id, { name: name.trim(), emoji });
+    const clean = cleanText(name, 60, "Nom du rayon");
+    if (!clean) throw new ConvexError("Le nom du rayon est obligatoire.");
+    assertEmoji(emoji);
+    await ctx.db.patch(id, { name: clean, emoji });
   },
 });
 
@@ -172,15 +195,15 @@ export const createStore = mutation({
   },
   handler: async (ctx, { token, chain, name, copyFrom }) => {
     await assertSession(ctx, token);
-    if (!name.trim())
-      throw new ConvexError("Le nom du magasin est obligatoire.");
+    const clean = cleanText(name, 60, "Nom du magasin");
+    if (!clean) throw new ConvexError("Le nom du magasin est obligatoire.");
     const source = copyFrom ? await ctx.db.get(copyFrom) : null;
     const aisles = (await ctx.db.query("aisles").collect()).sort(
       (a, b) => a.order - b.order,
     );
     return ctx.db.insert("stores", {
       chain,
-      name: name.trim(),
+      name: clean,
       aisleOrder: source?.aisleOrder ?? aisles.map((a) => a._id),
       overrides: source?.overrides ?? [],
       priceFactor: source?.priceFactor ?? DEFAULT_FACTORS[chain] ?? 1,
@@ -201,8 +224,23 @@ export const updateStore = mutation({
   },
   handler: async (ctx, { token, id, ...patch }) => {
     await assertSession(ctx, token);
-    if (patch.name !== undefined && !patch.name.trim())
-      throw new ConvexError("Le nom du magasin est obligatoire.");
+    if (patch.name !== undefined) {
+      patch.name = cleanText(patch.name, 60, "Nom du magasin");
+      if (!patch.name)
+        throw new ConvexError("Le nom du magasin est obligatoire.");
+    }
+    if (
+      patch.priceFactor !== undefined &&
+      !(
+        Number.isFinite(patch.priceFactor) &&
+        patch.priceFactor >= 0.5 &&
+        patch.priceFactor <= 2
+      )
+    ) {
+      throw new ConvexError("Niveau de prix invalide.");
+    }
+    if (patch.aisleOrder && patch.aisleOrder.length > 100)
+      throw new ConvexError("Trop de rayons.");
     await ctx.db.patch(id, patch);
   },
 });

@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertSession } from "./lib";
+import { assertDate, assertPositive, assertSession, cleanText } from "./lib";
 import { unitValidator } from "./schema";
 import { addDays } from "./domain/dates";
 import { buildShoppingList } from "./domain/shopping";
@@ -14,6 +14,7 @@ export const list = query({
   },
   handler: async (ctx, { token, start, storeId }) => {
     await assertSession(ctx, token);
+    assertDate(start);
     const [meals, ingredients, aisles, extras, checks] = await Promise.all([
       ctx.db
         .query("meals")
@@ -81,6 +82,8 @@ export const toggle = mutation({
   },
   handler: async (ctx, { token, start, itemKey, checked, memberId }) => {
     await assertSession(ctx, token);
+    assertDate(start);
+    if (itemKey.length > 120) throw new ConvexError("Article invalide.");
     const existing = (
       await ctx.db
         .query("shoppingChecks")
@@ -106,6 +109,7 @@ export const resetChecks = mutation({
   args: { token: v.string(), start: v.string() },
   handler: async (ctx, { token, start }) => {
     await assertSession(ctx, token);
+    assertDate(start);
     const checks = await ctx.db
       .query("shoppingChecks")
       .withIndex("by_period", (q) => q.eq("periodStart", start))
@@ -126,6 +130,9 @@ export const addExtra = mutation({
   },
   handler: async (ctx, { token, start, label, memberId, ...rest }) => {
     await assertSession(ctx, token);
+    assertDate(start);
+    label = cleanText(label, 80, "Article");
+    if (rest.qty !== undefined) assertPositive(rest.qty, 100000, "Quantité");
     if (!label.trim()) throw new ConvexError("Écris ce qu'il faut acheter.");
     if (rest.qty !== undefined && !(rest.qty > 0))
       throw new ConvexError("La quantité doit être positive.");

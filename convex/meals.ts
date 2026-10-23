@@ -1,18 +1,13 @@
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
-import { assertSession } from "./lib";
+import { assertDate, assertInt, assertSession, cleanText } from "./lib";
 import { slotValidator } from "./schema";
 import { addDays } from "./domain/dates";
 import { leftoverStatus } from "./domain/leftovers";
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
-function assertDate(d: string) {
-  if (!DATE.test(d)) throw new ConvexError(`Date invalide : ${d}`);
-}
 function assertPersons(n: number) {
-  if (!Number.isInteger(n) || n < 1 || n > 30)
-    throw new ConvexError("Le nombre de personnes doit être entre 1 et 30.");
+  assertInt(n, 1, 30, "Nombre de personnes");
 }
 
 async function mealsBetween(ctx: QueryCtx, from: string, to: string) {
@@ -87,7 +82,7 @@ export const add = mutation({
         : m.date;
     const id = await ctx.db.insert("meals", {
       ...m,
-      title: m.title?.trim() || undefined,
+      title: m.title ? cleanText(m.title, 80, "Titre") || undefined : undefined,
       cookedOn,
       status: "prévu",
       leftoverPortions: 0,
@@ -98,7 +93,7 @@ export const add = mutation({
         date: addDays(m.date, 1),
         slot: "midi",
         recipeId: m.recipeId,
-        title: m.title?.trim() || undefined,
+        title: m.title ? cleanText(m.title, 80, "Titre") || undefined : undefined,
         persons: tomorrowLunchPersons,
         cookedOn: m.date,
         status: "prévu",
@@ -125,6 +120,7 @@ export const update = mutation({
     if (!meal) throw new ConvexError("Repas introuvable.");
     if (patch.persons !== undefined) assertPersons(patch.persons);
     if (patch.date !== undefined) assertDate(patch.date);
+    if (patch.title !== undefined) patch.title = cleanText(patch.title, 80, "Titre") || undefined;
     const next: Partial<Doc<"meals">> = { ...patch };
     // Moving a dish moves the cooking day by the same amount
     if (patch.date && patch.date !== meal.date) {
@@ -150,12 +146,7 @@ export const setStatus = mutation({
     await assertSession(ctx, token);
     const meal = await ctx.db.get(id);
     if (!meal) throw new ConvexError("Repas introuvable.");
-    if (
-      leftoverPortions !== undefined &&
-      (leftoverPortions < 0 || leftoverPortions > 60)
-    ) {
-      throw new ConvexError("Nombre de portions invalide.");
-    }
+    if (leftoverPortions !== undefined) assertInt(leftoverPortions, 0, 60, "Portions restantes");
     // A dish not eaten goes to the fridge whole
     const portions =
       status === "pas mangé"

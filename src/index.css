@@ -2,7 +2,7 @@
 
 /* Warm, food-friendly palette: cream background, carrot orange, herb green */
 @theme {
-  --font-sans: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Nunito Variable", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
   --color-cream: #fff7ee;
   --color-paper: #ffffff;
   --color-ink: #2b2420;

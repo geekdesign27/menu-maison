@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as catalog from "../catalog.js";
+import type * as crons from "../crons.js";
 import type * as domain_dates from "../domain/dates.js";
 import type * as domain_leftovers from "../domain/leftovers.js";
 import type * as domain_quantities from "../domain/quantities.js";
@@ -34,6 +35,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   catalog: typeof catalog;
+  crons: typeof crons;
   "domain/dates": typeof domain_dates;
   "domain/leftovers": typeof domain_leftovers;
   "domain/quantities": typeof domain_quantities;

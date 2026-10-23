@@ -36,7 +36,14 @@ Serveurs de dev via Portly.
 - Variable d'environnement Convex `FAMILY_CODE`. Écran d'accueil : saisir le code une fois
   par appareil → mutation `access.login` → jeton de session (table `sessions`, 365 jours)
   gardé en localStorage. Toutes les fonctions prennent `token` et appellent `assertSession`.
-- Garde anti-force brute (table `accessGuard`) : après 5 échecs, refus 10 min.
+- Garde anti-force brute (table `accessGuard`) : 5 échecs en 10 min, puis refus 10 min.
+  Garde globale : un inconnu peut bloquer les **nouvelles** connexions (les téléphones déjà
+  connectés ne sont pas touchés). Déblocage : `npx convex run access:resetGuard`.
+- `FAMILY_CODE` : 12 caractères au minimum (refusé sinon), idéalement 4 mots au hasard.
+  Seule une empreinte SHA-256 du jeton est stockée, et chaque session retient l'empreinte du
+  code : **changer `FAMILY_CODE` déconnecte tous les téléphones**. Révocation d'urgence :
+  `npx convex run access:revokeAll`. Sessions expirées purgées chaque nuit (`crons.ts`).
+- Police Nunito hébergée dans l'app (pas d'appel à Google). CSP stricte dans le build de production.
 - Puis choix du profil en un tap (Pierre-Alain, Patricia, Clara), mémorisé sur l'appareil,
   changeable à tout moment. Le profil sert aux cœurs, envies, cases cochées.
 

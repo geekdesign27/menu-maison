@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider } from "convex/react";
 import { HashRouter, Route, Routes } from "react-router-dom";
+import "@fontsource-variable/nunito";
 import "./index.css";
 import { convex, convexConfigured } from "./lib/convex";
 import { SessionProvider } from "./lib/session";

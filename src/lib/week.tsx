@@ -28,8 +28,12 @@ export function WeekProvider({ children }: { children: ReactNode }) {
   const shoppingDay = base?.settings.shoppingDay ?? 6;
   const [today, setToday] = useState(() => zurichToday());
   const [offset, setOffset] = useState(() => {
-    const raw = Number(sessionStorage.getItem(OFFSET_KEY));
-    return Number.isFinite(raw) ? raw : 0;
+    try {
+      const raw = Number(sessionStorage.getItem(OFFSET_KEY));
+      return Number.isFinite(raw) ? raw : 0;
+    } catch {
+      return 0;
+    }
   });
 
   // Keep "today" right when the app stays open past midnight
@@ -39,7 +43,11 @@ export function WeekProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem(OFFSET_KEY, String(offset));
+    try {
+      sessionStorage.setItem(OFFSET_KEY, String(offset));
+    } catch {
+      // Not critical: the week resets to the current one on reload
+    }
   }, [offset]);
 
   const value = useMemo(() => {
@@ -69,9 +77,13 @@ const STORE_KEY = "mm.store";
 /** Store chosen on this phone for the shopping list (falls back to the default store). */
 export function useStoreChoice() {
   const base = useBase();
-  const [stored, setStored] = useState(
-    () => localStorage.getItem(STORE_KEY) ?? "",
-  );
+  const [stored, setStored] = useState(() => {
+    try {
+      return localStorage.getItem(STORE_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const stores = base?.stores ?? [];
   const current =
     stores.find((s) => s._id === stored) ??
@@ -79,7 +91,11 @@ export function useStoreChoice() {
     stores[0] ??
     null;
   const choose = (id: string) => {
-    localStorage.setItem(STORE_KEY, id);
+    try {
+      localStorage.setItem(STORE_KEY, id);
+    } catch {
+      // Private mode: the choice lasts as long as the tab
+    }
     setStored(id);
   };
   return { store: current, stores, choose };

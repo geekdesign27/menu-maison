@@ -169,7 +169,8 @@ export default defineSchema({
 
   /** Device sessions opened with the family code (token kept in localStorage). */
   sessions: defineTable({
-    token: v.string(),
+    token: v.string(), // SHA-256 of the device token, never the token itself
+    codeHash: v.optional(v.string()), // fingerprint of FAMILY_CODE at login
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_token", ["token"]),
@@ -177,6 +178,7 @@ export default defineSchema({
   /** Brute-force guard on the family code (one row). */
   accessGuard: defineTable({
     failures: v.number(),
+    lastFailureAt: v.optional(v.number()),
     lockedUntil: v.number(),
   }),
 });

@@ -1,6 +1,6 @@
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertSession } from "./lib";
+import { assertDate, assertSession, cleanText } from "./lib";
 import { addDays, daysBetween } from "./domain/dates";
 
 export const list = query({
@@ -56,6 +56,8 @@ export const saveWeek = mutation({
   },
   handler: async (ctx, { token, name, start, replaceId }) => {
     await assertSession(ctx, token);
+    assertDate(start);
+    name = cleanText(name, 60, "Nom du menu type");
     if (!name.trim()) throw new ConvexError("Donne un nom à ce menu type.");
     const entries = await entriesFromWeek(ctx, start);
     if (entries.length === 0)
@@ -78,6 +80,7 @@ export const apply = mutation({
   },
   handler: async (ctx, { token, id, start, replace }) => {
     await assertSession(ctx, token);
+    assertDate(start);
     const template = await ctx.db.get(id);
     if (!template) throw new ConvexError("Menu type introuvable.");
     if (replace) {
