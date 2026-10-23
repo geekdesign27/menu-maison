@@ -1,11 +1,10 @@
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "convex/react";
 import { CalendarPlus } from "lucide-react";
-import { api } from "../../convex/_generated/api";
 import { daysBetween, weekStart } from "../../convex/domain/dates";
 import { forgottenRecipes } from "../../convex/domain/stats";
-import { useBase, useSession } from "../lib/session";
+import { NBSP } from "../../convex/domain/quantities";
+import { useBase } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { plural } from "../lib/format";
 import { BackButton } from "../components/Layout";
@@ -18,7 +17,7 @@ import {
   SectionTitle,
 } from "../components/ui";
 import { RecipeEmoji } from "../components/RecipeCard";
-import { NB, useRecipeList } from "../components/recipes/data";
+import { isLoved, useOverview, useRecipes } from "../lib/queries";
 
 const TOP_SIZE = 8;
 const FORGOTTEN_SIZE = 6;
@@ -44,15 +43,11 @@ function Bar({
 }
 
 export function StatsPage() {
-  const { token } = useSession();
   const { today } = useWeek();
   const base = useBase();
-  const recipes = useRecipeList();
+  const recipes = useRecipes();
   const navigate = useNavigate();
-  const overview = useQuery(
-    api.stats.overview,
-    token ? { token, today } : "skip",
-  );
+  const overview = useOverview();
 
   const data = useMemo(() => {
     if (!overview || !recipes || !base) return null;
@@ -89,9 +84,7 @@ export function StatsPage() {
     }
     const styles = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
 
-    const loved = recipes
-      .filter((r) => r.saved || r.likedBy.length > 0)
-      .map((r) => r._id as string);
+    const loved = recipes.filter(isLoved).map((r) => r._id as string);
     const lastById = new Map(stats.map((s) => [s.recipeId, s.lastDate]));
     const forgotten = forgottenRecipes(loved, stats, today)
       .slice(0, FORGOTTEN_SIZE)
@@ -191,8 +184,8 @@ export function StatsPage() {
               ))}
             </ul>
             <p className="mt-3 text-[15px] font-bold">
-              Et si on variait un peu{NB}? Jette un œil à « Ça fait longtemps »
-              juste en dessous.
+              Et si on variait un peu{NBSP}? Jette un œil à « Ça fait
+              longtemps » juste en dessous.
             </p>
           </Card>
         </>
@@ -221,7 +214,7 @@ export function StatsPage() {
                         </span>
                         <span className="shrink-0 text-[15px] font-black text-carrot-dark tabular-nums">
                           {count}
-                          {NB}×
+                          {NBSP}×
                         </span>
                       </div>
                       <Bar value={count} max={topMax} tone="bg-carrot" />

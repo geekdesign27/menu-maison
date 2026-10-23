@@ -12,7 +12,7 @@ import {
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { formatDateRange } from "../../convex/domain/dates";
-import type { ShoppingItem } from "../../convex/domain/shopping";
+import { compareItems, type ShoppingItem } from "../../convex/domain/shopping";
 import { useBase, useSession, type Member } from "../lib/session";
 import { useStoreChoice, useWeek } from "../lib/week";
 import { useRun } from "../lib/toast";
@@ -55,12 +55,6 @@ function saveFilter(filter: Filter) {
   }
 }
 
-// Same order as the server: unchecked first, then alphabetical
-function byCheckedThenLabel(a: ShoppingItem, b: ShoppingItem) {
-  if (a.checked !== b.checked) return a.checked ? 1 : -1;
-  return a.label.localeCompare(b.label, "fr");
-}
-
 export function ShoppingPage() {
   const { token, memberId } = useSession();
   const base = useBase();
@@ -90,7 +84,7 @@ export function ShoppingPage() {
                       ? { ...i, checked: args.checked }
                       : i,
                   )
-                  .sort(byCheckedThenLabel),
+                  .sort(compareItems),
               }
             : s,
         );
@@ -138,7 +132,7 @@ export function ShoppingPage() {
           token,
           id: item.key.slice("extra:".length) as Id<"shoppingExtras">,
         }),
-      `« ${item.label} » retiré de la liste.`,
+      `« ${item.label} » retiré de la liste.`,
     );
 
   const weekNav = (
@@ -326,7 +320,7 @@ export function ShoppingPage() {
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
         title="Tout décocher ?"
-        text={`Les ${plural(checkedCount, "article coché", "articles cochés")} repasseront dans « Reste à acheter », pour tout le monde.`}
+        text={`Les ${plural(checkedCount, "article coché", "articles cochés")} repasseront dans « Reste à acheter », pour tout le monde.`}
         confirmLabel="Tout décocher"
         onConfirm={() =>
           run(

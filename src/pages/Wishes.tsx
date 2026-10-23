@@ -244,7 +244,10 @@ function WishRow({ wish }: { wish: Wish }) {
               size="sm"
               className="flex-1"
               onClick={() =>
-                run(() => setDone({ token, id: wish._id, done: true }), "Envie cochée")
+                run(
+                  () => setDone({ token, id: wish._id, done: true }),
+                  "Envie cochée",
+                )
               }
             >
               <Check size={18} />

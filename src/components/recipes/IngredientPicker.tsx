@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
-import { useMutation } from "convex/react";
 import { ChevronRight, Plus } from "lucide-react";
-import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import type { Unit } from "../../../convex/domain/quantities";
-import { useSession, type Base } from "../../lib/session";
-import { useRun } from "../../lib/toast";
-import { Button, Card, SearchInput, Sheet, TextInput } from "../ui";
-import { NB, normalize, UNIT_LABELS, UNITS } from "./data";
+import { NBSP, type Unit } from "../../../convex/domain/quantities";
+import type { Base } from "../../lib/session";
+import { searchKey } from "../../lib/text";
+import { unitChoiceLabel } from "../../lib/units";
+import { Card, SearchInput, Sheet } from "../ui";
+import { IngredientSheet } from "../shopping/IngredientSheet";
 
 export interface PickedIngredient {
   _id: Id<"ingredients">;
@@ -16,9 +15,6 @@ export interface PickedIngredient {
 }
 
 const MAX_RESULTS = 60;
-
-export const selectClass =
-  "min-h-12 w-full rounded-2xl bg-paper px-3 font-bold ring-1 ring-line outline-none focus:ring-2 focus:ring-carrot";
 
 /** Sheet to pick an ingredient, or create it on the spot when it is missing. */
 export function IngredientPicker({
@@ -49,30 +45,19 @@ export function IngredientPicker({
     () => new Map(base.aisles.map((a) => [a._id, a])),
     [base.aisles],
   );
-  const q = normalize(query);
+  const q = searchKey(query);
   const matches = useMemo(
     () =>
       base.ingredients
-        .filter((i) => normalize(i.name).includes(q))
+        .filter((i) => searchKey(i.name).includes(q))
         .slice(0, MAX_RESULTS),
     [base.ingredients, q],
   );
-  const exact = base.ingredients.some((i) => normalize(i.name) === q);
+  const exact = base.ingredients.some((i) => searchKey(i.name) === q);
 
   return (
-    <Sheet
-      open={open}
-      onClose={close}
-      title={creating ? "Nouvel ingrédient" : "Choisir un ingrédient"}
-    >
-      {creating ? (
-        <CreateIngredient
-          base={base}
-          initialName={query.trim()}
-          onCancel={() => setCreating(false)}
-          onCreated={pick}
-        />
-      ) : (
+    <>
+      <Sheet open={open} onClose={close} title="Choisir un ingrédient">
         <div className="space-y-3">
           <SearchInput
             value={query}
@@ -88,9 +73,9 @@ export function IngredientPicker({
                 <Plus size={22} strokeWidth={3} />
               </span>
               <span className="min-w-0 flex-1 font-extrabold">
-                Créer «{NB}
+                Créer «{NBSP}
                 {query.trim()}
-                {NB}»
+                {NBSP}»
               </span>
               <ChevronRight className="text-muted" />
             </Card>
@@ -115,7 +100,7 @@ export function IngredientPicker({
                     </span>
                     <span className="min-w-0 flex-1 font-bold">{i.name}</span>
                     <span className="text-[15px] text-muted">
-                      {UNIT_LABELS[i.unit]}
+                      {unitChoiceLabel(i.unit)}
                     </span>
                   </button>
                 </li>
@@ -123,93 +108,16 @@ export function IngredientPicker({
             })}
           </ul>
         </div>
+      </Sheet>
+      {/* Quick creation stacks the regular ingredient form over the picker */}
+      {open && creating && (
+        <IngredientSheet
+          aisles={base.aisles}
+          initialName={query.trim()}
+          onSaved={pick}
+          onClose={() => setCreating(false)}
+        />
       )}
-    </Sheet>
-  );
-}
-
-function CreateIngredient({
-  base,
-  initialName,
-  onCancel,
-  onCreated,
-}: {
-  base: Base;
-  initialName: string;
-  onCancel: () => void;
-  onCreated: (ingredient: PickedIngredient) => void;
-}) {
-  const { token } = useSession();
-  const run = useRun();
-  const upsert = useMutation(api.catalog.upsertIngredient);
-  const [name, setName] = useState(initialName);
-  const [aisleId, setAisleId] = useState(base.aisles[0]?._id ?? "");
-  const [unit, setUnit] = useState<Unit>("g");
-  const [saving, setSaving] = useState(false);
-
-  const create = async () => {
-    if (!aisleId) return;
-    setSaving(true);
-    const id = await run(
-      () =>
-        upsert({
-          token,
-          name,
-          aisleId: aisleId as Id<"aisles">,
-          unit,
-        }),
-      "Ingrédient ajouté",
-    );
-    setSaving(false);
-    if (id) onCreated({ _id: id, name: name.trim(), unit });
-  };
-
-  return (
-    <div className="space-y-4">
-      <TextInput
-        label="Nom"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Ex. Patate douce"
-      />
-      <label className="block">
-        <span className="mb-1 block text-[15px] font-bold">Rayon</span>
-        <select
-          className={selectClass}
-          value={aisleId}
-          onChange={(e) => setAisleId(e.target.value as Id<"aisles">)}
-        >
-          {base.aisles.map((a) => (
-            <option key={a._id} value={a._id}>
-              {a.emoji} {a.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-[15px] font-bold">
-          Unité sur la liste de courses
-        </span>
-        <select
-          className={selectClass}
-          value={unit}
-          onChange={(e) => setUnit(e.target.value as Unit)}
-        >
-          {UNITS.map((u) => (
-            <option key={u} value={u}>
-              {UNIT_LABELS[u]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="grid grid-cols-2 gap-3 pt-1">
-        <Button variant="secondary" onClick={onCancel}>
-          Retour
-        </Button>
-        <Button onClick={create} disabled={saving || !name.trim()}>
-          Créer
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }

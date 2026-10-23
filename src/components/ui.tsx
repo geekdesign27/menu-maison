@@ -1,10 +1,12 @@
 import {
   useEffect,
+  useRef,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
+  type SelectHTMLAttributes,
 } from "react";
-import { Minus, Plus, Search, X } from "lucide-react";
+import { ChevronDown, Minus, Plus, Search, X } from "lucide-react";
 import type { Member } from "../lib/session";
 
 export function cx(...classes: (string | false | null | undefined)[]) {
@@ -305,6 +307,42 @@ export function TextInput({
   );
 }
 
+/** Native select with the app's look; `label` is optional, like `TextInput`. */
+export function Select({
+  label,
+  className,
+  children,
+  ...rest
+}: SelectHTMLAttributes<HTMLSelectElement> & {
+  label?: string;
+  children: ReactNode;
+}) {
+  const select = (
+    <span className="relative block w-full">
+      <select
+        {...rest}
+        className={cx(
+          "min-h-12 w-full appearance-none rounded-2xl bg-paper pr-11 pl-4 ring-1 ring-line outline-none focus:ring-2 focus:ring-carrot",
+          className,
+        )}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={20}
+        className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted"
+      />
+    </span>
+  );
+  if (!label) return select;
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[15px] font-bold">{label}</span>
+      {select}
+    </label>
+  );
+}
+
 export function SearchInput({
   value,
   onChange,
@@ -398,6 +436,13 @@ export function Sheet({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  // Latest onClose kept in a ref: callers often pass a new arrow on every
+  // render, which must not re-run the effect and reorder the sheet stack
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
     const id = Symbol("sheet");
@@ -406,7 +451,7 @@ export function Sheet({
     const onKey = (e: KeyboardEvent) =>
       e.key === "Escape" &&
       openSheets[openSheets.length - 1] === id &&
-      onClose();
+      onCloseRef.current();
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -415,7 +460,7 @@ export function Sheet({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   return (
     <div

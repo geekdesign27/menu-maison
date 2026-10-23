@@ -8,7 +8,10 @@ export interface ShoppingInput {
     recipeId?: string;
     persons: number;
     fromLeftoverOf?: string;
+    cookedOn?: string;
   }[];
+  /** Shopping period: a dish is bought for the week it is cooked in, not eaten in. */
+  period?: { start: string; end: string };
   recipes: Record<
     string,
     {
@@ -157,7 +160,8 @@ export function orderAisles(
 }
 
 // Unchecked first, then alphabetical in French.
-function compareItems(a: ShoppingItem, b: ShoppingItem): number {
+/** Unchecked first, then by label: also used by the optimistic UI. */
+export function compareItems(a: ShoppingItem, b: ShoppingItem): number {
   if (a.checked !== b.checked) return a.checked ? 1 : -1;
   return a.label.localeCompare(b.label, "fr");
 }
@@ -175,6 +179,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
   >();
   for (const meal of input.meals) {
     if (!meal.recipeId || meal.fromLeftoverOf) continue;
+    if (input.period && meal.cookedOn && (meal.cookedOn < input.period.start || meal.cookedOn > input.period.end)) continue;
     const recipe = input.recipes[meal.recipeId];
     if (!recipe) continue;
     for (const item of recipe.items) {

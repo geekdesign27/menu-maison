@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { formatNumber, type Unit } from "../../convex/domain/quantities";
+import { formatNumber, NBSP, type Unit } from "../../convex/domain/quantities";
 import { TAGS } from "../../convex/domain/tags";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun } from "../lib/toast";
@@ -28,23 +28,15 @@ import {
   Loading,
   Page,
   SectionTitle,
+  Select,
   Stepper,
   TextInput,
 } from "../components/ui";
-import {
-  compatibleUnits,
-  NB,
-  pastelFor,
-  UNIT_LABELS,
-  useIngredientMap,
-  useRecipeList,
-  type RecipeRow,
-} from "../components/recipes/data";
+import { pastelFor } from "../components/recipes/data";
+import { useIngredientMap, useRecipes, type RecipeRow } from "../lib/queries";
+import { compatibleUnits, parseAmount, unitChoiceLabel } from "../lib/units";
 import { RecipeNotFound } from "../components/recipes/RecipeNotFound";
-import {
-  IngredientPicker,
-  selectClass,
-} from "../components/recipes/IngredientPicker";
+import { IngredientPicker } from "../components/recipes/IngredientPicker";
 
 const EMOJIS = [
   "🍝",
@@ -152,9 +144,9 @@ function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
   };
 }
 
-function parseQty(text: string) {
-  const value = Number(text.trim().replace(",", "."));
-  return text.trim() && Number.isFinite(value) ? value : NaN;
+// NaN when the quantity is missing or invalid
+function qtyOf(item: ItemDraft) {
+  return parseAmount(item.qty) ?? NaN;
 }
 
 function isBlank(item: ItemDraft) {
@@ -168,10 +160,10 @@ function validate(draft: Draft): string[] {
   draft.items.forEach((item, i) => {
     if (isBlank(item)) return;
     if (!item.ingredientId)
-      errors.push(`Ingrédient ${i + 1}${NB}: choisis l'ingrédient.`);
-    if (!(parseQty(item.qty) > 0))
+      errors.push(`Ingrédient ${i + 1}${NBSP}: choisis l'ingrédient.`);
+    if (!(qtyOf(item) > 0))
       errors.push(
-        `Ingrédient ${i + 1}${NB}: indique une quantité plus grande que zéro.`,
+        `Ingrédient ${i + 1}${NBSP}: indique une quantité plus grande que zéro.`,
       );
   });
   return errors;
@@ -189,7 +181,7 @@ function firstGrapheme(text: string) {
 export function RecipeEditorPage() {
   const { id } = useParams();
   const base = useBase();
-  const recipes = useRecipeList();
+  const recipes = useRecipes();
   const title = id ? "Modifier la recette" : "Nouvelle recette";
   const back = <BackButton fallback={id ? `/recette/${id}` : "/recettes"} />;
 
@@ -289,7 +281,7 @@ function RecipeForm({
         .filter((i) => !isBlank(i))
         .map((i) => ({
           ingredientId: i.ingredientId as Id<"ingredients">,
-          qtyPerPerson: parseQty(i.qty),
+          qtyPerPerson: qtyOf(i),
           unit: i.unit,
         })),
       steps: draft.steps.map((s) => s.text.trim()).filter(Boolean),
@@ -530,23 +522,23 @@ function RecipeForm({
                   className="min-h-12 w-32 rounded-2xl bg-paper px-4 font-bold ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
                 />
                 {units.length > 1 ? (
-                  <select
+                  <Select
                     aria-label={`Unité, ingrédient ${index + 1}`}
                     value={item.unit}
                     onChange={(e) =>
                       setItem(item.key, { unit: e.target.value as Unit })
                     }
-                    className={selectClass}
+                    className="font-bold"
                   >
                     {units.map((u) => (
                       <option key={u} value={u}>
-                        {UNIT_LABELS[u]}
+                        {unitChoiceLabel(u)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 ) : (
                   <span className="flex min-h-12 flex-1 items-center px-2 font-bold text-muted">
-                    {UNIT_LABELS[item.unit]}
+                    {unitChoiceLabel(item.unit)}
                   </span>
                 )}
               </div>

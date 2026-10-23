@@ -1,30 +1,42 @@
-import { useState, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
-import { ChevronDown } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { Unit } from "../../../convex/domain/quantities";
 import { formatNumber } from "../../../convex/domain/quantities";
 import { useSession } from "../../lib/session";
 import { useRun, useToast } from "../../lib/toast";
-import { Button, Sheet, TextInput } from "../ui";
-import { parseAmount, unitLabel, UNITS } from "./units";
+import { Button, Select, Sheet, TextInput } from "../ui";
+import { parseAmount, unitChoiceLabel, unitName, UNITS } from "../../lib/units";
 
-/** Form sheet to create or edit an ingredient and its estimated price. */
+export interface SavedIngredient {
+  _id: Id<"ingredients">;
+  name: string;
+  unit: Unit;
+}
+
+/**
+ * Form sheet to create or edit an ingredient and its estimated price.
+ * The aisle has no default: it must be chosen explicitly for a new ingredient.
+ */
 export function IngredientSheet({
   ingredient,
   aisles,
+  initialName = "",
+  onSaved,
   onClose,
 }: {
   ingredient?: Doc<"ingredients">;
   aisles: Doc<"aisles">[];
+  initialName?: string;
+  onSaved?: (saved: SavedIngredient) => void;
   onClose: () => void;
 }) {
   const { token } = useSession();
   const run = useRun();
   const toast = useToast();
   const upsert = useMutation(api.catalog.upsertIngredient);
-  const [name, setName] = useState(ingredient?.name ?? "");
+  const [name, setName] = useState(ingredient?.name ?? initialName);
   const [aisleId, setAisleId] = useState<Id<"aisles"> | "">(
     ingredient?.aisleId ?? "",
   );
@@ -72,7 +84,10 @@ export function IngredientSheet({
       ingredient ? "Ingrédient enregistré." : "Ingrédient ajouté.",
     );
     setBusy(false);
-    if (id) onClose();
+    if (id) {
+      onSaved?.({ _id: id, name: name.trim(), unit });
+      onClose();
+    }
   };
 
   return (
@@ -112,8 +127,8 @@ export function IngredientSheet({
           onChange={(e) => setUnit(e.target.value as Unit)}
         >
           {UNITS.map((u) => (
-            <option key={u.value} value={u.value}>
-              {u.label}
+            <option key={u} value={u}>
+              {unitChoiceLabel(u)}
             </option>
           ))}
         </Select>
@@ -126,7 +141,7 @@ export function IngredientSheet({
             placeholder="Ex. 3.50"
           />
           <TextInput
-            label={`Pour (${unitLabel(unit)})`}
+            label={`Pour (${unitName(unit, parseAmount(qtyText) ?? 1)})`}
             value={qtyText}
             onChange={(e) => setQtyText(e.target.value)}
             inputMode="decimal"
@@ -137,32 +152,5 @@ export function IngredientSheet({
         </p>
       </div>
     </Sheet>
-  );
-}
-
-function Select({
-  label,
-  children,
-  ...rest
-}: SelectHTMLAttributes<HTMLSelectElement> & {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[15px] font-bold">{label}</span>
-      <span className="relative block">
-        <select
-          {...rest}
-          className="min-h-12 w-full appearance-none rounded-2xl bg-paper pr-11 pl-4 ring-1 ring-line outline-none focus:ring-2 focus:ring-carrot"
-        >
-          {children}
-        </select>
-        <ChevronDown
-          size={20}
-          className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted"
-        />
-      </span>
-    </label>
   );
 }

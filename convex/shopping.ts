@@ -15,12 +15,12 @@ export const list = query({
   handler: async (ctx, { token, start, storeId }) => {
     await assertSession(ctx, token);
     assertDate(start);
-    const [meals, ingredients, aisles, extras, checks] = await Promise.all([
+    const end = addDays(start, 6);
+    const [eaten, ingredients, aisles, extras, checks] = await Promise.all([
+      // One extra day: next week's first lunch may be cooked on this week's last evening
       ctx.db
         .query("meals")
-        .withIndex("by_date", (q) =>
-          q.gte("date", start).lte("date", addDays(start, 6)),
-        )
+        .withIndex("by_date", (q) => q.gte("date", start).lte("date", addDays(start, 7)))
         .collect(),
       ctx.db.query("ingredients").collect(),
       ctx.db.query("aisles").collect(),
@@ -33,6 +33,7 @@ export const list = query({
         .withIndex("by_period", (q) => q.eq("periodStart", start))
         .collect(),
     ]);
+    const meals = eaten.filter((m) => m.cookedOn >= start && m.cookedOn <= end);
     const store = storeId ? await ctx.db.get(storeId) : null;
 
     const recipes: Parameters<typeof buildShoppingList>[0]["recipes"] = {};
@@ -49,7 +50,9 @@ export const list = query({
         recipeId: m.recipeId,
         persons: m.persons,
         fromLeftoverOf: m.fromLeftoverOf,
+        cookedOn: m.cookedOn,
       })),
+      period: { start, end },
       recipes,
       ingredients: Object.fromEntries(ingredients.map((i) => [i._id, i])),
       aisles,
@@ -134,8 +137,6 @@ export const addExtra = mutation({
     label = cleanText(label, 80, "Article");
     if (rest.qty !== undefined) assertPositive(rest.qty, 100000, "Quantité");
     if (!label.trim()) throw new ConvexError("Écris ce qu'il faut acheter.");
-    if (rest.qty !== undefined && !(rest.qty > 0))
-      throw new ConvexError("La quantité doit être positive.");
     return ctx.db.insert("shoppingExtras", {
       periodStart: start,
       label: label.trim(),

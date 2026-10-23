@@ -3,7 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { assertDate, assertInt, assertSession, cleanText } from "./lib";
 import { slotValidator } from "./schema";
-import { addDays } from "./domain/dates";
+import { addDays, daysBetween } from "./domain/dates";
 import { leftoverStatus } from "./domain/leftovers";
 
 function assertPersons(n: number) {
@@ -122,10 +122,15 @@ export const update = mutation({
     if (patch.date !== undefined) assertDate(patch.date);
     if (patch.title !== undefined) patch.title = cleanText(patch.title, 80, "Titre") || undefined;
     const next: Partial<Doc<"meals">> = { ...patch };
-    // Moving a dish moves the cooking day by the same amount
-    if (patch.date && patch.date !== meal.date) {
-      const shift = (Date.parse(patch.date) - Date.parse(meal.date)) / 86400000;
-      next.cookedOn = addDays(meal.cookedOn, shift);
+    // A standalone dish moves with its cooking day. Leftovers and portions cooked
+    // together with another meal (tonight + tomorrow's lunch) keep their cooking day.
+    if (patch.date && patch.date !== meal.date && !meal.fromLeftoverOf) {
+      const sameDay = await ctx.db
+        .query("meals")
+        .withIndex("by_date", (q) => q.gte("date", addDays(meal.cookedOn, -1)).lte("date", addDays(meal.cookedOn, 2)))
+        .collect();
+      const cookedWithOther = sameDay.some((m) => m._id !== meal._id && m.recipeId === meal.recipeId && m.cookedOn === meal.cookedOn);
+      if (!cookedWithOther) next.cookedOn = addDays(meal.cookedOn, daysBetween(meal.date, patch.date));
     }
     await ctx.db.patch(id, next);
   },
@@ -163,8 +168,8 @@ export const remove = mutation({
     await assertSession(ctx, token);
     const meal = await ctx.db.get(id);
     if (!meal) return;
-    // Give back the portions a planned leftover had taken
-    if (meal.fromLeftoverOf) {
+    // Give back the portions a planned leftover had taken, if not eaten yet
+    if (meal.fromLeftoverOf && meal.status === "prévu") {
       const source = await ctx.db.get(meal.fromLeftoverOf);
       if (source)
         await ctx.db.patch(source._id, {

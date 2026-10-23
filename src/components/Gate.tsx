@@ -13,7 +13,8 @@ export function Gate({ children }: { children: ReactNode }) {
   if (checking) return <Loading label="Ouverture" />;
   if (!token) return <CodeScreen onToken={setToken} expired={expired} />;
   if (base === undefined) return <Loading label="Ouverture" />;
-  if (!memberId || !base.members.some((m) => m._id === memberId)) return <ProfilePicker />;
+  if (!memberId || !base.members.some((m) => m._id === memberId))
+    return <ProfilePicker />;
   return <>{children}</>;
 }
 
@@ -28,7 +29,7 @@ function Brand() {
       </div>
       <h1 className="text-3xl font-black tracking-tight">Menu Maison</h1>
       <p className="mt-1 font-semibold text-muted">
-        Les menus de la semaine et les courses du samedi.
+        Les menus de la semaine et la liste de courses.
       </p>
     </div>
   );
@@ -96,7 +97,7 @@ export function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
   return (
     <main className="pt-safe mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
       <Brand />
-      <h2 className="mb-4 text-center text-xl font-black">Qui es-tu ?</h2>
+      <h2 className="mb-4 text-center text-xl font-black">Qui es-tu ?</h2>
       <div className="grid gap-3">
         {base.members.map((m) => (
           <button

@@ -101,6 +101,23 @@ describe("buildShoppingList", () => {
     expect(findItem(list, "ing:oignon:pc")?.display).toBe("3");
   });
 
+  it("buys a dish in the week it is cooked, not the week it is eaten", () => {
+    const period = { start: "2026-10-24", end: "2026-10-30" };
+    const list = buildShoppingList(
+      input({
+        period,
+        meals: [
+          // Friday dinner + Saturday lunch cooked the same Friday evening
+          { _id: "m1", recipeId: "curry", persons: 3, cookedOn: "2026-10-30" },
+          { _id: "m2", recipeId: "curry", persons: 2, cookedOn: "2026-10-30" },
+          // First-day lunch prepared the evening before: bought the week before
+          { _id: "m3", recipeId: "curry", persons: 4, cookedOn: "2026-10-23" },
+        ],
+      }),
+    );
+    expect(findItem(list, "ing:poulet:g")?.qty).toBe(750);
+  });
+
   it("merges kg and g of the same ingredient", () => {
     const list = buildShoppingList(
       input({

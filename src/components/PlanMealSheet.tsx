@@ -13,12 +13,11 @@ import { Field, SLOT_OPTIONS, Toggle } from "./planning/controls";
 import {
   capitalize,
   repeatWarning,
-  useOverview,
-  useRecipes,
   useWeekMeals,
   type MealChoice,
   type Slot,
 } from "./planning/data";
+import { useOverview, useRecipes } from "../lib/queries";
 import { Badge, Button, cx, Segmented, Sheet, Stepper } from "./ui";
 
 interface Props {

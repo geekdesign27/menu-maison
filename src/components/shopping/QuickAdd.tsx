@@ -7,7 +7,7 @@ import type { Unit } from "../../../convex/domain/quantities";
 import { useBase, useSession } from "../../lib/session";
 import { useRun, useToast } from "../../lib/toast";
 import { Button, Chip, IconButton, Sheet, TextInput } from "../ui";
-import { parseAmount, UNITS } from "./units";
+import { parseAmount, unitChoiceLabel, UNITS } from "../../lib/units";
 
 /** « Ajouter un article… » field, with a sheet for quantity, unit and aisle. */
 export function QuickAdd({ start }: { start: string }) {
@@ -144,12 +144,8 @@ function ExtraSheet({
             <span className="mb-1 block text-[15px] font-bold">Unité</span>
             <div className="flex flex-wrap gap-2">
               {UNITS.map((u) => (
-                <Chip
-                  key={u.value}
-                  selected={unit === u.value}
-                  onClick={() => setUnit(u.value)}
-                >
-                  {u.label}
+                <Chip key={u} selected={unit === u} onClick={() => setUnit(u)}>
+                  {unitChoiceLabel(u)}
                 </Chip>
               ))}
             </div>

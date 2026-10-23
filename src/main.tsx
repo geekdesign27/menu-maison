@@ -31,7 +31,7 @@ function App() {
     return (
       <main className="p-4">
         <ErrorBox>
-          Configuration manquante : VITE_CONVEX_URL n'est pas défini.
+          Configuration manquante : VITE_CONVEX_URL n'est pas défini.
         </ErrorBox>
       </main>
     );

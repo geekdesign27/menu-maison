@@ -6,15 +6,15 @@ import { forgottenRecipes } from "../../convex/domain/stats";
 import { useBase, useSession, type Member } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { formatChf, minutes } from "../lib/format";
+import { repeatWarning, type MealChoice } from "./planning/data";
 import {
-  normalize,
-  repeatWarning,
+  isLoved,
   useOverview,
   usePricing,
   useRecipes,
-  type MealChoice,
   type RecipeRow,
-} from "./planning/data";
+} from "../lib/queries";
+import { searchKey } from "../lib/text";
 import {
   Avatar,
   Badge,
@@ -84,7 +84,9 @@ function PickerBody({
   const wishes = useQuery(api.wishes.list, token ? { token } : "skip");
   const [chosenFilter, setFilter] = useState<Filter | null>(null);
   // First use: "Nos recettes" is still empty, so start on the whole catalog
-  const filter: Filter = chosenFilter ?? (recipes && !recipes.some((r) => r.saved) ? "all" : "saved");
+  const filter: Filter =
+    chosenFilter ??
+    (recipes && !recipes.some((r) => r.saved) ? "all" : "saved");
   const [search, setSearch] = useState("");
   const [tag, setTag] = useState<string | null>(null);
   const [freeTitle, setFreeTitle] = useState("");
@@ -109,18 +111,20 @@ function PickerBody({
       );
       list = recipes.filter((r) => wanted.has(r._id));
     } else if (filter === "forgotten") {
-      const liked = recipes.filter((r) => r.likedBy.length > 0);
+      // Without the history every recipe would look never eaten
+      if (!overview) return undefined;
+      const loved = recipes.filter(isLoved);
       const order = forgottenRecipes(
-        liked.map((r) => r._id),
-        overview?.stats ?? [],
+        loved.map((r) => r._id),
+        overview.stats,
         today,
       );
-      const byId = new Map(liked.map((r) => [r._id as string, r]));
+      const byId = new Map(loved.map((r) => [r._id as string, r]));
       list = order.flatMap((id) => byId.get(id) ?? []);
     } else list = recipes;
     if (tag) list = list.filter((r) => r.tags.includes(tag));
-    const q = normalize(search.trim());
-    if (q) list = list.filter((r) => normalize(r.name).includes(q));
+    const q = searchKey(search);
+    if (q) list = list.filter((r) => searchKey(r.name).includes(q));
     return list;
   }, [recipes, wishes, overview, filter, tag, search, today]);
 
@@ -288,9 +292,7 @@ function RecipeLine({
             <Clock size={15} aria-hidden />
             {minutes(recipe.prepMinutes)}
           </span>
-          {perPerson > 0 && (
-            <span>env. {formatChf(perPerson)} / pers.</span>
-          )}
+          {perPerson > 0 && <span>env. {formatChf(perPerson)} / pers.</span>}
         </span>
         {warning && (
           <span className="mt-1 block">

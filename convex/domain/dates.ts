@@ -2,7 +2,7 @@
 
 const DAY_MS = 86_400_000;
 
-const DAY_NAMES = [
+export const DAY_NAMES = [
   "dimanche",
   "lundi",
   "mardi",
@@ -11,7 +11,7 @@ const DAY_NAMES = [
   "vendredi",
   "samedi",
 ];
-const DAY_SHORT = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+export const DAY_SHORT = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const MONTH_NAMES = [
   "janvier",
   "février",

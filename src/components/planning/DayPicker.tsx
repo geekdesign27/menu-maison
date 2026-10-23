@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { addDays, dayOfWeek, weekDays } from "../../../convex/domain/dates";
+import {
+  addDays,
+  DAY_SHORT,
+  dayOfWeek,
+  weekDays,
+} from "../../../convex/domain/dates";
 import { useWeek } from "../../lib/week";
 import { cx } from "../ui";
-
-const SHORT = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
 /** Grid of day tiles; tapping one selects it. */
 export function DayGrid({
@@ -41,7 +44,7 @@ export function DayGrid({
             )}
           >
             <span className="text-[13px] font-bold leading-none">
-              {SHORT[dayOfWeek(d)]}
+              {DAY_SHORT[dayOfWeek(d)]}
             </span>
             <span className="mt-1 text-lg font-black leading-none tabular-nums">
               {Number(d.slice(8))}

@@ -4,10 +4,15 @@ import type { FunctionReturnType } from "convex/server";
 import { CopyPlus, Save, Trash } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { addDays, dayOfWeek, formatDateRange } from "../../convex/domain/dates";
+import {
+  addDays,
+  DAY_SHORT,
+  dayOfWeek,
+  formatDateRange,
+} from "../../convex/domain/dates";
 import { useSession } from "../lib/session";
 import { useWeek } from "../lib/week";
-import { useRun } from "../lib/toast";
+import { useRun, useToast } from "../lib/toast";
 import { plural } from "../lib/format";
 import { BackButton } from "../components/Layout";
 import { Field } from "../components/planning/controls";
@@ -26,8 +31,6 @@ import {
 } from "../components/ui";
 
 type Template = FunctionReturnType<typeof api.templates.list>[number];
-
-const SHORT = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
 export function TemplatesPage() {
   const { token } = useSession();
@@ -117,7 +120,7 @@ function TemplateCard({
               className="flex min-h-20 flex-col items-center gap-0.5 rounded-xl bg-cream py-1.5"
             >
               <span className="text-[13px] font-bold text-muted">
-                {SHORT[dayOfWeek(addDays(start, i))]}
+                {DAY_SHORT[dayOfWeek(addDays(start, i))]}
               </span>
               {entries.map((e, j) => (
                 <span
@@ -205,6 +208,7 @@ function ApplyForm({
   const { token } = useSession();
   const { start, end } = useWeek();
   const run = useRun();
+  const toast = useToast();
   const apply = useMutation(api.templates.apply);
   const meals = useWeekMeals(start);
   const [mode, setMode] = useState<"add" | "replace">("add");
@@ -247,18 +251,18 @@ function ApplyForm({
         disabled={busy}
         onClick={async () => {
           setBusy(true);
-          const n = await run(
-            () =>
-              apply({
-                token,
-                id: template._id,
-                start,
-                replace: mode === "replace",
-              }),
-            `${count} ajoutés à la semaine`,
+          const result = await run(() =>
+            apply({
+              token,
+              id: template._id,
+              start,
+              replace: mode === "replace",
+            }),
           );
           setBusy(false);
-          if (n !== undefined) onClose();
+          if (result === undefined) return;
+          toast(appliedMessage(result.added, result.skipped));
+          onClose();
         }}
       >
         {mode === "replace" && planned > 0
@@ -267,6 +271,13 @@ function ApplyForm({
       </Button>
     </div>
   );
+}
+
+/** « 3 plats ajoutés à la semaine (1 recette archivée ignorée) ». */
+function appliedMessage(added: number, skipped: number) {
+  const text = `${plural(added, "plat ajouté", "plats ajoutés")} à la semaine`;
+  if (skipped === 0) return text;
+  return `${text} (${plural(skipped, "recette archivée ignorée", "recettes archivées ignorées")})`;
 }
 
 function SaveWeekSheet({

@@ -38,7 +38,7 @@ import {
 import { AislePicker } from "../components/shopping/AislePicker";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { useUpdateStore } from "../components/shopping/useUpdateStore";
-import { searchKey } from "../components/shopping/search";
+import { searchKey } from "../lib/text";
 
 const MIN_FACTOR = 0.8;
 const MAX_FACTOR = 1.2;

@@ -4,7 +4,8 @@ import { Clock, Heart } from "lucide-react";
 import type { Member } from "../lib/session";
 import { minutes } from "../lib/format";
 import { Avatar, Card, cx } from "./ui";
-import { pastelFor, type RecipeRow } from "./recipes/data";
+import { pastelFor } from "./recipes/data";
+import type { RecipeRow } from "../lib/queries";
 
 /** Recipe emoji on its pastel tile. */
 export function RecipeEmoji({

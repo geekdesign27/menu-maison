@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import {
   Archive,
   BookmarkMinus,
@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { formatDayLong } from "../../convex/domain/dates";
-import { formatQty } from "../../convex/domain/quantities";
+import { formatQty, NBSP } from "../../convex/domain/quantities";
 import { ingredientCost } from "../../convex/domain/shopping";
 import { useBase, useSession, type Base } from "../lib/session";
-import { useStoreChoice, useWeek } from "../lib/week";
+import { useStoreChoice } from "../lib/week";
 import { useRun } from "../lib/toast";
 import { formatChf, minutes, persons as personsText } from "../lib/format";
 import { BackButton } from "../components/Layout";
@@ -33,20 +33,19 @@ import {
   Sheet,
   Stepper,
 } from "../components/ui";
+import { pastelFor, useToggleLike } from "../components/recipes/data";
 import {
-  costText,
-  NB,
-  pastelFor,
   useIngredientMap,
-  useRecipeList,
-  useToggleLike,
+  useOverview,
+  usePricing,
+  useRecipes,
   type RecipeRow,
-} from "../components/recipes/data";
+} from "../lib/queries";
 import { RecipeNotFound } from "../components/recipes/RecipeNotFound";
 
 export function RecipeDetailPage() {
   const { id } = useParams();
-  const recipes = useRecipeList();
+  const recipes = useRecipes();
   const base = useBase();
   const back = <BackButton fallback="/recettes" />;
 
@@ -71,7 +70,6 @@ export function RecipeDetailPage() {
 
 function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
   const { token, memberId } = useSession();
-  const { today } = useWeek();
   const { store } = useStoreChoice();
   const navigate = useNavigate();
   const run = useRun();
@@ -79,16 +77,14 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
   const toggleLike = useToggleLike();
   const setSaved = useMutation(api.recipes.setSaved);
   const archive = useMutation(api.recipes.archive);
-  const overview = useQuery(
-    api.stats.overview,
-    token ? { token, today } : "skip",
-  );
+  const overview = useOverview();
   const [count, setCount] = useState(base.settings.defaultPersons);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [taps, setTaps] = useState(0);
 
+  const pricing = usePricing();
   const factor = store?.priceFactor ?? 1;
-  const totalCost = costText(recipe, count, ingredients, factor);
+  const totalCost = pricing.text(recipe, count);
   const stat = overview?.stats.find((s) => s.recipeId === recipe._id);
   const editPath = `/recette/${recipe._id}/modifier`;
 
@@ -363,7 +359,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
       <Sheet
         open={confirmArchive}
         onClose={() => setConfirmArchive(false)}
-        title={`Archiver cette recette${NB}?`}
+        title={`Archiver cette recette${NBSP}?`}
         footer={
           <div className="grid grid-cols-2 gap-3">
             <Button
@@ -379,10 +375,10 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
         }
       >
         <p className="text-[17px]">
-          «{NB}
+          «{NBSP}
           {recipe.name}
-          {NB}» disparaîtra des recettes. Les repas déjà passés la gardent dans
-          l'historique.
+          {NBSP}» disparaîtra des recettes. Les repas déjà passés la gardent
+          dans l'historique.
         </p>
       </Sheet>
     </Page>

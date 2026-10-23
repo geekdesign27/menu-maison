@@ -94,9 +94,11 @@ export const apply = mutation({
         if (m.status === "prévu" && !m.fromLeftoverOf)
           await ctx.db.delete(m._id);
     }
+    let added = 0;
     for (const e of template.entries) {
       const recipe = await ctx.db.get(e.recipeId);
       if (!recipe || recipe.archived) continue;
+      added++;
       await ctx.db.insert("meals", {
         date: addDays(start, e.dayOffset),
         slot: e.slot,
@@ -107,7 +109,8 @@ export const apply = mutation({
         leftoverPortions: 0,
       });
     }
-    return template.entries.length;
+    // Archived recipes are skipped: tell the UI what was really added
+    return { added, skipped: template.entries.length - added };
   },
 });
 

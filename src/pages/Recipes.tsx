@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Zap } from "lucide-react";
 import { TAGS } from "../../convex/domain/tags";
 import { useBase, useSession } from "../lib/session";
-import { useStoreChoice } from "../lib/week";
 import { plural } from "../lib/format";
 import {
   Button,
@@ -15,13 +14,9 @@ import {
   Segmented,
 } from "../components/ui";
 import { RecipeCard } from "../components/RecipeCard";
-import {
-  costText,
-  normalize,
-  useIngredientMap,
-  useRecipeList,
-  useToggleLike,
-} from "../components/recipes/data";
+import { useToggleLike } from "../components/recipes/data";
+import { usePricing, useRecipes } from "../lib/queries";
+import { searchKey } from "../lib/text";
 
 type View = "saved" | "discover";
 
@@ -31,11 +26,10 @@ const EXPRESS_MAX_MINUTES = 20;
 const FILTER_TAGS = TAGS.filter((t) => t !== "Express");
 
 export function RecipesPage() {
-  const recipes = useRecipeList();
+  const recipes = useRecipes();
   const base = useBase();
   const { memberId } = useSession();
-  const { store } = useStoreChoice();
-  const ingredients = useIngredientMap();
+  const pricing = usePricing();
   const toggleLike = useToggleLike();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -53,14 +47,14 @@ export function RecipesPage() {
   );
 
   const shown = useMemo(() => {
-    const q = normalize(query);
+    const q = searchKey(query);
     return inView.filter((r) => {
       if (filter === EXPRESS && r.prepMinutes > EXPRESS_MAX_MINUTES)
         return false;
       if (filter && filter !== EXPRESS && !r.tags.includes(filter))
         return false;
       if (!q) return true;
-      return normalize(
+      return searchKey(
         [r.name, r.description ?? "", ...r.tags].join(" "),
       ).includes(q);
     });
@@ -72,9 +66,9 @@ export function RecipesPage() {
       className="rounded-full pr-4 pl-3"
       onClick={() => navigate("/recette/nouvelle")}
     >
-        <Plus size={20} strokeWidth={3} />
-        Nouvelle
-      </Button>
+      <Plus size={20} strokeWidth={3} />
+      Nouvelle
+    </Button>
   );
 
   if (!recipes || !base) {
@@ -142,7 +136,7 @@ export function RecipesPage() {
               key={r._id}
               recipe={r}
               members={base.members}
-              cost={costText(r, 1, ingredients, store?.priceFactor)}
+              cost={pricing.text(r, 1)}
               liked={!!memberId && r.likedBy.includes(memberId)}
               onToggleLike={memberId ? () => toggleLike(r._id) : undefined}
             />

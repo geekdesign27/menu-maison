@@ -4,6 +4,7 @@ import { useMutation } from "convex/react";
 import { ChevronRight, LogOut, Plus, UserRound } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { DAY_NAMES } from "../../convex/domain/dates";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun } from "../lib/toast";
 import { formatChf } from "../lib/format";
@@ -24,19 +25,18 @@ import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { MemberSheet } from "../components/shopping/MemberSheet";
 import { AisleSheet } from "../components/shopping/AisleSheet";
 import { IngredientSheet } from "../components/shopping/IngredientSheet";
-import { amountLabel } from "../components/shopping/units";
-import { searchKey } from "../components/shopping/search";
+import { amountLabel } from "../lib/units";
+import { searchKey } from "../lib/text";
 
 // Monday first, as on a Swiss calendar; values follow Date.getDay()
-const DAYS = [
-  { value: 1, short: "Lun", long: "lundi" },
-  { value: 2, short: "Mar", long: "mardi" },
-  { value: 3, short: "Mer", long: "mercredi" },
-  { value: 4, short: "Jeu", long: "jeudi" },
-  { value: 5, short: "Ven", long: "vendredi" },
-  { value: 6, short: "Sam", long: "samedi" },
-  { value: 0, short: "Dim", long: "dimanche" },
-];
+const DAYS = [1, 2, 3, 4, 5, 6, 0].map((value) => {
+  const long = DAY_NAMES[value];
+  return {
+    value,
+    long,
+    short: long.charAt(0).toUpperCase() + long.slice(1, 3),
+  };
+});
 
 const INGREDIENTS_SHOWN = 30;
 
@@ -63,10 +63,10 @@ function SettingsContent({ base }: { base: Base }) {
   const [editing, setEditing] = useState<Editing>(null);
   const [search, setSearch] = useState("");
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [newShoppingDay, setNewShoppingDay] = useState<number | null>(null);
 
   const { settings } = base;
-  const shoppingDayName =
-    DAYS.find((d) => d.value === settings.shoppingDay)?.long ?? "samedi";
+  const shoppingDayName = DAY_NAMES[settings.shoppingDay] ?? "samedi";
   const aisleById = new Map(base.aisles.map((a) => [a._id, a]));
   const needle = searchKey(search);
   const ingredients = base.ingredients.filter((i) =>
@@ -107,8 +107,7 @@ function SettingsContent({ base }: { base: Base }) {
               aria-pressed={settings.shoppingDay === d.value}
               aria-label={d.long}
               onClick={() =>
-                settings.shoppingDay !== d.value &&
-                run(() => updateSettings({ token, shoppingDay: d.value }))
+                settings.shoppingDay !== d.value && setNewShoppingDay(d.value)
               }
               className={
                 settings.shoppingDay === d.value
@@ -287,6 +286,18 @@ function SettingsContent({ base }: { base: Base }) {
           onClose={close}
         />
       )}
+      <ConfirmSheet
+        open={newShoppingDay !== null}
+        onClose={() => setNewShoppingDay(null)}
+        title={`Faire les courses le ${newShoppingDay !== null ? DAY_NAMES[newShoppingDay] : ""} ?`}
+        text="Les coches et les articles ajoutés à la main pour la semaine en cours seront remis à zéro."
+        confirmLabel="Changer le jour"
+        onConfirm={() =>
+          newShoppingDay !== null
+            ? run(() => updateSettings({ token, shoppingDay: newShoppingDay }))
+            : Promise.resolve()
+        }
+      />
       <ConfirmSheet
         open={confirmLogout}
         onClose={() => setConfirmLogout(false)}

@@ -28,12 +28,11 @@ import { MealSheet } from "../components/planning/MealSheet";
 import {
   capitalize,
   SLOT_LABEL,
-  usePricing,
-  useRecipes,
   useWeekMeals,
   type Slot,
   type WeekMeal,
 } from "../components/planning/data";
+import { usePricing, useRecipes } from "../lib/queries";
 import {
   Avatar,
   Badge,
