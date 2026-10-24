@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { formatNumber, NBSP, type Unit } from "../../convex/domain/quantities";
+import { formatNumber, NBSP, toBase, type Unit } from "../../convex/domain/quantities";
 import { TAGS } from "../../convex/domain/tags";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun } from "../lib/toast";
@@ -20,6 +20,7 @@ import { minutes } from "../lib/format";
 import { BackButton } from "../components/Layout";
 import { useAppPaths, useInGestion } from "../lib/paths";
 import {
+  Badge,
   Button,
   Card,
   Chip,
@@ -35,7 +36,7 @@ import {
 } from "../components/ui";
 import { pastelFor } from "../components/recipes/data";
 import { useIngredientMap, useRecipes, type RecipeRow } from "../lib/queries";
-import { compatibleUnits, parseAmount, unitChoiceLabel } from "../lib/units";
+import { compatibleUnits, parseAmount, unitChoiceLabel, UNITS } from "../lib/units";
 import { RecipeNotFound } from "../components/recipes/RecipeNotFound";
 import { IngredientPicker } from "../components/recipes/IngredientPicker";
 import { PhotoField } from "../components/recipes/PhotoField";
@@ -77,12 +78,16 @@ const PREP_STEP = 5;
 const PREP_MAX = 300;
 const FRIDGE_MAX = 7;
 
-interface ItemDraft {
+export interface ItemDraft {
   key: string;
   ingredientId: Id<"ingredients"> | null;
   name: string; // kept for display while a new ingredient reaches the catalog
   qty: string;
   unit: Unit;
+  // Imported recipe: ingredient missing from the catalog, created on save
+  newIngredient?: { name: string; unit: Unit; aisleId: Id<"aisles"> } | null;
+  sourceText?: string; // line as written in the imported recipe
+  check?: boolean; // the import could not settle the quantity or the aisle
 }
 
 interface StepDraft {
@@ -90,7 +95,7 @@ interface StepDraft {
   text: string;
 }
 
-interface Draft {
+export interface Draft {
   name: string;
   emoji: string;
   description: string;
@@ -102,10 +107,11 @@ interface Draft {
   steps: StepDraft[];
   imageId: Id<"_storage"> | null;
   imageUrl: string | null;
+  sourceUrl?: string;
 }
 
 let keySeq = 0;
-const newKey = () => `k${++keySeq}`;
+export const newKey = () => `k${++keySeq}`;
 
 const emptyItem = (): ItemDraft => ({
   key: newKey(),
@@ -152,6 +158,7 @@ function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
       : [emptyStep()],
     imageId: recipe.imageId ?? null,
     imageUrl: recipe.imageUrl ?? null,
+    sourceUrl: recipe.sourceUrl,
   };
 }
 
@@ -161,7 +168,7 @@ function qtyOf(item: ItemDraft) {
 }
 
 function isBlank(item: ItemDraft) {
-  return !item.ingredientId && !item.qty.trim();
+  return !item.ingredientId && !item.newIngredient && !item.qty.trim();
 }
 
 function validate(draft: Draft): string[] {
@@ -170,7 +177,9 @@ function validate(draft: Draft): string[] {
   if (!draft.emoji.trim()) errors.push("Choisis un emoji.");
   draft.items.forEach((item, i) => {
     if (isBlank(item)) return;
-    if (!item.ingredientId)
+    if (item.newIngredient && !item.newIngredient.name.trim())
+      errors.push(`Ingrédient ${i + 1}${NBSP}: donne un nom au nouvel ingrédient.`);
+    else if (!item.ingredientId && !item.newIngredient)
       errors.push(`Ingrédient ${i + 1}${NBSP}: choisis l'ingrédient.`);
     if (!(qtyOf(item) > 0))
       errors.push(
@@ -226,7 +235,7 @@ export function RecipeEditorPage() {
   );
 }
 
-function RecipeForm({
+export function RecipeForm({
   title,
   back,
   base,
@@ -294,20 +303,20 @@ function RecipeForm({
       prepMinutes: draft.prepMinutes,
       fridgeDays: draft.fridgeDays,
       defaultPersons: draft.defaultPersons,
-      items: draft.items
-        .filter((i) => !isBlank(i))
-        .map((i) => ({
-          ingredientId: i.ingredientId as Id<"ingredients">,
-          qtyPerPerson: qtyOf(i),
-          unit: i.unit,
-        })),
       steps: draft.steps.map((s) => s.text.trim()).filter(Boolean),
       imageId: draft.imageId ?? undefined,
+      sourceUrl: draft.sourceUrl,
     };
+    const filled = draft.items.filter((i) => !isBlank(i));
+    const items = filled.flatMap((i) =>
+      i.ingredientId
+        ? [{ ingredientId: i.ingredientId, qtyPerPerson: qtyOf(i), unit: i.unit }]
+        : [],
+    );
     setSaving(true);
     if (recipeId) {
       const done = await run(
-        () => update({ token, id: recipeId, ...payload }),
+        () => update({ token, id: recipeId, ...payload, items }),
         "Recette enregistrée",
       );
       setSaving(false);
@@ -317,7 +326,21 @@ function RecipeForm({
       else navigate(paths.recipeSaved(recipeId), { replace: true });
     } else {
       const newId = await run(
-        () => create({ token, memberId: memberId ?? undefined, ...payload }),
+        () =>
+          create({
+            token,
+            memberId: memberId ?? undefined,
+            ...payload,
+            items: filled.map((i) =>
+              i.ingredientId
+                ? { ingredientId: i.ingredientId, qtyPerPerson: qtyOf(i), unit: i.unit }
+                : {
+                    newIngredient: { ...i.newIngredient!, name: i.newIngredient!.name.trim() },
+                    qtyPerPerson: qtyOf(i),
+                    unit: i.unit,
+                  },
+            ),
+          }),
         "Recette ajoutée à nos recettes",
       );
       setSaving(false);
@@ -542,10 +565,16 @@ function RecipeForm({
                 ? ingredients[item.ingredientId]
                 : undefined;
               // Pieces are always offered (« 1 poivron »): they get their own line on the list
-              const family = compatibleUnits(ing?.unit ?? item.unit);
-              const units = family.includes("pc")
-                ? family
-                : [...family, "pc" as const];
+              const isNew = !ing && !!item.newIngredient;
+              const family = compatibleUnits(
+                ing?.unit ?? item.newIngredient?.unit ?? item.unit,
+              );
+              // A new ingredient takes whichever unit is chosen here
+              const units = isNew
+                ? UNITS
+                : family.includes("pc")
+                  ? family
+                  : [...family, "pc" as const];
               return (
                 <Card key={item.key} className="space-y-2 p-3">
                   <div className="flex items-center gap-2">
@@ -560,7 +589,10 @@ function RecipeForm({
                           !item.ingredientId && "text-muted",
                         )}
                       >
-                        {ing?.name ?? (item.name || "Choisir un ingrédient")}
+                        {ing?.name ??
+                          (isNew
+                            ? "Choisir dans nos produits"
+                            : item.name || "Choisir un ingrédient")}
                       </span>
                       <ChevronDown size={20} className="shrink-0 text-muted" />
                     </button>
@@ -577,6 +609,53 @@ function RecipeForm({
                       <Trash2 size={20} />
                     </IconButton>
                   </div>
+                  {(item.sourceText || item.check) && (
+                    <div className="flex flex-wrap items-center gap-2 px-1 text-[15px] text-muted">
+                      {item.check && <Badge tone="sun">À vérifier</Badge>}
+                      {item.sourceText && <span>« {item.sourceText} »</span>}
+                    </div>
+                  )}
+                  {isNew && item.newIngredient && (
+                    <div className="space-y-2 rounded-2xl bg-carrot-soft/60 p-3">
+                      <div className="flex items-center gap-2">
+                        <Badge tone="carrot">Nouveau</Badge>
+                        <span className="text-[15px] font-bold">
+                          Créé dans nos produits à l'enregistrement
+                        </span>
+                      </div>
+                      <TextInput
+                        aria-label={`Nom du nouvel ingrédient ${index + 1}`}
+                        value={item.newIngredient.name}
+                        onChange={(e) =>
+                          setItem(item.key, {
+                            newIngredient: {
+                              ...item.newIngredient!,
+                              name: e.target.value,
+                            },
+                          })
+                        }
+                        className="font-extrabold"
+                      />
+                      <Select
+                        aria-label={`Rayon du nouvel ingrédient ${index + 1}`}
+                        value={item.newIngredient.aisleId}
+                        onChange={(e) =>
+                          setItem(item.key, {
+                            newIngredient: {
+                              ...item.newIngredient!,
+                              aisleId: e.target.value as Id<"aisles">,
+                            },
+                          })
+                        }
+                      >
+                        {base.aisles.map((a) => (
+                          <option key={a._id} value={a._id}>
+                            {a.emoji} {a.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <input
                       aria-label={`Quantité pour 1 portion, ingrédient ${index + 1}`}
@@ -593,7 +672,15 @@ function RecipeForm({
                         aria-label={`Unité, ingrédient ${index + 1}`}
                         value={item.unit}
                         onChange={(e) =>
-                          setItem(item.key, { unit: e.target.value as Unit })
+                          setItem(item.key, {
+                            unit: e.target.value as Unit,
+                            ...(isNew && {
+                              newIngredient: {
+                                ...item.newIngredient!,
+                                unit: toBase(1, e.target.value as Unit).unit,
+                              },
+                            }),
+                          })
                         }
                         className="font-bold"
                       >
@@ -709,6 +796,8 @@ function RecipeForm({
               ingredientId: picked._id,
               name: picked.name,
               unit: picked.unit,
+              newIngredient: null,
+              check: false,
             });
         }}
       />

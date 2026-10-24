@@ -53,6 +53,28 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
    (liste, coût des recettes) prennent le prix de l'enseigne du magasin choisi avant
    l'estimation × coefficient.
 
+## Demandes de PA (2026-10-24, suite)
+
+1. **Lot 1, importer une recette** (`/recette/importer`, bouton « Nouvelle » des
+   Recettes, bouton « Importer » de la gestion) : un lien (Fooby, Betty Bossi, Marmiton…,
+   même partagé avec son titre depuis iOS) ou le texte d'une recette. Le serveur lit la
+   fiche schema.org de la page (JSON-LD), sinon son texte, puis Claude Opus 5.5 (effort
+   low) en fait un brouillon en français : quantités ramenées à une portion (portions du
+   site, sinon celles lues par Claude, sinon le foyer), étapes, styles, temps, conservation.
+   Ingrédients : ceux du catalogue d'abord (clé du catalogue, puis même nom), les autres
+   proposés « Nouveau » avec rayon et unité, créés à l'enregistrement (sans doublon). Les
+   cuillères deviennent des ml, ou des g estimés (« À vérifier ») ; sans conversion sûre,
+   la quantité est laissée à saisir. Le brouillon s'ouvre dans l'éditeur de recette, la
+   ligne d'origine sous chaque ingrédient. Photo du site importée (JPEG, PNG, WebP,
+   4 Mo max), lien d'origine gardé (`recipes.sourceUrl`) et affiché sur la recette.
+   Sécurité : https seulement, ni IP, ni nom local, ni port ; redirections revérifiées.
+2. **Lot 2, dicter une recette** : bouton micro, audio transcrit par Groq Whisper
+   large-v3 (offre gratuite, clé `GROQ_API_KEY`), puis même brouillon que le lot 1.
+3. **Lot 3, articles habituels** : page à part dans « Plus », tous les articles, fiches
+   complètes, ajout aux courses en un tap.
+4. **Lot 4, dépenses** : tickets enregistrés (date, enseigne, total, lignes avec rayon),
+   statistiques par semaine, par rayon et par enseigne.
+
 ## Stack
 
 Identique à `~/dev/evacecole` : Vite + React 19 + TypeScript + Tailwind 4, React Router
@@ -168,6 +190,9 @@ Serveurs de dev via Portly.
   suggéré, doublons (code-barres puis nom), allergènes et nutrition d'une portion.
 - `receipts.ts` : lecture validée de la réponse de Claude, contrôle du total, prix d'un
   ingrédient depuis une ligne (kilo ou paquet), contenu de paquet plausible.
+- `recipeImport.ts` : contrôle du lien, lecture de la fiche recette d'une page,
+  réponse de Claude validée, brouillon (catalogue d'abord, quantités par portion,
+  conversion des unités, doublons fusionnés).
 - `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
   refus de suppression.
 

@@ -1,10 +1,20 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { assertEmoji, assertInt, assertPositive, assertSession, cleanText } from "./lib";
 import { unitValidator } from "./schema";
+import { checkPublicUrl } from "./domain/recipeImport";
+import { searchKey } from "./domain/text";
 
 const itemValidator = v.object({
   ingredientId: v.id("ingredients"),
+  qtyPerPerson: v.number(),
+  unit: unitValidator,
+});
+
+// An imported recipe can name an ingredient missing from the catalog: created on save
+const newItemValidator = v.object({
+  newIngredient: v.object({ name: v.string(), unit: unitValidator, aisleId: v.id("aisles") }),
   qtyPerPerson: v.number(),
   unit: unitValidator,
 });
@@ -54,6 +64,7 @@ function validate(data: {
   defaultPersons?: number;
   items: { qtyPerPerson: number }[];
   steps: string[];
+  sourceUrl?: string;
 }) {
   if (!cleanText(data.name, 100, "Nom de la recette")) throw new ConvexError("Le nom de la recette est obligatoire.");
   assertEmoji(data.emoji);
@@ -66,6 +77,14 @@ function validate(data: {
   for (const i of data.items) assertPositive(i.qtyPerPerson, 100000, "Quantité");
   if (data.steps.length > 50) throw new ConvexError("50 étapes au maximum.");
   for (const step of data.steps) cleanText(step, 2000, "Étape");
+  if (data.sourceUrl !== undefined) {
+    cleanText(data.sourceUrl, 2000, "Lien de la recette");
+    try {
+      checkPublicUrl(data.sourceUrl);
+    } catch {
+      throw new ConvexError("Lien de la recette invalide.");
+    }
+  }
 }
 
 const recipeFields = {
@@ -79,6 +98,7 @@ const recipeFields = {
   steps: v.array(v.string()),
   imageId: v.optional(v.id("_storage")),
   defaultPersons: v.optional(v.number()),
+  sourceUrl: v.optional(v.string()),
 };
 
 export const create = mutation({
@@ -86,12 +106,41 @@ export const create = mutation({
     token: v.string(),
     memberId: v.optional(v.id("members")),
     ...recipeFields,
+    items: v.array(v.union(itemValidator, newItemValidator)),
   },
   handler: async (ctx, { token, memberId, ...data }) => {
     await assertSession(ctx, token);
     validate(data);
+    // Missing ingredients are created once, or matched to one that exists by now
+    const known = new Map(
+      (await ctx.db.query("ingredients").collect()).map((i) => [searchKey(i.name), i._id]),
+    );
+    const items: { ingredientId: Id<"ingredients">; qtyPerPerson: number; unit: typeof data.items[number]["unit"] }[] = [];
+    for (const item of data.items) {
+      if ("ingredientId" in item) {
+        // Deleted meanwhile by someone else (the draft can stay open a while)
+        if (!(await ctx.db.get(item.ingredientId))) throw new ConvexError("Un ingrédient de la recette n'existe plus.");
+        items.push(item);
+        continue;
+      }
+      const name = cleanText(item.newIngredient.name, 80, "Nom de l'ingrédient");
+      if (!searchKey(name).replace(/[^\p{L}\p{N}]/gu, ""))
+        throw new ConvexError("Un nouvel ingrédient n'a pas de nom.");
+      let ingredientId = known.get(searchKey(name));
+      if (!ingredientId) {
+        if (!(await ctx.db.get(item.newIngredient.aisleId))) throw new ConvexError("Rayon introuvable.");
+        ingredientId = await ctx.db.insert("ingredients", {
+          name,
+          aisleId: item.newIngredient.aisleId,
+          unit: item.newIngredient.unit,
+        });
+        known.set(searchKey(name), ingredientId);
+      }
+      items.push({ ingredientId, qtyPerPerson: item.qtyPerPerson, unit: item.unit });
+    }
     return ctx.db.insert("recipes", {
       ...data,
+      items,
       name: data.name.trim(),
       steps: data.steps.map((s) => s.trim()).filter(Boolean),
       saved: true, // a recipe we write ourselves is ours

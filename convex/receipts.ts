@@ -1,10 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { action, internalQuery, mutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { assertDate, assertPositive, assertSession, cleanText } from "./lib";
 import { chainValidator } from "./schema";
+import { askClaude } from "./claude";
 import {
   CHAINS,
   checkTotal,
@@ -17,7 +17,6 @@ import {
   type ReceiptLine,
 } from "./domain/receipts";
 
-const MODEL = "claude-opus-5-5";
 // Base64 of a phone photo shrunk to 2000 px stays far below this
 const MAX_IMAGE_CHARS = 6_000_000;
 
@@ -135,12 +134,6 @@ export const read = action({
     if (inList.length > 2000) throw new ConvexError("Liste de courses trop longue.");
     if (!image || image.length > MAX_IMAGE_CHARS)
       throw new ConvexError("Photo trop lourde ou vide.");
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey)
-      throw new ConvexError(
-        "La lecture des tickets n'est pas encore configurée (clé ANTHROPIC_API_KEY manquante).",
-      );
-
     // Short keys keep the prompt small and the answer easy to map back
     const listed = new Set(inList);
     const keys = new Map<string, Target>();
@@ -158,72 +151,36 @@ export const read = action({
       );
     });
 
-    const client = new Anthropic({ apiKey });
-    let text = "";
-    try {
-      const response = await client.beta.messages.create({
-        model: MODEL,
-        max_tokens: 16000,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        output_config: {
-          effort: "low",
-          format: { type: "json_schema", schema: SCHEMA },
+    const answer = await askClaude({
+      label: "receipt read",
+      system: SYSTEM,
+      schema: SCHEMA,
+      maxTokens: 16000,
+      content: [
+        {
+          type: "image",
+          source: { type: "base64", media_type: "image/jpeg", data: image },
         },
-        system: SYSTEM,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: "image/jpeg",
-                  data: image,
-                },
-              },
-              {
-                type: "text",
-                text: `Catalogue de la famille :\n${catalogLines.join("\n")}\n\nLis ce ticket.`,
-              },
-            ],
-          },
-        ],
-      });
-      // Tokens only, to follow the cost per receipt in the Convex logs
-      console.log("receipt read", JSON.stringify(response.usage));
-      if (response.stop_reason === "refusal")
-        throw new ConvexError(
-          "Ce ticket n'a pas pu être lu. Réessaie avec une autre photo.",
-        );
-      if (response.stop_reason === "max_tokens")
-        throw new ConvexError("Ticket trop long pour une seule lecture.");
-      for (const block of response.content)
-        if (block.type === "text") text += block.text;
-    } catch (e) {
-      if (e instanceof ConvexError) throw e;
-      if (e instanceof Anthropic.AuthenticationError)
-        throw new ConvexError(
-          "La clé ANTHROPIC_API_KEY est refusée par Anthropic.",
-        );
-      if (e instanceof Anthropic.RateLimitError)
-        throw new ConvexError(
-          "Trop de lectures en même temps. Réessaie dans une minute.",
-        );
-      throw new ConvexError(
-        "La lecture du ticket a échoué. Réessaie dans un moment.",
-      );
-    }
+        {
+          type: "text",
+          text: `Catalogue de la famille :\n${catalogLines.join("\n")}\n\nLis ce ticket.`,
+        },
+      ],
+      messages: {
+        missingKey:
+          "La lecture des tickets n'est pas encore configurée (clé ANTHROPIC_API_KEY manquante).",
+        refusal: "Ce ticket n'a pas pu être lu. Réessaie avec une autre photo.",
+        tooLong: "Ticket trop long pour une seule lecture.",
+        busy: "Trop de lectures en même temps. Réessaie dans une minute.",
+        failed: "La lecture du ticket a échoué. Réessaie dans un moment.",
+      },
+    });
 
     let receipt;
     try {
-      receipt = parseReceipt(JSON.parse(text));
+      receipt = parseReceipt(answer);
     } catch (e) {
-      // A JSON syntax error would quote the model's reply: keep a fixed message
-      throw new ConvexError(
-        e instanceof Error && !(e instanceof SyntaxError) ? e.message : "Réponse illisible.",
-      );
+      throw new ConvexError(e instanceof Error ? e.message : "Réponse illisible.");
     }
 
     const aliases = new Map(

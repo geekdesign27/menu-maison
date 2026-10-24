@@ -11,7 +11,7 @@ Code famille du backend local de test : `test-famille`
 (`CONVEX_AGENT_MODE=anonymous npx convex env set FAMILY_CODE test-famille`).
 Le code de production est différent et n'est jamais écrit dans le dépôt.
 
-Lecture des tickets : clé Anthropic `ANTHROPIC_API_KEY` dans l'environnement Convex, jamais
+Lecture des tickets et import de recettes : clé Anthropic `ANTHROPIC_API_KEY` dans l'environnement Convex, jamais
 dans le dépôt. Copier la clé puis, sans la taper :
 `pbpaste | CONVEX_AGENT_MODE=anonymous npx convex env set ANTHROPIC_API_KEY` (local) et
 `pbpaste | npx convex env set ANTHROPIC_API_KEY --deployment pierre-alain-schutz:menu-maison:production`.

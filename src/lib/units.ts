@@ -3,24 +3,11 @@ import {
   formatNumber,
   NBSP,
   sameFamily,
+  UNITS,
   type Unit,
 } from "../../convex/domain/quantities";
 
-/** Units in the order they are offered. */
-export const UNITS: Unit[] = [
-  "g",
-  "kg",
-  "ml",
-  "l",
-  "pc",
-  "cs",
-  "cc",
-  "botte",
-  "boîte",
-  "paquet",
-  "pincée",
-  "tranche",
-];
+export { UNITS };
 
 // Singular and plural name of each unit, the single source of unit labels
 const UNIT_NAMES: Record<Unit, { one: string; many: string }> = {

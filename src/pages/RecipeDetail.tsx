@@ -11,6 +11,7 @@ import {
   Heart,
   Pencil,
   Refrigerator,
+  ExternalLink,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { formatDayLong } from "../../convex/domain/dates";
@@ -314,6 +315,18 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
             </ol>
           </Card>
         </>
+      )}
+
+      {recipe.sourceUrl && (
+        <a
+          href={recipe.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex min-h-11 items-center gap-2 px-1 font-bold text-carrot-dark"
+        >
+          <ExternalLink size={18} aria-hidden />
+          Recette d'origine sur {new URL(recipe.sourceUrl).hostname.replace(/^www\./, "")}
+        </a>
       )}
 
       {/* Actions */}

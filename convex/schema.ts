@@ -100,6 +100,7 @@ export default defineSchema({
     ),
     steps: v.array(v.string()),
     imageId: v.optional(v.id("_storage")), // photo taken by the family
+    sourceUrl: v.optional(v.string()), // page the recipe was imported from
     // true once the family keeps it ("Nos recettes"); catalog recipes start false
     saved: v.boolean(),
     archived: v.boolean(),

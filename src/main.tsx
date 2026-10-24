@@ -17,6 +17,7 @@ import { ShoppingPage } from "./pages/Shopping";
 import { RecipesPage } from "./pages/Recipes";
 import { RecipeDetailPage } from "./pages/RecipeDetail";
 import { RecipeEditorPage } from "./pages/RecipeEditor";
+import { RecipeImportPage } from "./pages/RecipeImport";
 import { FridgePage } from "./pages/Fridge";
 import { MorePage } from "./pages/More";
 import { WishesPage } from "./pages/Wishes";
@@ -56,6 +57,7 @@ function App() {
                       <Route index element={<Navigate to="recettes" replace />} />
                       <Route path="recettes" element={<RecipesSection />} />
                       <Route path="recette/nouvelle" element={<RecipeEditorPage />} />
+                      <Route path="recette/importer" element={<RecipeImportPage />} />
                       <Route path="recette/:id/modifier" element={<RecipeEditorPage />} />
                       <Route path="produits" element={<ProductsSection />} />
                       <Route path="rayons" element={<AislesSection />} />
@@ -71,6 +73,10 @@ function App() {
                       <Route
                         path="/recette/nouvelle"
                         element={<RecipeEditorPage />}
+                      />
+                      <Route
+                        path="/recette/importer"
+                        element={<RecipeImportPage />}
                       />
                       <Route
                         path="/recette/:id"

@@ -14,6 +14,9 @@ export type Unit =
   | "pincée"
   | "tranche";
 
+/** Units in the order they are offered. */
+export const UNITS: Unit[] = ["g", "kg", "ml", "l", "pc", "cs", "cc", "botte", "boîte", "paquet", "pincée", "tranche"];
+
 export type BaseUnit = Exclude<Unit, "kg" | "l">;
 
 /** Non-breaking space placed between a number and its unit. */

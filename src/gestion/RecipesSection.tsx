@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Plus } from "lucide-react";
+import { Heart, Link2, Plus } from "lucide-react";
 import { TAGS } from "../../convex/domain/tags";
 import { formatDayShort } from "../../convex/domain/dates";
 import { searchKey } from "../lib/text";
@@ -162,9 +162,14 @@ export function RecipesSection() {
         title="Recettes"
         subtitle={plural(recipes.length, "recette", "recettes")}
         actions={
-          <Button onClick={() => navigate("/gestion/recette/nouvelle")}>
-            <Plus size={20} /> Nouvelle recette
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => navigate("/gestion/recette/importer")}>
+              <Link2 size={20} /> Importer
+            </Button>
+            <Button onClick={() => navigate("/gestion/recette/nouvelle")}>
+              <Plus size={20} /> Nouvelle recette
+            </Button>
+          </>
         }
       />
       <div className="px-6 pb-10">

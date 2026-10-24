@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Zap } from "lucide-react";
 import { TAGS } from "../../convex/domain/tags";
 import { useBase, useSession } from "../lib/session";
@@ -15,6 +15,7 @@ import {
 } from "../components/ui";
 import { RecipeCard } from "../components/RecipeCard";
 import { useToggleLike } from "../components/recipes/data";
+import { NewRecipeSheet } from "../components/recipes/NewRecipeSheet";
 import { usePricing, useRecipes } from "../lib/queries";
 import { searchKey } from "../lib/text";
 
@@ -31,10 +32,10 @@ export function RecipesPage() {
   const { memberId } = useSession();
   const pricing = usePricing();
   const toggleLike = useToggleLike();
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState(false);
 
   // View kept in the URL so coming back from a recipe lands on the same tab
   const view: View = params.get("vue") === "decouvrir" ? "discover" : "saved";
@@ -64,7 +65,7 @@ export function RecipesPage() {
     <Button
       size="sm"
       className="rounded-full pr-4 pl-3"
-      onClick={() => navigate("/recette/nouvelle")}
+      onClick={() => setChoosing(true)}
     >
       <Plus size={20} strokeWidth={3} />
       Nouvelle
@@ -175,6 +176,7 @@ export function RecipesPage() {
           text="Toutes les recettes sont déjà dans Nos recettes. Ajoute les tiennes avec « Nouvelle »."
         />
       )}
+      <NewRecipeSheet open={choosing} onClose={() => setChoosing(false)} />
     </Page>
   );
 }
