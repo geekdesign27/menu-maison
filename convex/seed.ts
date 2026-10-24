@@ -124,6 +124,8 @@ export const addStaples = internalMutation({
   handler: async (ctx) => ({ added: await seedStaples(ctx) }),
 });
 
+const RENAMED_RECIPES: Record<string, string> = { "Birchermüesli du soir": "Birchermüesli" };
+
 /**
  * Adds seed recipes missing from an existing deployment (matched by name), when all
  * their ingredients exist. `npx convex run seed:addMissingRecipes`
@@ -131,7 +133,17 @@ export const addStaples = internalMutation({
 export const addMissingRecipes = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const existing = new Set((await ctx.db.query("recipes").collect()).map((r) => r.name));
+    const all = await ctx.db.query("recipes").collect();
+    // Seed recipes renamed since: update the old one in place instead of adding a twin
+    for (const [oldName, newName] of Object.entries(RENAMED_RECIPES)) {
+      const before = all.find((r) => r.name === oldName);
+      const seed = RECIPES.find((r) => r.name === newName);
+      if (before && seed && !all.some((r) => r.name === newName)) {
+        await ctx.db.patch(before._id, { name: seed.name, description: seed.description, tags: seed.tags });
+        before.name = newName;
+      }
+    }
+    const existing = new Set(all.map((r) => r.name));
     const ingredients = new Map((await ctx.db.query("ingredients").collect()).map((i) => [i.name, i._id]));
     const added: string[] = [];
     for (const r of RECIPES) {
