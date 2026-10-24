@@ -51,6 +51,7 @@ function validate(data: {
   tags: string[];
   prepMinutes: number;
   fridgeDays: number;
+  defaultPersons?: number;
   items: { qtyPerPerson: number }[];
   steps: string[];
 }) {
@@ -60,6 +61,7 @@ function validate(data: {
   if (data.tags.length > 20 || data.tags.some((t) => t.length > 40)) throw new ConvexError("Trop de tags ou tag trop long.");
   assertInt(data.prepMinutes, 0, 1440, "Temps de préparation");
   assertInt(data.fridgeDays, 0, 30, "Conservation au frigo");
+  if (data.defaultPersons !== undefined) assertInt(data.defaultPersons, 1, 30, "Nombre de personnes");
   if (data.items.length > 60) throw new ConvexError("60 ingrédients au maximum.");
   for (const i of data.items) assertPositive(i.qtyPerPerson, 100000, "Quantité");
   if (data.steps.length > 50) throw new ConvexError("50 étapes au maximum.");
@@ -76,6 +78,7 @@ const recipeFields = {
   items: v.array(itemValidator),
   steps: v.array(v.string()),
   imageId: v.optional(v.id("_storage")),
+  defaultPersons: v.optional(v.number()),
 };
 
 export const create = mutation({
@@ -109,6 +112,7 @@ export const update = mutation({
       steps: data.steps.map((s) => s.trim()).filter(Boolean),
       // Explicit: a photo removed in the editor is unset (undefined is dropped on the wire)
       imageId: data.imageId,
+      defaultPersons: data.defaultPersons,
     });
   },
 });

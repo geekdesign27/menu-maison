@@ -96,6 +96,7 @@ interface Draft {
   tags: string[];
   prepMinutes: number;
   fridgeDays: number;
+  defaultPersons: number;
   items: ItemDraft[];
   steps: StepDraft[];
   imageId: Id<"_storage"> | null;
@@ -123,6 +124,7 @@ function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
       tags: [],
       prepMinutes: 30,
       fridgeDays: 2,
+      defaultPersons: base.settings.defaultPersons,
       items: [emptyItem()],
       steps: [emptyStep()],
       imageId: null,
@@ -136,6 +138,7 @@ function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
     tags: recipe.tags,
     prepMinutes: recipe.prepMinutes,
     fridgeDays: recipe.fridgeDays,
+    defaultPersons: recipe.defaultPersons ?? base.settings.defaultPersons,
     items: recipe.items.map((i) => ({
       key: newKey(),
       ingredientId: i.ingredientId,
@@ -284,6 +287,7 @@ function RecipeForm({
       tags: draft.tags,
       prepMinutes: draft.prepMinutes,
       fridgeDays: draft.fridgeDays,
+      defaultPersons: draft.defaultPersons,
       items: draft.items
         .filter((i) => !isBlank(i))
         .map((i) => ({
@@ -472,6 +476,21 @@ function RecipeForm({
             onChange={(n) => set("fridgeDays", n)}
             min={0}
             max={FRIDGE_MAX}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-line p-4">
+          <div>
+            <div className="font-extrabold">D'habitude pour</div>
+            <div className="text-[15px] text-muted">
+              {draft.defaultPersons > 1 ? `${draft.defaultPersons}\u00a0personnes` : "1\u00a0personne"}, proposé en planifiant
+            </div>
+          </div>
+          <Stepper
+            label="Personnes d'habitude"
+            value={draft.defaultPersons}
+            onChange={(n) => set("defaultPersons", n)}
+            min={1}
+            max={12}
           />
         </div>
       </Card>

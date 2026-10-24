@@ -60,6 +60,7 @@ export default defineSchema({
     tags: v.array(v.string()),
     prepMinutes: v.number(),
     fridgeDays: v.number(), // how many days leftovers keep in the fridge
+    defaultPersons: v.optional(v.number()), // usual servings (1 for a personal breakfast); else the household default
     // Quantities are per person; the list multiplies by the planned persons
     items: v.array(
       v.object({

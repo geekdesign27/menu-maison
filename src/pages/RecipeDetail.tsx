@@ -80,7 +80,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
   const archive = useMutation(api.recipes.archive);
   const duplicate = useMutation(api.recipes.duplicate);
   const overview = useOverview();
-  const [count, setCount] = useState(base.settings.defaultPersons);
+  const [count, setCount] = useState(recipe.defaultPersons ?? base.settings.defaultPersons);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [taps, setTaps] = useState(0);
 

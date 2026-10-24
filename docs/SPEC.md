@@ -82,6 +82,8 @@ Serveurs de dev via Portly.
   - Photo de recette (`recipes.imageId`, stockage Convex), réduite à 1200 px en JPEG sur
     le téléphone avant l'envoi. Affichée à la place de l'emoji.
   - Dupliquer une recette (« … (copie) », gardée dans Nos recettes, éditeur ouvert).
+  - Nombre de personnes habituel par recette (`recipes.defaultPersons`), proposé en
+    planifiant et sur la fiche (1 pour un petit-déjeuner individuel), sinon le réglage du foyer.
   - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
     5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.

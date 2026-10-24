@@ -73,14 +73,14 @@ function PlanMealForm({
   );
   const alsoTomorrow = tomorrow ?? tomorrowTaken === false;
 
-  const defaultPersons = base?.settings.defaultPersons ?? 3;
-  const effectivePersons = persons ?? defaultPersons;
-  const effectiveTomorrowPersons = tomorrowPersons ?? effectivePersons;
-
   const recipe =
     choice && "recipeId" in choice
       ? recipes?.find((r) => r._id === choice.recipeId)
       : undefined;
+  // The recipe's usual servings (1 for a personal breakfast), else the household default
+  const defaultPersons = recipe?.defaultPersons ?? base?.settings.defaultPersons ?? 3;
+  const effectivePersons = persons ?? defaultPersons;
+  const effectiveTomorrowPersons = tomorrowPersons ?? effectivePersons;
   const warning =
     choice && "recipeId" in choice
       ? repeatWarning(overview?.meals, choice.recipeId, date, today)
@@ -232,6 +232,7 @@ function PlanMealForm({
         allowFreeText
         onPick={(c) => {
           setChoice(c);
+          setPersons(null);
           setPicking(false);
         }}
       />

@@ -49,6 +49,7 @@ export interface SeedRecipe {
   tags: string[];
   prepMinutes: number;
   fridgeDays: number;
+  defaultPersons?: number; // usual servings, e.g. 1 for a personal breakfast
   items: SeedRecipeItem[];
   steps: string[];
 }
@@ -783,6 +784,7 @@ export const RECIPES: SeedRecipe[] = [
     tags: ["Petit-déj", "Suisse", "Express", "Healthy"],
     prepMinutes: 15,
     fridgeDays: 1,
+    defaultPersons: 1,
     items: [
       it("Flocons d'avoine", 50, "g"),
       it("Yogourt nature", 120, "g"),
@@ -1830,6 +1832,7 @@ export const RECIPES: SeedRecipe[] = [
     tags: ["Petit-déj", "Healthy", "Express"],
     prepMinutes: 10,
     fridgeDays: 1,
+    defaultPersons: 1,
     items: [
       it("Flocons d'avoine", 50, "g"),
       it("Lait", 250, "ml"),
@@ -1851,6 +1854,7 @@ export const RECIPES: SeedRecipe[] = [
     tags: ["Petit-déj", "Healthy", "Express"],
     prepMinutes: 5,
     fridgeDays: 1,
+    defaultPersons: 1,
     items: [
       it("Séré", 150, "g"),
       it("Petits fruits rouges", 80, "g"),

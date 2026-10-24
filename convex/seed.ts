@@ -48,6 +48,7 @@ export async function seedIfEmpty(ctx: MutationCtx) {
       tags: r.tags,
       prepMinutes: r.prepMinutes,
       fridgeDays: r.fridgeDays,
+      defaultPersons: r.defaultPersons,
       steps: r.steps,
       items: r.items.map((it) => {
         const ingredientId = ingredientIds.get(it.ingredient);
@@ -143,6 +144,13 @@ export const addMissingRecipes = internalMutation({
         before.name = newName;
       }
     }
+    // Usual servings added to seed recipes later (breakfasts for one)
+    for (const seed of RECIPES) {
+      const current = all.find((r) => r.name === seed.name);
+      if (current && seed.defaultPersons !== undefined && current.defaultPersons === undefined) {
+        await ctx.db.patch(current._id, { defaultPersons: seed.defaultPersons });
+      }
+    }
     const existing = new Set(all.map((r) => r.name));
     const ingredients = new Map((await ctx.db.query("ingredients").collect()).map((i) => [i.name, i._id]));
     const added: string[] = [];
@@ -157,6 +165,7 @@ export const addMissingRecipes = internalMutation({
         tags: r.tags,
         prepMinutes: r.prepMinutes,
         fridgeDays: r.fridgeDays,
+        defaultPersons: r.defaultPersons,
         steps: r.steps,
         items: items.map((i) => ({ ...i, ingredientId: i.ingredientId! })),
         saved: false,
