@@ -8,6 +8,7 @@ import {
 } from "react";
 import { ChevronDown, Minus, Plus, Search, X } from "lucide-react";
 import type { Member } from "../lib/session";
+import { useInGestion } from "../lib/paths";
 
 export function cx(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -21,16 +22,19 @@ export function Page({
   subtitle,
   action,
   back,
+  wide,
   children,
 }: {
   title: string;
   subtitle?: ReactNode;
   action?: ReactNode;
   back?: ReactNode;
+  /** Wider page for the desktop management area. */
+  wide?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-2xl pb-28">
+    <div className={cx("mx-auto pb-28", wide ? "max-w-7xl" : "max-w-2xl")}>
       <header className="pt-safe sticky top-0 z-20 bg-cream/90 backdrop-blur">
         <div className="flex min-h-16 items-center gap-2 px-4 py-2">
           {back}
@@ -461,10 +465,15 @@ export function Sheet({
       document.body.style.overflow = prev;
     };
   }, [open]);
+  // On the desktop management area, sheets open as a side panel on the right
+  const side = useInGestion();
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end justify-center"
+      className={cx(
+        "fixed inset-0 z-40 flex",
+        side ? "justify-end" : "items-end justify-center",
+      )}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -475,7 +484,14 @@ export function Sheet({
         className="absolute inset-0 bg-ink/40"
         onClick={onClose}
       />
-      <div className="animate-sheet pb-safe relative flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-[1.75rem] bg-cream shadow-2xl">
+      <div
+        className={cx(
+          "relative flex w-full flex-col bg-cream shadow-2xl",
+          side
+            ? "animate-panel h-full max-w-lg"
+            : "animate-sheet pb-safe max-h-[92dvh] max-w-2xl rounded-t-[1.75rem]",
+        )}
+      >
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           <h2 className="min-w-0 flex-1 truncate text-xl font-black">
             {title}

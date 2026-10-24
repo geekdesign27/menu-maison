@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider } from "convex/react";
-import { HashRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import "@fontsource-variable/nunito";
 import "./index.css";
 import { convex, convexConfigured } from "./lib/convex";
@@ -26,6 +26,11 @@ import { StoresPage } from "./pages/Stores";
 import { StoreEditorPage } from "./pages/StoreEditor";
 import { SettingsPage } from "./pages/Settings";
 import { ProductsPage } from "./pages/Products";
+import { GestionLayout } from "./gestion/GestionLayout";
+import { RecipesSection } from "./gestion/RecipesSection";
+import { ProductsSection } from "./gestion/ProductsSection";
+import { AislesSection } from "./gestion/AislesSection";
+import { StoresSection } from "./gestion/StoresSection";
 
 function App() {
   if (!convexConfigured) {
@@ -46,6 +51,17 @@ function App() {
               <WeekProvider>
                 <HashRouter>
                   <Routes>
+                    <Route path="/gestion" element={<GestionLayout />}>
+                      <Route index element={<Navigate to="recettes" replace />} />
+                      <Route path="recettes" element={<RecipesSection />} />
+                      <Route path="recette/nouvelle" element={<RecipeEditorPage />} />
+                      <Route path="recette/:id/modifier" element={<RecipeEditorPage />} />
+                      <Route path="produits" element={<ProductsSection />} />
+                      <Route path="rayons" element={<AislesSection />} />
+                      <Route path="magasins" element={<StoresSection />} />
+                      <Route path="magasin/:id" element={<StoreEditorPage />} />
+                      <Route path="*" element={<Navigate to="recettes" replace />} />
+                    </Route>
                     <Route element={<Layout />}>
                       <Route path="/" element={<WeekPage />} />
                       <Route path="/courses" element={<ShoppingPage />} />

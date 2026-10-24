@@ -18,6 +18,7 @@ import { useBase, useSession, type Base } from "../lib/session";
 import { useRun } from "../lib/toast";
 import { minutes } from "../lib/format";
 import { BackButton } from "../components/Layout";
+import { useAppPaths, useInGestion } from "../lib/paths";
 import {
   Button,
   Card,
@@ -193,7 +194,10 @@ export function RecipeEditorPage() {
   const base = useBase();
   const recipes = useRecipes();
   const title = id ? "Modifier la recette" : "Nouvelle recette";
-  const back = <BackButton fallback={id ? `/recette/${id}` : "/recettes"} />;
+  const paths = useAppPaths();
+  const back = (
+    <BackButton fallback={id ? paths.recipeSaved(id) : paths.recipes} />
+  );
 
   if (!base || (id && !recipes)) {
     return (
@@ -238,6 +242,8 @@ function RecipeForm({
   const { token, memberId } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
+  const paths = useAppPaths();
+  const wide = useInGestion();
   const run = useRun();
   const ingredients = useIngredientMap();
   const create = useMutation(api.recipes.create);
@@ -308,14 +314,14 @@ function RecipeForm({
       if (done === undefined) return;
       // Back to the recipe screen we came from, without stacking a duplicate
       if (location.key !== "default") navigate(-1);
-      else navigate(`/recette/${recipeId}`, { replace: true });
+      else navigate(paths.recipeSaved(recipeId), { replace: true });
     } else {
       const newId = await run(
         () => create({ token, memberId: memberId ?? undefined, ...payload }),
         "Recette ajoutée à nos recettes",
       );
       setSaving(false);
-      if (newId) navigate(`/recette/${newId}`, { replace: true });
+      if (newId) navigate(paths.recipeSaved(newId), { replace: true });
     }
   };
 
@@ -326,342 +332,371 @@ function RecipeForm({
   );
 
   return (
-    <Page title={title} back={back} action={saveButton}>
-      {/* Name and emoji */}
-      <div className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className="flex size-20 shrink-0 items-center justify-center rounded-3xl text-5xl"
-          style={{ background: pastelFor(draft.name || "Recette") }}
-        >
-          {draft.emoji || "🍽️"}
-        </span>
-        <div className="min-w-0 flex-1">
-          <TextInput
-            label="Nom du plat"
-            value={draft.name}
-            onChange={(e) => set("name", e.target.value)}
-            placeholder="Ex. Gratin de courge"
-            className="text-lg font-extrabold"
-          />
-        </div>
-      </div>
+    <Page title={title} back={back} action={saveButton} wide={wide}>
+      {/* Two columns on the desktop management area: the dish on the left, what goes in it on the right */}
+      <div
+        className={
+          wide ? "grid items-start gap-x-10 xl:grid-cols-2" : undefined
+        }
+      >
+        <div>
+          {/* Name and emoji */}
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden
+              className="flex size-20 shrink-0 items-center justify-center rounded-3xl text-5xl"
+              style={{ background: pastelFor(draft.name || "Recette") }}
+            >
+              {draft.emoji || "🍽️"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <TextInput
+                label="Nom du plat"
+                value={draft.name}
+                onChange={(e) => set("name", e.target.value)}
+                placeholder="Ex. Gratin de courge"
+                className="text-lg font-extrabold"
+              />
+            </div>
+          </div>
 
-      <SectionTitle>Emoji</SectionTitle>
-      <Card className="p-3">
-        <div className="grid grid-cols-6 gap-1.5">
-          {EMOJIS.map((e) => (
-            <button
-              key={e}
-              type="button"
-              aria-label={`Emoji ${e}`}
-              aria-pressed={draft.emoji === e}
-              onClick={() => set("emoji", e)}
+          <SectionTitle>Emoji</SectionTitle>
+          <Card className="p-3">
+            <div
               className={cx(
-                "flex aspect-square min-h-11 items-center justify-center rounded-2xl text-[26px] transition active:scale-90",
-                draft.emoji === e
-                  ? "bg-carrot-soft ring-2 ring-carrot"
-                  : "active:bg-cream",
+                "grid gap-1.5",
+                wide ? "grid-cols-10" : "grid-cols-6",
               )}
             >
-              {e}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3">
-          <TextInput
-            aria-label="Autre emoji"
-            placeholder="Ou tape un autre emoji"
-            value={EMOJIS.includes(draft.emoji) ? "" : draft.emoji}
-            onChange={(e) => set("emoji", firstGrapheme(e.target.value))}
-          />
-        </div>
-      </Card>
-
-      <PhotoField
-        imageUrl={draft.imageUrl}
-        onChange={(image) => setDraft((d) => ({ ...d, imageId: image?.id ?? null, imageUrl: image?.url ?? null }))}
-      />
-
-      <SectionTitle>Description</SectionTitle>
-      <textarea
-        aria-label="Description"
-        value={draft.description}
-        onChange={(e) => set("description", e.target.value)}
-        rows={2}
-        placeholder="En une phrase, ce qui donne envie"
-        className="w-full rounded-2xl bg-paper px-4 py-3 ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
-      />
-
-      <SectionTitle>Style</SectionTitle>
-      <div className="flex flex-wrap gap-2">
-        {TAGS.map((tag) => {
-          const on = draft.tags.includes(tag);
-          return (
-            <Chip
-              key={tag}
-              selected={on}
-              onClick={() =>
-                set(
-                  "tags",
-                  on
-                    ? draft.tags.filter((t) => t !== tag)
-                    : [...draft.tags, tag],
-                )
-              }
-            >
-              {tag}
-            </Chip>
-          );
-        })}
-      </div>
-
-      <SectionTitle>Temps et conservation</SectionTitle>
-      <Card className="divide-y divide-line">
-        <div className="flex items-center justify-between gap-3 p-4">
-          <div>
-            <div className="font-extrabold">Préparation</div>
-            <div className="text-[15px] text-muted">
-              {minutes(draft.prepMinutes)}
-            </div>
-          </div>
-          <div
-            className="flex items-center gap-1"
-            role="group"
-            aria-label="Temps de préparation"
-          >
-            <IconButton
-              label="Cinq minutes de moins"
-              disabled={draft.prepMinutes <= PREP_STEP}
-              onClick={() =>
-                set(
-                  "prepMinutes",
-                  Math.max(PREP_STEP, draft.prepMinutes - PREP_STEP),
-                )
-              }
-              className="bg-paper ring-1 ring-line"
-            >
-              <Minus size={20} />
-            </IconButton>
-            <span className="min-w-12 text-center text-xl font-black tabular-nums">
-              {draft.prepMinutes}
-            </span>
-            <IconButton
-              label="Cinq minutes de plus"
-              disabled={draft.prepMinutes >= PREP_MAX}
-              onClick={() =>
-                set(
-                  "prepMinutes",
-                  Math.min(PREP_MAX, draft.prepMinutes + PREP_STEP),
-                )
-              }
-              className="bg-paper ring-1 ring-line"
-            >
-              <Plus size={20} />
-            </IconButton>
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3 p-4">
-          <div>
-            <div className="font-extrabold">Au frigo</div>
-            <div className="text-[15px] text-muted">
-              {draft.fridgeDays === 0
-                ? "À manger tout de suite"
-                : `Se garde ${draft.fridgeDays} ${draft.fridgeDays > 1 ? "jours" : "jour"}`}
-            </div>
-          </div>
-          <Stepper
-            label="Jours au frigo"
-            value={draft.fridgeDays}
-            onChange={(n) => set("fridgeDays", n)}
-            min={0}
-            max={FRIDGE_MAX}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-3 border-t border-line p-4">
-          <div>
-            <div className="font-extrabold">D'habitude pour</div>
-            <div className="text-[15px] text-muted">
-              {draft.defaultPersons > 1 ? `${draft.defaultPersons}\u00a0portions` : "1\u00a0portion"}, proposé en planifiant
-            </div>
-          </div>
-          <Stepper
-            label="Portions d'habitude"
-            value={draft.defaultPersons}
-            onChange={(n) => set("defaultPersons", n)}
-            min={1}
-            max={12}
-          />
-        </div>
-      </Card>
-
-      <SectionTitle>Ingrédients</SectionTitle>
-      <div className="mb-3 flex items-start gap-2 rounded-2xl bg-sun-soft p-3 text-[15px] font-bold">
-        <Info
-          size={20}
-          className="mt-0.5 shrink-0 text-[#8a6200]"
-          aria-hidden
-        />
-        <span>
-          Quantités pour 1 portion, l'app multiplie selon le nombre de
-          portions au menu.
-        </span>
-      </div>
-      <div className="space-y-3">
-        {draft.items.map((item, index) => {
-          const ing = item.ingredientId
-            ? ingredients[item.ingredientId]
-            : undefined;
-          // Pieces are always offered (« 1 poivron »): they get their own line on the list
-          const family = compatibleUnits(ing?.unit ?? item.unit);
-          const units = family.includes("pc") ? family : [...family, "pc" as const];
-          return (
-            <Card key={item.key} className="space-y-2 p-3">
-              <div className="flex items-center gap-2">
+              {EMOJIS.map((e) => (
                 <button
+                  key={e}
                   type="button"
-                  onClick={() => setPickerFor(item.key)}
-                  className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-2xl bg-cream px-4 text-left ring-1 ring-line active:bg-carrot-soft"
+                  aria-label={`Emoji ${e}`}
+                  aria-pressed={draft.emoji === e}
+                  onClick={() => set("emoji", e)}
+                  className={cx(
+                    "flex aspect-square min-h-11 items-center justify-center rounded-2xl text-[26px] transition active:scale-90",
+                    draft.emoji === e
+                      ? "bg-carrot-soft ring-2 ring-carrot"
+                      : "active:bg-cream",
+                  )}
                 >
-                  <span
-                    className={cx(
-                      "min-w-0 flex-1 truncate font-extrabold",
-                      !item.ingredientId && "text-muted",
-                    )}
-                  >
-                    {ing?.name ?? (item.name || "Choisir un ingrédient")}
-                  </span>
-                  <ChevronDown size={20} className="shrink-0 text-muted" />
+                  {e}
                 </button>
-                <IconButton
-                  label={`Retirer l'ingrédient ${index + 1}`}
+              ))}
+            </div>
+            <div className="mt-3">
+              <TextInput
+                aria-label="Autre emoji"
+                placeholder="Ou tape un autre emoji"
+                value={EMOJIS.includes(draft.emoji) ? "" : draft.emoji}
+                onChange={(e) => set("emoji", firstGrapheme(e.target.value))}
+              />
+            </div>
+          </Card>
+
+          <PhotoField
+            imageUrl={draft.imageUrl}
+            onChange={(image) =>
+              setDraft((d) => ({
+                ...d,
+                imageId: image?.id ?? null,
+                imageUrl: image?.url ?? null,
+              }))
+            }
+          />
+
+          <SectionTitle>Description</SectionTitle>
+          <textarea
+            aria-label="Description"
+            value={draft.description}
+            onChange={(e) => set("description", e.target.value)}
+            rows={2}
+            placeholder="En une phrase, ce qui donne envie"
+            className="w-full rounded-2xl bg-paper px-4 py-3 ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
+          />
+
+          <SectionTitle>Style</SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {TAGS.map((tag) => {
+              const on = draft.tags.includes(tag);
+              return (
+                <Chip
+                  key={tag}
+                  selected={on}
                   onClick={() =>
                     set(
-                      "items",
-                      draft.items.filter((i) => i.key !== item.key),
+                      "tags",
+                      on
+                        ? draft.tags.filter((t) => t !== tag)
+                        : [...draft.tags, tag],
                     )
                   }
-                  className="text-berry"
                 >
-                  <Trash2 size={20} />
+                  {tag}
+                </Chip>
+              );
+            })}
+          </div>
+
+          <SectionTitle>Temps et conservation</SectionTitle>
+          <Card className="divide-y divide-line">
+            <div className="flex items-center justify-between gap-3 p-4">
+              <div>
+                <div className="font-extrabold">Préparation</div>
+                <div className="text-[15px] text-muted">
+                  {minutes(draft.prepMinutes)}
+                </div>
+              </div>
+              <div
+                className="flex items-center gap-1"
+                role="group"
+                aria-label="Temps de préparation"
+              >
+                <IconButton
+                  label="Cinq minutes de moins"
+                  disabled={draft.prepMinutes <= PREP_STEP}
+                  onClick={() =>
+                    set(
+                      "prepMinutes",
+                      Math.max(PREP_STEP, draft.prepMinutes - PREP_STEP),
+                    )
+                  }
+                  className="bg-paper ring-1 ring-line"
+                >
+                  <Minus size={20} />
+                </IconButton>
+                <span className="min-w-12 text-center text-xl font-black tabular-nums">
+                  {draft.prepMinutes}
+                </span>
+                <IconButton
+                  label="Cinq minutes de plus"
+                  disabled={draft.prepMinutes >= PREP_MAX}
+                  onClick={() =>
+                    set(
+                      "prepMinutes",
+                      Math.min(PREP_MAX, draft.prepMinutes + PREP_STEP),
+                    )
+                  }
+                  className="bg-paper ring-1 ring-line"
+                >
+                  <Plus size={20} />
                 </IconButton>
               </div>
-              <div className="flex gap-2">
-                <input
-                  aria-label={`Quantité pour 1 portion, ingrédient ${index + 1}`}
-                  inputMode="decimal"
-                  value={item.qty}
-                  onChange={(e) => setItem(item.key, { qty: e.target.value })}
-                  placeholder="Quantité"
-                  className="min-h-12 w-32 rounded-2xl bg-paper px-4 font-bold ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
-                />
-                {units.length > 1 ? (
-                  <Select
-                    aria-label={`Unité, ingrédient ${index + 1}`}
-                    value={item.unit}
-                    onChange={(e) =>
-                      setItem(item.key, { unit: e.target.value as Unit })
-                    }
-                    className="font-bold"
-                  >
-                    {units.map((u) => (
-                      <option key={u} value={u}>
-                        {unitChoiceLabel(u)}
-                      </option>
-                    ))}
-                  </Select>
-                ) : (
-                  <span className="flex min-h-12 flex-1 items-center px-2 font-bold text-muted">
-                    {unitChoiceLabel(item.unit)}
-                  </span>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => set("items", [...draft.items, emptyItem()])}
-        >
-          <Plus size={20} />
-          Ajouter un ingrédient
-        </Button>
-      </div>
-
-      <SectionTitle>Préparation</SectionTitle>
-      <div className="space-y-3">
-        {draft.steps.map((step, index) => (
-          <Card key={step.key} className="p-3">
-            <div className="mb-2 flex items-center gap-1">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-carrot font-black text-white">
-                {index + 1}
-              </span>
-              <span className="flex-1 pl-1 font-extrabold">
-                Étape {index + 1}
-              </span>
-              <IconButton
-                label={`Monter l'étape ${index + 1}`}
-                disabled={index === 0}
-                onClick={() => moveStep(index, -1)}
-              >
-                <ArrowUp size={20} />
-              </IconButton>
-              <IconButton
-                label={`Descendre l'étape ${index + 1}`}
-                disabled={index === draft.steps.length - 1}
-                onClick={() => moveStep(index, 1)}
-              >
-                <ArrowDown size={20} />
-              </IconButton>
-              <IconButton
-                label={`Supprimer l'étape ${index + 1}`}
-                onClick={() =>
-                  set(
-                    "steps",
-                    draft.steps.filter((s) => s.key !== step.key),
-                  )
-                }
-                className="text-berry"
-              >
-                <Trash2 size={20} />
-              </IconButton>
             </div>
-            <textarea
-              aria-label={`Texte de l'étape ${index + 1}`}
-              value={step.text}
-              onChange={(e) => setStep(step.key, e.target.value)}
-              rows={3}
-              placeholder="Ce qu'il faut faire"
-              className="w-full rounded-2xl bg-cream px-4 py-3 ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
-            />
+            <div className="flex items-center justify-between gap-3 p-4">
+              <div>
+                <div className="font-extrabold">Au frigo</div>
+                <div className="text-[15px] text-muted">
+                  {draft.fridgeDays === 0
+                    ? "À manger tout de suite"
+                    : `Se garde ${draft.fridgeDays} ${draft.fridgeDays > 1 ? "jours" : "jour"}`}
+                </div>
+              </div>
+              <Stepper
+                label="Jours au frigo"
+                value={draft.fridgeDays}
+                onChange={(n) => set("fridgeDays", n)}
+                min={0}
+                max={FRIDGE_MAX}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-line p-4">
+              <div>
+                <div className="font-extrabold">D'habitude pour</div>
+                <div className="text-[15px] text-muted">
+                  {draft.defaultPersons > 1
+                    ? `${draft.defaultPersons}\u00a0portions`
+                    : "1\u00a0portion"}
+                  , proposé en planifiant
+                </div>
+              </div>
+              <Stepper
+                label="Portions d'habitude"
+                value={draft.defaultPersons}
+                onChange={(n) => set("defaultPersons", n)}
+                min={1}
+                max={12}
+              />
+            </div>
           </Card>
-        ))}
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => set("steps", [...draft.steps, emptyStep()])}
-        >
-          <Plus size={20} />
-          Ajouter une étape
-        </Button>
-      </div>
+        </div>
 
-      <div className="mt-8 space-y-3">
-        {errors.length > 0 && (
-          <div ref={errorRef}>
-            <ErrorBox>
-              <ul className="space-y-1">
-                {errors.map((e) => (
-                  <li key={e}>{e}</li>
-                ))}
-              </ul>
-            </ErrorBox>
+        <div>
+          <SectionTitle>Ingrédients</SectionTitle>
+          <div className="mb-3 flex items-start gap-2 rounded-2xl bg-sun-soft p-3 text-[15px] font-bold">
+            <Info
+              size={20}
+              className="mt-0.5 shrink-0 text-[#8a6200]"
+              aria-hidden
+            />
+            <span>
+              Quantités pour 1 portion, l'app multiplie selon le nombre de
+              portions au menu.
+            </span>
           </div>
-        )}
-        <Button size="lg" onClick={save} disabled={saving}>
-          {saving ? "Enregistrement…" : "Enregistrer la recette"}
-        </Button>
+          <div className="space-y-3">
+            {draft.items.map((item, index) => {
+              const ing = item.ingredientId
+                ? ingredients[item.ingredientId]
+                : undefined;
+              // Pieces are always offered (« 1 poivron »): they get their own line on the list
+              const family = compatibleUnits(ing?.unit ?? item.unit);
+              const units = family.includes("pc")
+                ? family
+                : [...family, "pc" as const];
+              return (
+                <Card key={item.key} className="space-y-2 p-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPickerFor(item.key)}
+                      className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-2xl bg-cream px-4 text-left ring-1 ring-line active:bg-carrot-soft"
+                    >
+                      <span
+                        className={cx(
+                          "min-w-0 flex-1 truncate font-extrabold",
+                          !item.ingredientId && "text-muted",
+                        )}
+                      >
+                        {ing?.name ?? (item.name || "Choisir un ingrédient")}
+                      </span>
+                      <ChevronDown size={20} className="shrink-0 text-muted" />
+                    </button>
+                    <IconButton
+                      label={`Retirer l'ingrédient ${index + 1}`}
+                      onClick={() =>
+                        set(
+                          "items",
+                          draft.items.filter((i) => i.key !== item.key),
+                        )
+                      }
+                      className="text-berry"
+                    >
+                      <Trash2 size={20} />
+                    </IconButton>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      aria-label={`Quantité pour 1 portion, ingrédient ${index + 1}`}
+                      inputMode="decimal"
+                      value={item.qty}
+                      onChange={(e) =>
+                        setItem(item.key, { qty: e.target.value })
+                      }
+                      placeholder="Quantité"
+                      className="min-h-12 w-32 rounded-2xl bg-paper px-4 font-bold ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
+                    />
+                    {units.length > 1 ? (
+                      <Select
+                        aria-label={`Unité, ingrédient ${index + 1}`}
+                        value={item.unit}
+                        onChange={(e) =>
+                          setItem(item.key, { unit: e.target.value as Unit })
+                        }
+                        className="font-bold"
+                      >
+                        {units.map((u) => (
+                          <option key={u} value={u}>
+                            {unitChoiceLabel(u)}
+                          </option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <span className="flex min-h-12 flex-1 items-center px-2 font-bold text-muted">
+                        {unitChoiceLabel(item.unit)}
+                      </span>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => set("items", [...draft.items, emptyItem()])}
+            >
+              <Plus size={20} />
+              Ajouter un ingrédient
+            </Button>
+          </div>
+
+          <SectionTitle>Préparation</SectionTitle>
+          <div className="space-y-3">
+            {draft.steps.map((step, index) => (
+              <Card key={step.key} className="p-3">
+                <div className="mb-2 flex items-center gap-1">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-carrot font-black text-white">
+                    {index + 1}
+                  </span>
+                  <span className="flex-1 pl-1 font-extrabold">
+                    Étape {index + 1}
+                  </span>
+                  <IconButton
+                    label={`Monter l'étape ${index + 1}`}
+                    disabled={index === 0}
+                    onClick={() => moveStep(index, -1)}
+                  >
+                    <ArrowUp size={20} />
+                  </IconButton>
+                  <IconButton
+                    label={`Descendre l'étape ${index + 1}`}
+                    disabled={index === draft.steps.length - 1}
+                    onClick={() => moveStep(index, 1)}
+                  >
+                    <ArrowDown size={20} />
+                  </IconButton>
+                  <IconButton
+                    label={`Supprimer l'étape ${index + 1}`}
+                    onClick={() =>
+                      set(
+                        "steps",
+                        draft.steps.filter((s) => s.key !== step.key),
+                      )
+                    }
+                    className="text-berry"
+                  >
+                    <Trash2 size={20} />
+                  </IconButton>
+                </div>
+                <textarea
+                  aria-label={`Texte de l'étape ${index + 1}`}
+                  value={step.text}
+                  onChange={(e) => setStep(step.key, e.target.value)}
+                  rows={3}
+                  placeholder="Ce qu'il faut faire"
+                  className="w-full rounded-2xl bg-cream px-4 py-3 ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
+                />
+              </Card>
+            ))}
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => set("steps", [...draft.steps, emptyStep()])}
+            >
+              <Plus size={20} />
+              Ajouter une étape
+            </Button>
+          </div>
+
+          <div className="mt-8 space-y-3">
+            {errors.length > 0 && (
+              <div ref={errorRef}>
+                <ErrorBox>
+                  <ul className="space-y-1">
+                    {errors.map((e) => (
+                      <li key={e}>{e}</li>
+                    ))}
+                  </ul>
+                </ErrorBox>
+              </div>
+            )}
+            <Button size="lg" onClick={save} disabled={saving}>
+              {saving ? "Enregistrement…" : "Enregistrer la recette"}
+            </Button>
+          </div>
+        </div>
       </div>
 
       <IngredientPicker

@@ -16,6 +16,7 @@ import { orderAisles } from "../../convex/domain/shopping";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun } from "../lib/toast";
 import { BackButton } from "../components/Layout";
+import { useAppPaths } from "../lib/paths";
 import {
   Button,
   Card,
@@ -47,11 +48,12 @@ export function StoreEditorPage() {
   const { id } = useParams();
   const base = useBase();
   const store = base?.stores.find((s) => s._id === id);
+  const paths = useAppPaths();
   return (
     <Page
       title={store?.name ?? "Magasin"}
       subtitle={store ? `Enseigne ${store.chain}` : undefined}
-      back={<BackButton fallback="/magasins" />}
+      back={<BackButton fallback={paths.stores} />}
     >
       {!base ? (
         <Loading />
@@ -72,6 +74,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
   const { token } = useSession();
   const run = useRun();
   const navigate = useNavigate();
+  const paths = useAppPaths();
   const update = useUpdateStore();
   const setOverride = useMutation(api.catalog.setOverride);
   const [name, setName] = useState(store.name);
@@ -324,7 +327,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
         confirmLabel="Archiver"
         danger
         onConfirm={async () => {
-          navigate("/magasins", { replace: true });
+          navigate(paths.stores, { replace: true });
           await run(
             () => update({ token, id: store._id, archived: true }),
             `${store.name} est archivé.`,

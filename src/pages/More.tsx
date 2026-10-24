@@ -65,6 +65,23 @@ export function MorePage() {
           </button>
         </Card>
       )}
+      <Link to="/gestion" className="mb-3 hidden md:block">
+        <Card className="flex items-center gap-4 bg-carrot-soft p-4">
+          <span
+            className="flex size-12 items-center justify-center rounded-2xl bg-paper text-2xl"
+            aria-hidden
+          >
+            🖥️
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-lg font-black">Gestion sur ordinateur</div>
+            <div className="text-[15px] text-muted">
+              Tableaux des recettes, produits, rayons et magasins
+            </div>
+          </div>
+          <ChevronRight className="text-muted" />
+        </Card>
+      </Link>
       <div className="grid gap-3">
         {LINKS.map((l) => (
           <Link key={l.to} to={l.to}>

@@ -30,8 +30,9 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
    hors recette dans une seule liste, recherche, filtres (type, rayon, enseigne, sans prix,
    sans photo), modification par les fiches existantes, suppression d'un ingrédient
    seulement si aucune recette (archivées comprises) ne l'utilise.
-2. **Lot 2, gestion sur ordinateur** (`/gestion`) : même code famille, mise en page large,
-   tableaux triables (recettes, produits, rayons, magasins), édition dans un panneau.
+2. **Lot 2, gestion sur ordinateur** (`/gestion`, onglet visible sur grand écran) : même
+   code famille, menu latéral, tableaux triables (recettes, produits, rayons, magasins).
+   Les fiches s'ouvrent en panneau à droite ; l'éditeur de recette passe sur deux colonnes.
 3. **Lot 3, Open Food Facts** : chercher un produit depuis l'éditeur de recette ou la fiche
    d'un produit, importer photo, allergènes et nutrition. L'ingrédient reste générique
    (« Spaghetti ») et achetable partout : ni marque ni enseigne imposée. Pas de doublon
@@ -148,6 +149,7 @@ Serveurs de dev via Portly.
   magasin, articles avec quantité totale, recettes d'origine, coût estimé, clé de coche).
 - `leftovers.ts` : `leftoverStatus(cookedOn, fridgeDays, today)`.
 - `stats.ts` : fréquences, dernière fois, alertes de répétition.
+- `sort.ts` : tri des tableaux de la gestion (ordre français, cases vides en dernier).
 - `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
   refus de suppression.
 

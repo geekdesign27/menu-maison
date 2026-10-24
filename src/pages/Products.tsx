@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { ChevronRight, Plus } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -16,6 +16,7 @@ import { useBase, useSession, type Base } from "../lib/session";
 import { useRun, useToast } from "../lib/toast";
 import { formatChf, plural } from "../lib/format";
 import { amountLabel } from "../lib/units";
+import { useInGestion } from "../lib/paths";
 import { BackButton } from "../components/Layout";
 import {
   Badge,
@@ -37,7 +38,11 @@ import { IngredientSheet } from "../components/shopping/IngredientSheet";
 import { StapleSheet } from "../components/shopping/StapleSheet";
 
 type Data = FunctionReturnType<typeof api.products.list>;
-type Row = Product<Data["ingredients"][number], Data["staples"][number]>;
+export type ProductRowData = Product<
+  Data["ingredients"][number],
+  Data["staples"][number]
+>;
+type Row = ProductRowData;
 
 // "" = every aisle, "none" = items without aisle (« Divers »)
 type AisleFilter = Id<"aisles"> | "" | "none";
@@ -49,15 +54,32 @@ type Editing =
   | { kind: "newStaple" }
   | null;
 
-export function ProductsPage() {
-  const base = useBase();
+/** Every ingredient and usual item, live, as « Produits » rows (null while loading). */
+export function useProductRows(): Row[] | null {
   const { token } = useSession();
   const data = useQuery(api.products.list, token ? { token } : "skip");
-  const rows = useMemo(
+  return useMemo(
     () =>
       data ? buildProducts(data.ingredients, data.staples, data.recipes) : null,
     [data],
   );
+}
+
+/** « CHF 3.50 pour 1000 g », « CHF 6.00 l'article » or « Pas de prix ». */
+export function productPriceText(p: Row): string {
+  if (
+    p.ingredient?.priceChf !== undefined &&
+    p.ingredient.priceQty !== undefined
+  )
+    return `${formatChf(p.ingredient.priceChf)} pour ${amountLabel(p.ingredient.priceQty, p.ingredient.unit)}`;
+  if (p.staple?.priceChf !== undefined)
+    return `${formatChf(p.staple.priceChf)} l'article`;
+  return "Pas de prix";
+}
+
+export function ProductsPage() {
+  const base = useBase();
+  const rows = useProductRows();
   return (
     <Page
       title="Produits"
@@ -69,7 +91,19 @@ export function ProductsPage() {
   );
 }
 
-function ProductsContent({ base, rows }: { base: Base; rows: Row[] }) {
+/**
+ * Filters, list and editing sheets of the products. `renderRows` swaps the phone
+ * list for another view (the table of /gestion); `open` starts editing a row.
+ */
+export function ProductsContent({
+  base,
+  rows,
+  renderRows,
+}: {
+  base: Base;
+  rows: Row[];
+  renderRows?: (shown: Row[], open: (p: Row) => void) => ReactNode;
+}) {
   const { token } = useSession();
   const run = useRun();
   const toast = useToast();
@@ -100,6 +134,7 @@ function ProductsContent({ base, rows }: { base: Base; rows: Row[] }) {
   const toggleMissing = (what: Missing) =>
     setMissing(missing === what ? null : what);
   const close = () => setEditing(null);
+  const wide = useInGestion();
 
   const editedIngredient =
     editing?.kind === "ingredient" && editing.id
@@ -110,6 +145,13 @@ function ProductsContent({ base, rows }: { base: Base; rows: Row[] }) {
       ? rows.find((p) => p.staple?._id === editing.id)
       : undefined;
 
+  const open = (p: Row) =>
+    setEditing(
+      p.ingredient
+        ? { kind: "ingredient", id: p.ingredient._id }
+        : { kind: "staple", id: p.staple!._id },
+    );
+
   const askDelete = (row: Row) => {
     const blocker =
       row.kind === "ingredient" ? deletionBlocker(row.recipes) : null;
@@ -117,9 +159,28 @@ function ProductsContent({ base, rows }: { base: Base; rows: Row[] }) {
     else setDeleting(row);
   };
 
+  const addButtons = (
+    <div className={wide ? "flex justify-end gap-2" : "mt-4 grid gap-2 sm:grid-cols-2"}>
+      <Button
+        variant={wide ? "primary" : "secondary"}
+        onClick={() => setEditing({ kind: "ingredient" })}
+      >
+        <Plus size={20} /> Ingrédient de recette
+      </Button>
+      <Button
+        variant={wide ? "primary" : "secondary"}
+        onClick={() => setEditing({ kind: "newStaple" })}
+      >
+        <Plus size={20} /> Article hors recette
+      </Button>
+    </div>
+  );
+
   return (
     <>
-      <div className="grid gap-3">
+      {/* On the desktop management area, filters fit on two lines and adding comes first */}
+      {wide && <div className="mb-4">{addButtons}</div>}
+      <div className={wide ? "grid gap-3 lg:grid-cols-2" : "grid gap-3"}>
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -190,6 +251,8 @@ function ProductsContent({ base, rows }: { base: Base; rows: Row[] }) {
               : "Ajoute un premier produit."
           }
         />
+      ) : renderRows ? (
+        renderRows(shown, open)
       ) : (
         <Card className="mt-4 overflow-hidden">
           <ul className="divide-y divide-line">
@@ -198,13 +261,7 @@ function ProductsContent({ base, rows }: { base: Base; rows: Row[] }) {
                 <ProductRow
                   product={p}
                   aisle={p.aisleId ? aisleById.get(p.aisleId) : undefined}
-                  onClick={() =>
-                    setEditing(
-                      p.ingredient
-                        ? { kind: "ingredient", id: p.ingredient._id }
-                        : { kind: "staple", id: p.staple!._id },
-                    )
-                  }
+                  onClick={() => open(p)}
                 />
               </li>
             ))}
@@ -212,20 +269,7 @@ function ProductsContent({ base, rows }: { base: Base; rows: Row[] }) {
         </Card>
       )}
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <Button
-          variant="secondary"
-          onClick={() => setEditing({ kind: "ingredient" })}
-        >
-          <Plus size={20} /> Ingrédient de recette
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => setEditing({ kind: "newStaple" })}
-        >
-          <Plus size={20} /> Article hors recette
-        </Button>
-      </div>
+      {!wide && addButtons}
 
       {editing?.kind === "ingredient" && (
         <IngredientSheet
@@ -289,14 +333,7 @@ function ProductRow({
   const source = p.ingredient ?? p.staple!;
   const chains = (source.onlyChains ?? []) as Chain[];
   const used = p.recipes.filter((r) => !r.archived).length;
-  let price = "Pas de prix";
-  if (
-    p.ingredient?.priceChf !== undefined &&
-    p.ingredient.priceQty !== undefined
-  )
-    price = `${formatChf(p.ingredient.priceChf)} pour ${amountLabel(p.ingredient.priceQty, p.ingredient.unit)}`;
-  else if (p.staple?.priceChf !== undefined)
-    price = `${formatChf(p.staple.priceChf)} l'article`;
+  const price = productPriceText(p);
 
   return (
     <button

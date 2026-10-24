@@ -8,6 +8,7 @@ import { useBase, useSession } from "../lib/session";
 import { useRun } from "../lib/toast";
 import { plural } from "../lib/format";
 import { BackButton } from "../components/Layout";
+import { useAppPaths } from "../lib/paths";
 import {
   Badge,
   Button,
@@ -131,7 +132,7 @@ export function StoresPage() {
   );
 }
 
-function AddStoreSheet({
+export function AddStoreSheet({
   stores,
   onClose,
 }: {
@@ -141,6 +142,7 @@ function AddStoreSheet({
   const { token } = useSession();
   const run = useRun();
   const navigate = useNavigate();
+  const paths = useAppPaths();
   const createStore = useMutation(api.catalog.createStore);
   const [chain, setChain] = useState<Chain>("Aldi");
   const [name, setName] = useState("");
@@ -162,7 +164,7 @@ function AddStoreSheet({
       "Magasin ajouté.",
     );
     setBusy(false);
-    if (id) navigate(`/magasin/${id}`);
+    if (id) navigate(paths.store(id));
   };
 
   return (

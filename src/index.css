@@ -89,3 +89,16 @@ input[type="search"]::-webkit-search-cancel-button {
 .animate-pop {
   animation: pop 0.25s ease-out;
 }
+
+@keyframes panel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-panel {
+  animation: panel-in 0.2s ease-out;
+}

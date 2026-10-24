@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ChevronLeft,
   LayoutGrid,
+  MonitorCog,
   Refrigerator,
   ShoppingCart,
 } from "lucide-react";
@@ -15,6 +16,8 @@ const TABS = [
   { to: "/recettes", label: "Recettes", icon: BookHeart },
   { to: "/frigo", label: "Frigo", icon: Refrigerator },
   { to: "/plus", label: "Plus", icon: LayoutGrid },
+  // Wide screens only: the management area is built for a computer
+  { to: "/gestion", label: "Gestion", icon: MonitorCog, desktopOnly: true },
 ];
 
 export function Layout() {
@@ -28,8 +31,8 @@ export function Layout() {
         className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 backdrop-blur"
       >
         <ul className="mx-auto flex max-w-2xl">
-          {TABS.map(({ to, label, icon: Icon, end }) => (
-            <li key={to} className="flex-1">
+          {TABS.map(({ to, label, icon: Icon, end, desktopOnly }) => (
+            <li key={to} className={cx("flex-1", desktopOnly && "hidden lg:block")}>
               <NavLink
                 to={to}
                 end={end}
