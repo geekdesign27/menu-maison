@@ -68,8 +68,12 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
    ligne d'origine sous chaque ingrédient. Photo du site importée (JPEG, PNG, WebP,
    4 Mo max), lien d'origine gardé (`recipes.sourceUrl`) et affiché sur la recette.
    Sécurité : https seulement, ni IP, ni nom local, ni port ; redirections revérifiées.
-2. **Lot 2, dicter une recette** : bouton micro, audio transcrit par Groq Whisper
-   large-v3 (offre gratuite, clé `GROQ_API_KEY`), puis même brouillon que le lot 1.
+2. **Lot 2, dicter une recette** (même écran « Dicter ou importer ») : gros bouton micro,
+   5 minutes au plus, « Terminer » ou « Annuler ». L'audio passe par le stockage Convex,
+   est transcrit en français par Groq Whisper large-v3 (offre gratuite, clé
+   `GROQ_API_KEY`) puis supprimé aussitôt. Le texte s'affiche dans le champ (corrigeable
+   si la préparation échoue) et donne le même brouillon que le lot 1. Seul l'audio part
+   chez Groq ; seule la taille est écrite dans les logs.
 3. **Lot 3, articles habituels** : page à part dans « Plus », tous les articles, fiches
    complètes, ajout aux courses en un tap.
 4. **Lot 4, dépenses** : tickets enregistrés (date, enseigne, total, lignes avec rayon),

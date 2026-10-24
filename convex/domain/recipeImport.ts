@@ -82,6 +82,31 @@ export function imageTypeOf(
   return null;
 }
 
+// ---------- Dictation ----------
+
+/** Five minutes of phone audio stay far below this; Groq accepts 25 MB. */
+export const MAX_AUDIO_BYTES = 20_000_000;
+
+const AUDIO_EXTENSIONS: Record<string, string> = {
+  "audio/mp4": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/aac": "m4a",
+  "audio/webm": "webm",
+  "audio/ogg": "ogg",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+};
+
+/**
+ * File name the transcription service needs to know the format, from the
+ * recorder's type (« audio/webm;codecs=opus »). null for anything else.
+ */
+export function audioFileName(type: string): string | null {
+  const ext = AUDIO_EXTENSIONS[type.split(";")[0].trim().toLowerCase()];
+  return ext ? `dictee.${ext}` : null;
+}
+
 // ---------- Recipe page ----------
 
 /** Recipe as published by a site in its schema.org data (JSON-LD). */

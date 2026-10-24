@@ -5,9 +5,9 @@ import { Card, Sheet } from "../ui";
 const CHOICES = [
   {
     to: "/recette/importer",
-    emoji: "🔗",
-    title: "Importer un lien ou un texte",
-    text: "Fooby, Betty Bossi, Marmiton… ou une recette copiée",
+    emoji: "🎙️",
+    title: "Dicter ou importer",
+    text: "Raconte la recette, ou colle un lien Fooby, Marmiton… ou un texte",
   },
   {
     to: "/recette/nouvelle",
@@ -17,7 +17,7 @@ const CHOICES = [
   },
 ];
 
-/** How to add a recipe: import it or write it. */
+/** How to add a recipe: dictate or import it, or write it. */
 export function NewRecipeSheet({
   open,
   onClose,

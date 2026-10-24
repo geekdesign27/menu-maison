@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  audioFileName,
   buildDraft,
   checkPublicUrl,
   classifyInput,
@@ -71,6 +72,15 @@ describe("checkPublicUrl", () => {
     "pas un lien",
   ])("refuses %s", (url) => {
     expect(() => checkPublicUrl(url)).toThrow();
+  });
+});
+
+describe("audioFileName", () => {
+  it("names the recording after its format", () => {
+    expect(audioFileName("audio/mp4")).toBe("dictee.m4a");
+    expect(audioFileName("audio/webm;codecs=opus")).toBe("dictee.webm");
+    expect(audioFileName("image/jpeg")).toBeNull();
+    expect(audioFileName("")).toBeNull();
   });
 });
 

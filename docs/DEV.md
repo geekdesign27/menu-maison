@@ -15,6 +15,11 @@ Lecture des tickets et import de recettes : clé Anthropic `ANTHROPIC_API_KEY` d
 dans le dépôt. Copier la clé puis, sans la taper :
 `pbpaste | CONVEX_AGENT_MODE=anonymous npx convex env set ANTHROPIC_API_KEY` (local) et
 `pbpaste | npx convex env set ANTHROPIC_API_KEY --deployment pierre-alain-schutz:menu-maison:production`.
+
+Dictée des recettes : clé Groq `GROQ_API_KEY` (console.groq.com, offre gratuite, sans carte),
+même méthode : `pbpaste | CONVEX_AGENT_MODE=anonymous npx convex env set GROQ_API_KEY` (local) et
+`pbpaste | npx convex env set GROQ_API_KEY --deployment pierre-alain-schutz:menu-maison:production`.
+En place depuis le 2026-10-24.
 Sans clé, l'écran de scan l'indique clairement. Les tokens de chaque lecture sont journalisés.
 
 Au premier code famille correct, le backend se remplit tout seul (profils, rayons,

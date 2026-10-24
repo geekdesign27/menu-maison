@@ -10,7 +10,9 @@ import {
   buildDraft,
   checkPublicUrl,
   extractOgImage,
+  audioFileName,
   extractPageRecipe,
+  MAX_AUDIO_BYTES,
   imageTypeOf,
   classifyInput,
   pageRecipeText,
@@ -31,7 +33,9 @@ const PHOTO_GRACE_MS = 24 * 60 * 60 * 1000;
 const UNREACHABLE =
   "Cette page ne répond pas. Vérifie le lien ou réessaie plus tard.";
 
-const SYSTEM = `Tu transformes une recette (fiche d'un site de recettes ou texte libre) en brouillon pour une application familiale suisse romande de menus et de courses.
+const SYSTEM = `Tu transformes une recette (fiche d'un site de recettes, texte libre ou dictée orale transcrite) en brouillon pour une application familiale suisse romande de menus et de courses.
+
+Une dictée est parlée : ignore les hésitations, répétitions et remarques hors recette, et remets les étapes dans l'ordre de la préparation.
 
 Recette :
 - Tout en français, traduis si la source est dans une autre langue. Typographie suisse romande, jamais de tiret cadratin ni demi-cadratin.
@@ -104,6 +108,13 @@ const SCHEMA = {
   ],
   additionalProperties: false,
 };
+
+export const checkSession = internalQuery({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await assertSession(ctx, token);
+  },
+});
 
 export const catalog = internalQuery({
   args: { token: v.string() },
@@ -236,6 +247,93 @@ export const dropUnusedPhoto = internalMutation({
   handler: async (ctx, { imageId }) => {
     const recipes = await ctx.db.query("recipes").collect();
     if (!recipes.some((r) => r.imageId === imageId)) await ctx.storage.delete(imageId);
+  },
+});
+
+const GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
+// Words Whisper should expect, so quantities come out as written in a recipe
+const DICTATION_HINT =
+  "Recette de cuisine. Ingrédients : 200 g de farine, 3 dl de lait, 2 cuillères à soupe d'huile d'olive, une pincée de sel.";
+
+/**
+ * Turns a dictated recipe, uploaded to storage just before, into text with
+ * Groq Whisper. The recording is deleted right away, whatever happens.
+ */
+export const transcribe = action({
+  args: { token: v.string(), audioId: v.id("_storage") },
+  handler: async (ctx, { token, audioId }): Promise<{ text: string }> => {
+    // Type and size are read from the metadata, before loading anything in memory
+    const meta = await ctx.runQuery(internal.recipeImport.audioMeta, { token, audioId });
+    if (!meta) throw new ConvexError("Enregistrement introuvable, recommence la dictée.");
+    const name = audioFileName(meta.contentType ?? "");
+    // Only a recording is accepted: any other stored file (a photo) is left untouched
+    if (!name) throw new ConvexError("Ce fichier n'est pas un enregistrement audio.");
+    try {
+      if (meta.size > MAX_AUDIO_BYTES) throw new ConvexError("Dictée trop longue, 5 minutes au plus.");
+      const apiKey = process.env.GROQ_API_KEY;
+      if (!apiKey) throw new ConvexError("La dictée n'est pas encore configurée (clé GROQ_API_KEY manquante).");
+      const audio = await ctx.storage.get(audioId);
+      if (!audio) throw new ConvexError("Enregistrement introuvable, recommence la dictée.");
+      const form = new FormData();
+      form.append("file", audio, name);
+      form.append("model", "whisper-large-v3");
+      form.append("language", "fr");
+      form.append("response_format", "json");
+      form.append("temperature", "0");
+      form.append("prompt", DICTATION_HINT);
+      let response: Response;
+      try {
+        response = await fetch(GROQ_URL, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: form,
+          signal: AbortSignal.timeout(60_000),
+        });
+      } catch {
+        throw new ConvexError("La transcription ne répond pas. Réessaie dans un moment.");
+      }
+      if (response.status === 401) throw new ConvexError("La clé GROQ_API_KEY est refusée par Groq.");
+      if (response.status === 429)
+        throw new ConvexError("Trop de dictées pour aujourd'hui ou en même temps. Réessaie plus tard.");
+      if (response.status === 413) throw new ConvexError("Dictée trop longue, 5 minutes au plus.");
+      if (!response.ok) throw new ConvexError("La transcription a échoué. Réessaie dans un moment.");
+      const body = (await response.json().catch(() => null)) as { text?: unknown } | null;
+      const text = typeof body?.text === "string" ? body.text.trim() : "";
+      // Sizes only, never the words, to follow the use of the free quota in the Convex logs
+      console.log("dictation", JSON.stringify({ bytes: meta.size, chars: text.length }));
+      if (!text) throw new ConvexError("Je n'ai rien entendu. Parle près du téléphone et réessaie.");
+      return { text: text.slice(0, 20_000) };
+    } finally {
+      // A failed delete must not hide the result; the hourly purge catches it
+      await ctx.storage.delete(audioId).catch(() => {});
+    }
+  },
+});
+
+export const audioMeta = internalQuery({
+  args: { token: v.string(), audioId: v.id("_storage") },
+  handler: async (ctx, { token, audioId }) => {
+    await assertSession(ctx, token);
+    return ctx.db.system.get(audioId);
+  },
+});
+
+const AUDIO_MAX_AGE_MS = 30 * 60 * 1000;
+
+/** Recordings never transcribed (app closed, network lost) are deleted within the hour. */
+export const purgeAudio = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const limit = Date.now() - AUDIO_MAX_AGE_MS;
+    const files = await ctx.db.system.query("_storage").collect();
+    let purged = 0;
+    for (const f of files) {
+      if (f.contentType?.startsWith("audio/") && f._creationTime < limit) {
+        await ctx.storage.delete(f._id);
+        purged++;
+      }
+    }
+    return { purged };
   },
 });
 

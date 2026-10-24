@@ -9,4 +9,10 @@ crons.daily(
   internal.access.purgeExpired,
 );
 
+crons.hourly(
+  "purge unused dictations",
+  { minuteUTC: 20 },
+  internal.recipeImport.purgeAudio,
+);
+
 export default crons;
