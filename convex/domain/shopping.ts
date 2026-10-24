@@ -31,6 +31,7 @@ export interface ShoppingInput {
       pantry?: boolean; // usually in stock at home
       packSize?: number; // bought by the pack: content of one pack, in `unit`
       onlyChains?: string[]; // sold only by these chains (e.g. ["Coop"])
+      imageUrl?: string | null; // photo of the exact product
     }
   >;
   aisles: { _id: string; name: string; emoji: string; order: number }[];
@@ -48,6 +49,7 @@ export interface ShoppingInput {
     aisleId?: string;
     priceChf?: number; // price of one item (usual items)
     onlyChains?: string[];
+    imageUrl?: string | null;
   }[];
   checks: Record<string, boolean>; // itemKey → checked
   /** Item keys the family already has at home this week: kept out of the list. */
@@ -69,6 +71,7 @@ export interface ShoppingItem {
   packs?: number; // whole packs to buy, when the ingredient is bought by the pack
   packDetail?: string; // « ≈ 14 tranches »: what the recipes need, shown under the label
   onlyChains?: string[];
+  imageUrl?: string; // photo of the exact product, to recognise it on the shelf
 }
 
 export interface ShoppingSection {
@@ -270,6 +273,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       ingredientId: entry.ingredientId,
       pantry: ing.pantry ?? false,
       onlyChains: ing.onlyChains?.length ? ing.onlyChains : undefined,
+      imageUrl: ing.imageUrl ?? undefined,
     };
     if (skippedKeys.has(key)) skipped.push(item);
     else push(overrides.get(entry.ingredientId) ?? ing.aisleId, item);
@@ -294,6 +298,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       extra: true,
       pantry: false,
       onlyChains: extra.onlyChains?.length ? extra.onlyChains : undefined,
+      imageUrl: extra.imageUrl ?? undefined,
     });
   }
 

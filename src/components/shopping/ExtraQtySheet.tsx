@@ -12,9 +12,11 @@ import { Button, Sheet, Stepper } from "../ui";
 export function ExtraQtySheet({
   item,
   onClose,
+  onRemove,
 }: {
   item: ShoppingItem;
   onClose: () => void;
+  onRemove: () => void;
 }) {
   const { token } = useSession();
   const run = useRun();
@@ -62,6 +64,16 @@ export function ExtraQtySheet({
           Sans quantité
         </button>
       )}
+      <button
+        type="button"
+        onClick={() => {
+          onRemove();
+          onClose();
+        }}
+        className="mt-2 block min-h-11 rounded-2xl px-3 font-extrabold text-berry active:bg-berry-soft"
+      >
+        Retirer de la liste
+      </button>
     </Sheet>
   );
 }

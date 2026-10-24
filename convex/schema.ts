@@ -56,6 +56,7 @@ export default defineSchema({
     // Bought by the pack: how much of `unit` one pack holds (8 slices, 200 g…)
     packSize: v.optional(v.number()),
     onlyChains: v.optional(v.array(chainValidator)), // sold only by these chains (julienne: Coop)
+    imageId: v.optional(v.id("_storage")), // photo of the exact product to buy
   }).index("by_name", ["name"]),
 
   recipes: defineTable({
@@ -173,6 +174,7 @@ export default defineSchema({
     unit: v.optional(unitValidator),
     priceChf: v.optional(v.number()), // price of one item
     onlyChains: v.optional(v.array(chainValidator)),
+    imageId: v.optional(v.id("_storage")), // photo of the exact product to buy
   }).index("by_name", ["name"]),
 
   /** Items already at home for a shopping week: kept out of the list. */

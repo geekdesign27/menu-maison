@@ -106,6 +106,9 @@ Serveurs de dev via Portly.
     ou restes cuisinés au plus tard ce jour-là et encore bons à cette date. Choisis, ils
     sont pris du frigo (`planLeftover`), sans courses. Les portions déjà placées sont
     déduites quand on modifie les portions en plus ou le statut d'un plat.
+  - Photo du produit exact (`staples.imageId`, `ingredients.imageId`, 800 px) dans les fiches
+    d'article habituel et d'ingrédient ; vignette sur la liste de courses, agrandie au tap.
+    La suppression d'un article libre passe par « ⋯ » (« Retirer de la liste »).
   - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
     5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.

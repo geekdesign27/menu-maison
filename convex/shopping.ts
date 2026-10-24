@@ -59,7 +59,11 @@ export const list = query({
       })),
       period: { start, end },
       recipes,
-      ingredients: Object.fromEntries(ingredients.map((i) => [i._id, i])),
+      ingredients: Object.fromEntries(
+        await Promise.all(
+          ingredients.map(async (i) => [i._id, { ...i, imageUrl: i.imageId ? await ctx.storage.getUrl(i.imageId) : null }] as const),
+        ),
+      ),
       aisles,
       store: store && {
         chain: store.chain,
@@ -72,7 +76,14 @@ export const list = query({
         extras.map(async (e) => {
           const staple = e.stapleId ? await ctx.db.get(e.stapleId) : null;
           return staple
-            ? { ...e, label: staple.name, aisleId: staple.aisleId ?? e.aisleId, priceChf: staple.priceChf, onlyChains: staple.onlyChains }
+            ? {
+                ...e,
+                label: staple.name,
+                aisleId: staple.aisleId ?? e.aisleId,
+                priceChf: staple.priceChf,
+                onlyChains: staple.onlyChains,
+                imageUrl: staple.imageId ? await ctx.storage.getUrl(staple.imageId) : null,
+              }
             : e;
         }),
       ),

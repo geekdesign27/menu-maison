@@ -97,7 +97,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
       aisle: aisleById.get(o.aisleId),
     }))
     .filter(
-      (e): e is { ingredient: Doc<"ingredients">; aisle: Doc<"aisles"> } =>
+      (e): e is { ingredient: NonNullable<typeof e.ingredient>; aisle: NonNullable<typeof e.aisle> } =>
         !!e.ingredient && !!e.aisle,
     )
     .sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name, "fr"));

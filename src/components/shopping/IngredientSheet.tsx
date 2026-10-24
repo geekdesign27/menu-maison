@@ -9,6 +9,7 @@ import { useRun, useToast } from "../../lib/toast";
 import { Button, Select, Sheet, TextInput } from "../ui";
 import { parseAmount, unitChoiceLabel, unitName, UNITS } from "../../lib/units";
 import { ChainsPicker, type Chain } from "./chains";
+import { ProductPhotoField } from "./ProductPhotoField";
 
 export interface SavedIngredient {
   _id: Id<"ingredients">;
@@ -52,6 +53,10 @@ export function IngredientSheet({
   );
   const [pantry, setPantry] = useState(ingredient?.pantry ?? false);
   const [onlyChains, setOnlyChains] = useState<Chain[]>(ingredient?.onlyChains ?? []);
+  const [image, setImage] = useState<{ id: Id<"_storage"> | null; url: string | null }>({
+    id: ingredient?.imageId ?? null,
+    url: (ingredient as { imageUrl?: string | null } | undefined)?.imageUrl ?? null,
+  });
   const [packText, setPackText] = useState(
     ingredient?.packSize !== undefined ? formatNumber(ingredient.packSize) : "",
   );
@@ -94,6 +99,7 @@ export function IngredientSheet({
           pantry,
           packSize,
           onlyChains,
+          imageId: image.id ?? undefined,
         }),
       ingredient ? "Ingrédient enregistré." : "Ingrédient ajouté.",
     );
@@ -173,6 +179,7 @@ export function IngredientSheet({
             Rempli, la liste de courses compte des paquets entiers. Vide, elle garde la quantité exacte.
           </p>
         </div>
+        <ProductPhotoField imageUrl={image.url} onChange={(img) => setImage(img ? { id: img.id, url: img.url } : { id: null, url: null })} />
         <ChainsPicker value={onlyChains} onChange={setOnlyChains} />
         <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl bg-paper px-4 py-3 ring-1 ring-line">
           <input

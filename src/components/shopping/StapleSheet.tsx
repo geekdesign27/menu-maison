@@ -8,6 +8,7 @@ import { useRun, useToast } from "../../lib/toast";
 import { parseAmount } from "../../lib/units";
 import { Button, Select, Sheet, TextInput } from "../ui";
 import { ChainsPicker, type Chain } from "./chains";
+import { ProductPhotoField } from "./ProductPhotoField";
 import type { Staple } from "./StaplesSheet";
 
 /** Full card of a usual item: name, aisle, price of one item, chains, usual quantity. */
@@ -36,6 +37,10 @@ export function StapleSheet({
   const [onlyChains, setOnlyChains] = useState<Chain[]>(
     staple.onlyChains ?? [],
   );
+  const [image, setImage] = useState<{ id: Id<"_storage"> | null; url: string | null }>({
+    id: staple.imageId ?? null,
+    url: staple.imageUrl ?? null,
+  });
   const [busy, setBusy] = useState(false);
 
   async function save() {
@@ -59,6 +64,7 @@ export function StapleSheet({
           priceChf: price ?? null,
           onlyChains,
           qty: qty ?? null,
+          imageId: image.id,
         }),
       "Article enregistré",
     );
@@ -111,6 +117,7 @@ export function StapleSheet({
             placeholder="Ex. 2"
           />
         </div>
+        <ProductPhotoField imageUrl={image.url} onChange={(img) => setImage(img ? { id: img.id, url: img.url } : { id: null, url: null })} />
         <ChainsPicker value={onlyChains} onChange={setOnlyChains} />
       </div>
     </Sheet>

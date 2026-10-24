@@ -17,14 +17,18 @@ export const list = query({
         .collect(),
     ]);
     const added = new Map(extras.filter((e) => e.stapleId).map((e) => [e.stapleId, e]));
-    return staples
-      .map((s) => {
+    const rows = await Promise.all(
+      staples.map(async (s) => {
         const extra = added.get(s._id);
-        return { ...s, extraId: extra?._id ?? null, extraQty: extra?.qty ?? null };
-      })
-      .sort(
-        (a, b) => b.useCount - a.useCount || a.name.localeCompare(b.name, "fr"),
-      );
+        return {
+          ...s,
+          extraId: extra?._id ?? null,
+          extraQty: extra?.qty ?? null,
+          imageUrl: s.imageId ? await ctx.storage.getUrl(s.imageId) : null,
+        };
+      }),
+    );
+    return rows.sort((a, b) => b.useCount - a.useCount || a.name.localeCompare(b.name, "fr"));
   },
 });
 
@@ -69,8 +73,9 @@ export const update = mutation({
     priceChf: v.union(v.number(), v.null()),
     onlyChains: v.array(chainValidator),
     qty: v.union(v.number(), v.null()),
+    imageId: v.union(v.id("_storage"), v.null()),
   },
-  handler: async (ctx, { token, id, name, aisleId, priceChf, onlyChains, qty }) => {
+  handler: async (ctx, { token, id, name, aisleId, priceChf, onlyChains, qty, imageId }) => {
     await assertSession(ctx, token);
     const clean = cleanText(name, 80, "Article");
     if (!clean) throw new ConvexError("Le nom de l'article est obligatoire.");
@@ -84,6 +89,7 @@ export const update = mutation({
       onlyChains: onlyChains.length ? onlyChains : undefined,
       qty: qty ?? undefined,
       unit: qty !== null ? "pc" : undefined,
+      imageId: imageId ?? undefined,
     });
   },
 });

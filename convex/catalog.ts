@@ -36,8 +36,10 @@ export const base = query({
           .map(async (m) => ({ ...m, imageUrl: m.imageId ? await ctx.storage.getUrl(m.imageId) : null })),
       ),
       aisles: aisles.sort((a, b) => a.order - b.order),
-      ingredients: ingredients.sort((a, b) =>
-        a.name.localeCompare(b.name, "fr"),
+      ingredients: await Promise.all(
+        ingredients
+          .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+          .map(async (i) => ({ ...i, imageUrl: i.imageId ? await ctx.storage.getUrl(i.imageId) : null })),
       ),
       stores: stores
         .filter((s) => !s.archived)
@@ -120,6 +122,7 @@ export const upsertIngredient = mutation({
     pantry: v.optional(v.boolean()),
     packSize: v.optional(v.number()),
     onlyChains: v.optional(v.array(chainValidator)),
+    imageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, { token, id, ...data }) => {
     await assertSession(ctx, token);
@@ -138,7 +141,7 @@ export const upsertIngredient = mutation({
       throw new ConvexError(`« ${name} » existe déjà.`);
     if (id) {
       // Explicit undefined so that clearing a price removes it
-      await ctx.db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty, packSize: data.packSize, onlyChains: data.onlyChains?.length ? data.onlyChains : undefined });
+      await ctx.db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty, packSize: data.packSize, onlyChains: data.onlyChains?.length ? data.onlyChains : undefined, imageId: data.imageId });
       return id;
     }
     return ctx.db.insert("ingredients", { ...data, name });

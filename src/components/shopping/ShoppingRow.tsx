@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Check, MoreHorizontal, Trash2 } from "lucide-react";
+import { Check, MoreHorizontal } from "lucide-react";
 import type { ShoppingItem } from "../../../convex/domain/shopping";
 import type { Member } from "../../lib/session";
 import { Avatar, cx, IconButton } from "../ui";
@@ -12,13 +12,14 @@ export function ShoppingRow({
   checker,
   onToggle,
   onMore,
-  onRemove,
+  onPhoto,
 }: {
   item: ShoppingItem;
   checker?: Member;
   onToggle: () => void;
   onMore?: () => void;
-  onRemove?: () => void;
+  /** Opens the product photo (to buy the right brand or size). */
+  onPhoto?: () => void;
 }) {
   const timer = useRef<number | undefined>(undefined);
   const longPressed = useRef(false);
@@ -95,14 +96,15 @@ export function ShoppingRow({
         )}
         {item.checked && checker && <Avatar member={checker} size={26} />}
       </button>
-      {onRemove && (
-        <IconButton
-          label={`Supprimer ${item.label}`}
-          onClick={onRemove}
-          className="my-auto mr-1 text-muted"
+      {item.imageUrl && (
+        <button
+          type="button"
+          onClick={onPhoto}
+          aria-label={`Voir la photo du produit\u00a0: ${item.label}`}
+          className="my-auto mr-1 shrink-0 overflow-hidden rounded-xl ring-1 ring-line active:scale-95"
         >
-          <Trash2 size={20} />
-        </IconButton>
+          <img src={item.imageUrl} alt="" loading="lazy" className={cx("size-11 object-cover", item.checked && "opacity-50")} />
+        </button>
       )}
       {onMore && (
         <IconButton

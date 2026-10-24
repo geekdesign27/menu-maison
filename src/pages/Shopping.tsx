@@ -66,6 +66,7 @@ export function ShoppingPage() {
   const [filter, setFilter] = useState<Filter>(readFilter);
   const [moreItem, setMoreItem] = useState<ShoppingItem | null>(null);
   const [qtyItem, setQtyItem] = useState<ShoppingItem | null>(null);
+  const [photoItem, setPhotoItem] = useState<ShoppingItem | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const list = useQuery(
@@ -288,9 +289,7 @@ export function ShoppingPage() {
                               : undefined
                           }
                           onToggle={() => onToggle(item)}
-                          onRemove={
-                            item.extra ? () => onRemove(item) : undefined
-                          }
+                          onPhoto={() => setPhotoItem(item)}
                           onMore={
                             item.extra
                               ? () => setQtyItem(item)
@@ -322,7 +321,14 @@ export function ShoppingPage() {
         </>
       )}
 
-      {qtyItem && <ExtraQtySheet item={qtyItem} onClose={() => setQtyItem(null)} />}
+      {qtyItem && <ExtraQtySheet item={qtyItem} onClose={() => setQtyItem(null)} onRemove={() => onRemove(qtyItem)} />}
+      {/* Product photo in large, to pick the right brand or size on the shelf */}
+      <Sheet open={!!photoItem} onClose={() => setPhotoItem(null)} title={photoItem?.label ?? ""}>
+        {photoItem?.imageUrl && (
+          <img src={photoItem.imageUrl} alt={`Photo du produit\u00a0: ${photoItem.label}`} className="w-full rounded-[var(--radius-card)] object-contain" />
+        )}
+        {photoItem?.display && <p className="mt-3 text-center text-lg font-black text-carrot-dark">{photoItem.display}</p>}
+      </Sheet>
       {moreItem && store && base && (
         <AisleOverrideSheet
           item={moreItem}
