@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useMutation } from "convex/react";
-import { Plus, SlidersHorizontal } from "lucide-react";
+import { Check, Plus, SlidersHorizontal, Star } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { Unit } from "../../../convex/domain/quantities";
@@ -8,6 +8,8 @@ import { useBase, useSession } from "../../lib/session";
 import { useRun, useToast } from "../../lib/toast";
 import { Button, Chip, IconButton, Sheet, TextInput } from "../ui";
 import { parseAmount, unitChoiceLabel, UNITS } from "../../lib/units";
+import { searchKey } from "../../lib/text";
+import { StaplesSheet, useStaples, useToggleStaple } from "./StaplesSheet";
 
 /** « Ajouter un article… » field, with a sheet for quantity, unit and aisle. */
 export function QuickAdd({ start }: { start: string }) {
@@ -16,6 +18,18 @@ export function QuickAdd({ start }: { start: string }) {
   const run = useRun();
   const [label, setLabel] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [staplesOpen, setStaplesOpen] = useState(false);
+  const base = useBase();
+  const staples = useStaples(start);
+  const toggleStaple = useToggleStaple(start);
+
+  // Usual items first: what is typed is looked up in the assortment
+  const suggestions = useMemo(() => {
+    const q = searchKey(label);
+    if (!q || !staples) return [];
+    return staples.filter((s) => searchKey(s.name).includes(q)).slice(0, 6);
+  }, [label, staples]);
+  const exactMatch = suggestions.some((s) => searchKey(s.name) === searchKey(label));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,7 +42,7 @@ export function QuickAdd({ start }: { start: string }) {
 
   return (
     <>
-      <form onSubmit={submit} className="flex items-center gap-2">
+      <form id="quick-add" onSubmit={submit} className="flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
           <TextInput
             value={label}
@@ -55,6 +69,55 @@ export function QuickAdd({ start }: { start: string }) {
           <Plus size={26} strokeWidth={3} />
         </IconButton>
       </form>
+
+      {suggestions.length > 0 && (
+        <ul className="mt-2 divide-y divide-line overflow-hidden rounded-2xl bg-paper shadow-md ring-1 ring-line" aria-label="Articles habituels correspondants">
+          {suggestions.map((s) => {
+            const aisle = base?.aisles.find((a) => a._id === s.aisleId);
+            return (
+              <li key={s._id}>
+                <button
+                  type="button"
+                  disabled={!!s.extraId}
+                  onClick={async () => {
+                    if (await toggleStaple(s)) setLabel("");
+                  }}
+                  className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left active:bg-carrot-soft disabled:opacity-60"
+                >
+                  <span className="text-xl" aria-hidden>
+                    {aisle?.emoji ?? "🛒"}
+                  </span>
+                  <span className="min-w-0 flex-1 font-bold">{s.name}</span>
+                  {s.extraId ? (
+                    <span className="flex items-center gap-1 text-[13px] font-bold text-herb">
+                      <Check size={16} /> Sur la liste
+                    </span>
+                  ) : (
+                    <Plus size={20} className="text-carrot-dark" />
+                  )}
+                </button>
+              </li>
+            );
+          })}
+          {!exactMatch && (
+            <li>
+              <button type="submit" form="quick-add" className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left text-carrot-dark active:bg-carrot-soft">
+                <Plus size={20} />
+                <span className="font-bold">Nouvel article : « {label.trim()} »</span>
+              </button>
+            </li>
+          )}
+        </ul>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setStaplesOpen(true)}
+        className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-sun-soft px-4 font-extrabold text-[#6b4d00] active:brightness-95"
+      >
+        <Star size={18} /> Articles habituels
+      </button>
+      {staplesOpen && <StaplesSheet start={start} onClose={() => setStaplesOpen(false)} />}
       {sheetOpen && (
         <ExtraSheet
           start={start}

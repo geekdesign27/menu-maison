@@ -68,6 +68,12 @@ Serveurs de dev via Portly.
   « souvent en stock » (`ingredients.pantry`, rayons épices, huiles, pâtes et riz,
   conserves, petit-déjeuner par défaut, modifiable dans Réglages) en haut, frais en bas.
   Dans Courses, section repliable « Déjà à la maison » avec « Remettre ».
+- **Articles habituels** (demande de PA, 2026-10-24) : assortiment hors recettes (table
+  `staples` : ménage, hygiène, petit-déjeuner…, 31 articles de départ). Dans Courses, la
+  saisie cherche d'abord dans l'assortiment (suggestions), un article inventé y est retenu
+  avec son rayon. Bouton « Articles habituels » : tout l'assortiment par rayon, un tap
+  ajoute ou retire de la semaine, mode « Modifier » pour retirer de l'assortiment.
+  Un même article habituel n'est jamais ajouté deux fois à la même semaine.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.
 - **Stats** : nombre de fois par recette (4 et 12 dernières semaines), dernière fois,
   plats « oubliés » (aimés mais pas mangés depuis 30 jours), alerte au moment de planifier

@@ -126,6 +126,10 @@ export const resetChecks = mutation({
   },
 });
 
+/**
+ * Adds a free item to the week. Usual items are remembered: picking one reuses its
+ * aisle, and a new label becomes a usual item for next time.
+ */
 export const addExtra = mutation({
   args: {
     token: v.string(),
@@ -135,18 +139,50 @@ export const addExtra = mutation({
     unit: v.optional(unitValidator),
     aisleId: v.optional(v.id("aisles")),
     memberId: v.optional(v.id("members")),
+    stapleId: v.optional(v.id("staples")),
   },
-  handler: async (ctx, { token, start, label, memberId, ...rest }) => {
+  handler: async (ctx, { token, start, label, memberId, stapleId, ...rest }) => {
     await assertSession(ctx, token);
     assertDate(start);
     label = cleanText(label, 80, "Article");
     if (rest.qty !== undefined) assertPositive(rest.qty, 100000, "Quantité");
-    if (!label.trim()) throw new ConvexError("Écris ce qu'il faut acheter.");
+
+    let staple = stapleId ? await ctx.db.get(stapleId) : null;
+    if (!staple) {
+      if (!label) throw new ConvexError("Écris ce qu'il faut acheter.");
+      // Same name typed again: reuse the usual item instead of creating a twin
+      const all = await ctx.db.query("staples").collect();
+      const key = label.toLocaleLowerCase("fr");
+      staple = all.find((s) => s.name.toLocaleLowerCase("fr") === key) ?? null;
+      if (!staple) {
+        const id = await ctx.db.insert("staples", { name: label, aisleId: rest.aisleId, useCount: 0 });
+        staple = await ctx.db.get(id);
+      }
+    }
+    if (!staple) throw new ConvexError("Article introuvable.");
+
+    // Already on this week's list: tapping it twice must not add a duplicate
+    const existing = (
+      await ctx.db
+        .query("shoppingExtras")
+        .withIndex("by_period", (q) => q.eq("periodStart", start))
+        .collect()
+    ).find((e) => e.stapleId === staple._id);
+    if (existing) return existing._id;
+
+    await ctx.db.patch(staple._id, {
+      useCount: staple.useCount + 1,
+      lastUsedAt: Date.now(),
+      // A chosen aisle teaches the usual item where it belongs
+      ...(rest.aisleId && !staple.aisleId ? { aisleId: rest.aisleId } : {}),
+    });
     return ctx.db.insert("shoppingExtras", {
       periodStart: start,
-      label: label.trim(),
+      label: staple.name,
       addedBy: memberId,
+      stapleId: staple._id,
       ...rest,
+      aisleId: rest.aisleId ?? staple.aisleId,
     });
   },
 });

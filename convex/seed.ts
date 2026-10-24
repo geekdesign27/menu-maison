@@ -1,6 +1,6 @@
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { AISLES, INGREDIENTS, MEMBERS, RECIPES, STORES } from "./seedData";
+import { AISLES, INGREDIENTS, MEMBERS, RECIPES, STAPLES, STORES } from "./seedData";
 import { DEFAULT_SETTINGS } from "./lib";
 
 /** Aisles whose products usually stay in stock at home (bought in bulk, not every week). */
@@ -77,6 +77,7 @@ export async function seedIfEmpty(ctx: MutationCtx) {
     ...DEFAULT_SETTINGS,
     defaultStoreId: firstStore,
   });
+  await seedStaples(ctx);
   return true;
 }
 
@@ -104,4 +105,21 @@ export const setPantryDefaults = internalMutation({
     }
     return { updated };
   },
+});
+
+/** Usual household items, matched to aisles by name (works on older deployments too). */
+async function seedStaples(ctx: MutationCtx) {
+  if (await ctx.db.query("staples").first()) return 0;
+  const aisles = await ctx.db.query("aisles").collect();
+  const byKey = new Map(AISLES.map((a) => [a.key, aisles.find((x) => x.name === a.name)?._id]));
+  for (const s of STAPLES) {
+    await ctx.db.insert("staples", { name: s.name, aisleId: byKey.get(s.aisle), useCount: 0 });
+  }
+  return STAPLES.length;
+}
+
+/** One-off migration (2026-10-24): `npx convex run seed:addStaples` on deployments seeded before staples existed. */
+export const addStaples = internalMutation({
+  args: {},
+  handler: async (ctx) => ({ added: await seedStaples(ctx) }),
 });

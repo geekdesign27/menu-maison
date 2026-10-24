@@ -150,7 +150,16 @@ export default defineSchema({
     unit: v.optional(unitValidator),
     aisleId: v.optional(v.id("aisles")),
     addedBy: v.optional(v.id("members")),
+    stapleId: v.optional(v.id("staples")),
   }).index("by_period", ["periodStart"]),
+
+  /** Usual non-recipe items (toilet paper, washing powder…), offered first when adding. */
+  staples: defineTable({
+    name: v.string(),
+    aisleId: v.optional(v.id("aisles")),
+    useCount: v.number(),
+    lastUsedAt: v.optional(v.number()),
+  }).index("by_name", ["name"]),
 
   /** Items already at home for a shopping week: kept out of the list. */
   stockSkips: defineTable({

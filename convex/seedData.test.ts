@@ -5,6 +5,7 @@ import {
   INGREDIENTS,
   MEMBERS,
   RECIPES,
+  STAPLES,
   STORES,
   TAGS,
 } from "./seedData";
@@ -216,5 +217,16 @@ describe("seed data: typography", () => {
       ({ text }) => text !== text.trim() || /  /.test(text),
     );
     expect(bad).toEqual([]);
+  });
+});
+
+describe("staples", () => {
+  it("have unique names, known aisles and no dashes", () => {
+    const keys = new Set(AISLES.map((a) => a.key));
+    const names = STAPLES.map((s) => s.name.toLowerCase());
+    expect(new Set(names).size).toBe(names.length);
+    expect(STAPLES.filter((s) => !keys.has(s.aisle))).toEqual([]);
+    expect(STAPLES.filter((s) => /[—–]/.test(s.name))).toEqual([]);
+    expect(STAPLES.length).toBeGreaterThanOrEqual(20);
   });
 });

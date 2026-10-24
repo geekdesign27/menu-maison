@@ -23,6 +23,7 @@ import type * as recipes from "../recipes.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
 import type * as shopping from "../shopping.js";
+import type * as staples from "../staples.js";
 import type * as stats from "../stats.js";
 import type * as templates from "../templates.js";
 import type * as wishes from "../wishes.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   seedData: typeof seedData;
   shopping: typeof shopping;
+  staples: typeof staples;
   stats: typeof stats;
   templates: typeof templates;
   wishes: typeof wishes;

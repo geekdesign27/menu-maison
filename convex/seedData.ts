@@ -1951,3 +1951,46 @@ export const MEMBERS: SeedMember[] = [
   { name: "Patricia", emoji: "🌻", color: "#F5C6A5" },
   { name: "Clara", emoji: "🦄", color: "#CDB8E6" },
 ];
+
+// ---------------------------------------------------------------------------
+// Usual non-recipe items (household, hygiene, breakfast…)
+// ---------------------------------------------------------------------------
+
+export interface SeedStaple {
+  name: string;
+  aisle: string; // SeedAisle.key
+}
+
+export const STAPLES: SeedStaple[] = [
+  { name: "Papier toilette", aisle: "menage" },
+  { name: "Essuie-tout", aisle: "menage" },
+  { name: "Mouchoirs", aisle: "menage" },
+  { name: "Lessive", aisle: "menage" },
+  { name: "Assouplissant", aisle: "menage" },
+  { name: "Liquide vaisselle", aisle: "menage" },
+  { name: "Tablettes lave-vaisselle", aisle: "menage" },
+  { name: "Éponges", aisle: "menage" },
+  { name: "Sacs taxés 35 l", aisle: "menage" },
+  { name: "Sacs congélation", aisle: "menage" },
+  { name: "Film alimentaire", aisle: "menage" },
+  { name: "Papier aluminium", aisle: "menage" },
+  { name: "Nettoyant multi-usage", aisle: "menage" },
+  { name: "Dentifrice", aisle: "menage" },
+  { name: "Brosses à dents", aisle: "menage" },
+  { name: "Gel douche", aisle: "menage" },
+  { name: "Shampoing", aisle: "menage" },
+  { name: "Savon pour les mains", aisle: "menage" },
+  { name: "Déodorant", aisle: "menage" },
+  { name: "Café en grains", aisle: "petit-dej" },
+  { name: "Capsules de café", aisle: "petit-dej" },
+  { name: "Thé", aisle: "petit-dej" },
+  { name: "Confiture", aisle: "petit-dej" },
+  { name: "Céréales", aisle: "petit-dej" },
+  { name: "Lait entier", aisle: "laitiers" },
+  { name: "Beurre de table", aisle: "laitiers" },
+  { name: "Yogourts", aisle: "laitiers" },
+  { name: "Pain", aisle: "boulangerie" },
+  { name: "Eau minérale", aisle: "boissons" },
+  { name: "Jus d'orange", aisle: "boissons" },
+  { name: "Fruits pour la semaine", aisle: "fruits-legumes" },
+];
