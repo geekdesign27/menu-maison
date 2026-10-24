@@ -219,7 +219,7 @@ export function Avatar({
   size = 32,
   className,
 }: {
-  member: Pick<Member, "name" | "emoji" | "color">;
+  member: Pick<Member, "name" | "emoji" | "color"> & { imageUrl?: string | null };
   size?: number;
   className?: string;
 }) {
@@ -228,7 +228,7 @@ export function Avatar({
       title={member.name}
       aria-label={member.name}
       className={cx(
-        "inline-flex shrink-0 items-center justify-center rounded-full ring-2 ring-paper",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-paper",
         className,
       )}
       style={{
@@ -238,7 +238,7 @@ export function Avatar({
         fontSize: size * 0.55,
       }}
     >
-      {member.emoji}
+      {member.imageUrl ? <img src={member.imageUrl} alt="" className="size-full object-cover" /> : member.emoji}
     </span>
   );
 }

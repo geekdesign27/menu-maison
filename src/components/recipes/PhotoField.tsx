@@ -7,27 +7,9 @@ import { useSession } from "../../lib/session";
 import { useToast } from "../../lib/toast";
 import { errorMessage } from "../../lib/format";
 import { Button, SectionTitle } from "../ui";
+import { PhotoTooHeavy, uploadPhoto } from "../../lib/image";
 
 const MAX_SIDE = 1200;
-const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
-
-/** Shrinks a phone photo to at most 1200 px and JPEG, so storage and data stay small. */
-async function shrink(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) =>
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Image illisible"))),
-      "image/jpeg",
-      0.82,
-    ),
-  );
-}
 
 /** Recipe photo: take one or pick one from the phone, shown instead of the emoji. */
 export function PhotoField({
@@ -46,20 +28,11 @@ export function PhotoField({
   async function upload(file: File) {
     setBusy(true);
     try {
-      const blob = await shrink(file);
-      if (blob.size > MAX_UPLOAD_BYTES) throw new Error("Photo trop lourde");
-      const url = await generateUploadUrl({ token });
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "image/jpeg" },
-        body: blob,
-      });
-      if (!res.ok) throw new Error(`Envoi refusé (${res.status})`);
-      const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
-      onChange({ id: storageId, url: URL.createObjectURL(blob) });
+      const photo = await uploadPhoto(file, MAX_SIDE, () => generateUploadUrl({ token }));
+      onChange({ id: photo.id, url: photo.previewUrl });
     } catch (e) {
       toast(
-        e instanceof Error && e.message.startsWith("Photo")
+        e instanceof PhotoTooHeavy
           ? "Cette photo est trop lourde, essaie une autre."
           : errorMessage(e),
         "error",

@@ -94,6 +94,12 @@ Serveurs de dev via Portly.
     Fiche d'article habituel : nom, rayon, prix d'un article, enseignes, quantité habituelle.
   - Portions au lieu de personnes. « En plus pour le frigo » (`meals.extraPortions`) :
     achetées avec le plat, au frigo dès le jour de cuisson, réutilisables dans la semaine.
+  - « Planifier les restes » directement depuis un plat (portions en plus ou restes),
+    même avant la cuisson, jamais avant le jour de cuisson.
+  - Photo de profil (`members.imageId`, 400 px), affichée à la place de l'emoji partout.
+  - Connexion : jeton et profil gardés 365 jours sur l'appareil, stockage durable demandé
+    au navigateur. Les onglets Safari effacent les données après 7 jours sans visite :
+    conseil affiché d'ajouter l'app à l'écran d'accueil (non concernée).
   - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
     5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.

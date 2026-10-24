@@ -35,6 +35,7 @@ export default defineSchema({
     emoji: v.string(),
     color: v.string(), // hex, used for avatar backgrounds
     order: v.number(),
+    imageId: v.optional(v.id("_storage")), // profile photo, shown instead of the emoji
   }),
 
   /** Generic aisles (rayons). Each store orders them its own way. */

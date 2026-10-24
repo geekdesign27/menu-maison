@@ -84,7 +84,7 @@ function CodeScreen({
         </Button>
       </form>
       <p className="mt-6 text-center text-[15px] text-muted">
-        À entrer une seule fois sur ce téléphone.
+        À entrer une seule fois sur ce téléphone. Pour rester connecté, ajoute l'app à l'écran d'accueil (Safari : Partager, puis « Sur l'écran d'accueil »).
       </p>
     </main>
   );

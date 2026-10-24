@@ -30,7 +30,11 @@ export const base = query({
       getSettings(ctx),
     ]);
     return {
-      members: members.sort((a, b) => a.order - b.order),
+      members: await Promise.all(
+        members
+          .sort((a, b) => a.order - b.order)
+          .map(async (m) => ({ ...m, imageUrl: m.imageId ? await ctx.storage.getUrl(m.imageId) : null })),
+      ),
       aisles: aisles.sort((a, b) => a.order - b.order),
       ingredients: ingredients.sort((a, b) =>
         a.name.localeCompare(b.name, "fr"),
@@ -267,5 +271,15 @@ export const setOverride = mutation({
     );
     if (aisleId) overrides.push({ ingredientId, aisleId });
     await ctx.db.patch(storeId, { overrides });
+  },
+});
+
+/** Profile photo (null removes it and brings the emoji back). */
+export const setMemberPhoto = mutation({
+  args: { token: v.string(), id: v.id("members"), imageId: v.union(v.id("_storage"), v.null()) },
+  handler: async (ctx, { token, id, imageId }) => {
+    await assertSession(ctx, token);
+    if (!(await ctx.db.get(id))) throw new ConvexError("Profil introuvable.");
+    await ctx.db.patch(id, { imageId: imageId ?? undefined });
   },
 });

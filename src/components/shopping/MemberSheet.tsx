@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { Check, Plus } from "lucide-react";
+import { Camera, Check, Plus, Trash2 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { useSession, type Member } from "../../lib/session";
-import { useRun } from "../../lib/toast";
+import { useRun, useToast } from "../../lib/toast";
+import { errorMessage } from "../../lib/format";
+import { PhotoTooHeavy, uploadPhoto } from "../../lib/image";
 import { Avatar, Button, cx, Sheet, TextInput } from "../ui";
 import { EmojiField } from "./EmojiField";
 
@@ -47,11 +49,32 @@ export function MemberSheet({
 }) {
   const { token } = useSession();
   const run = useRun();
+  const toast = useToast();
   const updateMember = useMutation(api.catalog.updateMember);
   const addMember = useMutation(api.catalog.addMember);
   const [name, setName] = useState(member?.name ?? "");
   const [emoji, setEmoji] = useState(member?.emoji ?? MEMBER_EMOJIS[3]);
   const [color, setColor] = useState(member?.color ?? MEMBER_COLORS[3]);
+  const setPhoto = useMutation(api.catalog.setMemberPhoto);
+  const generateUploadUrl = useMutation(api.recipes.generateUploadUrl);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const [photoUrl, setPhotoUrl] = useState(member?.imageUrl ?? null);
+  const [uploading, setUploading] = useState(false);
+
+  // Square-ish avatar: 400 px is plenty for a round picture
+  const choosePhoto = async (file: File) => {
+    if (!member) return;
+    setUploading(true);
+    try {
+      const photo = await uploadPhoto(file, 400, () => generateUploadUrl({ token }));
+      const ok = await run(() => setPhoto({ token, id: member._id, imageId: photo.id }), "Photo enregistrée");
+      if (ok !== undefined) setPhotoUrl(photo.previewUrl);
+    } catch (e) {
+      toast(e instanceof PhotoTooHeavy ? "Cette photo est trop lourde, essaie une autre." : errorMessage(e), "error");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const save = (
     patch: Partial<{ name: string; emoji: string; color: string }>,
@@ -87,8 +110,37 @@ export function MemberSheet({
       }
     >
       <div className="grid gap-5">
-        <div className="flex justify-center pt-1">
-          <Avatar member={{ name: name || "Profil", emoji, color }} size={88} />
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <Avatar member={{ name: name || "Profil", emoji, color, imageUrl: photoUrl }} size={88} />
+          {member && (
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => photoInput.current?.click()} disabled={uploading}>
+                <Camera size={18} /> {uploading ? "Envoi…" : photoUrl ? "Changer la photo" : "Ajouter une photo"}
+              </Button>
+              {photoUrl && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={async () => {
+                    if ((await run(() => setPhoto({ token, id: member._id, imageId: null }))) !== undefined) setPhotoUrl(null);
+                  }}
+                >
+                  <Trash2 size={18} /> Retirer
+                </Button>
+              )}
+              <input
+                ref={photoInput}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void choosePhoto(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          )}
         </div>
         <TextInput
           label="Prénom"

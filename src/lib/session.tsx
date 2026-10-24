@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { Doc, Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 const TOKEN_KEY = "mm.token";
 const MEMBER_KEY = "mm.member";
@@ -27,6 +27,19 @@ function write(key: string, value: string) {
     else localStorage.removeItem(key);
   } catch {
     // Private mode: the session simply lasts as long as the tab
+  }
+}
+
+/**
+ * Asks the browser to keep this site's storage (device token, chosen profile)
+ * instead of clearing it under storage pressure. Best effort: Safari tabs still
+ * wipe data of sites unused for 7 days, the home-screen app does not.
+ */
+function askPersistentStorage() {
+  try {
+    void navigator.storage?.persist?.().catch(() => undefined);
+  } catch {
+    // Not supported: nothing more we can do
   }
 }
 
@@ -50,6 +63,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [memberId, setMemberState] = useState(() => (read(MEMBER_KEY) || null) as Id<"members"> | null);
   const valid = useQuery(api.access.check, stored ? { token: stored } : "skip");
 
+  // Phones already signed in before this existed ask too, once per launch
+  useEffect(() => {
+    if (read(TOKEN_KEY)) askPersistentStorage();
+  }, []);
+
   // A refused token is dropped, so that no screen keeps querying with it
   useEffect(() => {
     if (stored && valid === false) {
@@ -61,6 +79,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const setToken = useCallback((t: string) => {
     write(TOKEN_KEY, t);
+    if (t) askPersistentStorage();
     setStored(t);
     if (t) setExpired(false);
   }, []);
@@ -89,7 +108,8 @@ export function useBase() {
 }
 
 export type Base = NonNullable<ReturnType<typeof useBase>>;
-export type Member = Doc<"members">;
+/** A profile as served to the app (with its photo URL). */
+export type Member = Base["members"][number];
 
 /** Current member, or undefined while loading. */
 export function useMe(): Member | null | undefined {
