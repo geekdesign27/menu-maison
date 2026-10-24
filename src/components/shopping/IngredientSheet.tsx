@@ -8,6 +8,7 @@ import { useSession } from "../../lib/session";
 import { useRun, useToast } from "../../lib/toast";
 import { Button, Select, Sheet, TextInput } from "../ui";
 import { parseAmount, unitChoiceLabel, unitName, UNITS } from "../../lib/units";
+import { ChainsPicker, type Chain } from "./chains";
 
 export interface SavedIngredient {
   _id: Id<"ingredients">;
@@ -50,6 +51,7 @@ export function IngredientSheet({
       : "1",
   );
   const [pantry, setPantry] = useState(ingredient?.pantry ?? false);
+  const [onlyChains, setOnlyChains] = useState<Chain[]>(ingredient?.onlyChains ?? []);
   const [packText, setPackText] = useState(
     ingredient?.packSize !== undefined ? formatNumber(ingredient.packSize) : "",
   );
@@ -91,6 +93,7 @@ export function IngredientSheet({
           priceQty: priceChf !== undefined ? priceQty : undefined,
           pantry,
           packSize,
+          onlyChains,
         }),
       ingredient ? "Ingrédient enregistré." : "Ingrédient ajouté.",
     );
@@ -170,6 +173,7 @@ export function IngredientSheet({
             Rempli, la liste de courses compte des paquets entiers. Vide, elle garde la quantité exacte.
           </p>
         </div>
+        <ChainsPicker value={onlyChains} onChange={setOnlyChains} />
         <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl bg-paper px-4 py-3 ring-1 ring-line">
           <input
             type="checkbox"

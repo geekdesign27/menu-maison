@@ -43,6 +43,11 @@ export function MealPill({
             <Users size={14} aria-hidden />
             {meal.persons}
           </span>
+          {!!meal.extraPortions && (
+            <span className="rounded-full bg-herb-soft px-2 font-extrabold text-herb">
+              +{meal.extraPortions}&nbsp;frigo
+            </span>
+          )}
           {meal.fromLeftoverOf ? (
             <span className="rounded-full bg-sun-soft px-2 font-extrabold text-[#8a6200]">
               restes du {formatDayShort(meal.cookedOn)}
@@ -56,7 +61,7 @@ export function MealPill({
               </span>
             )
           )}
-          {meal.leftoverPortions > 0 && (
+          {meal.leftoverPortions > 0 && meal.status !== "prévu" && (
             <span className="inline-flex items-center gap-1 text-herb">
               <Refrigerator size={14} aria-hidden />
               {meal.leftoverPortions} au frigo

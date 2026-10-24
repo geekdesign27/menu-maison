@@ -19,7 +19,7 @@ import { ingredientCost } from "../../convex/domain/shopping";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useStoreChoice } from "../lib/week";
 import { useRun } from "../lib/toast";
-import { formatChf, minutes, persons as personsText } from "../lib/format";
+import { formatChf, minutes, portions } from "../lib/format";
 import { BackButton } from "../components/Layout";
 import {
   Avatar,
@@ -235,14 +235,14 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
         <div className="flex items-center justify-between gap-2">
           <span className="text-lg font-black">Pour</span>
           <Stepper
-            label="Nombre de personnes"
+            label="Nombre de portions"
             value={count}
             onChange={setCount}
             min={1}
             max={20}
           />
           <span className="w-24 text-right text-lg font-black">
-            {count > 1 ? "personnes" : "personne"}
+            {count > 1 ? "portions" : "portion"}
           </span>
         </div>
         {recipe.items.length === 0 ? (
@@ -287,7 +287,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
               <span className="tabular-nums">{totalCost}</span>
             </div>
             <div className="text-[15px] text-muted">
-              Pour {personsText(count)}
+              Pour {portions(count)}
               {store ? `, prix indicatifs chez ${store.name}` : ""}.
             </div>
           </div>

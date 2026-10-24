@@ -60,3 +60,41 @@ export function priceLevelText(factor: number): string {
   if (pct === 0) return "Prix dans la moyenne";
   return `${pct}${NBSP}% ${factor < 1 ? "moins cher" : "plus cher"} que la moyenne`;
 }
+
+/**
+ * « Disponible seulement chez » : no chain ticked means sold everywhere.
+ * Ticked chains restrict the product (julienne de légumes: Coop only).
+ */
+export function ChainsPicker({ value, onChange }: { value: Chain[]; onChange: (chains: Chain[]) => void }) {
+  const toggle = (c: Chain) => onChange(value.includes(c) ? value.filter((x) => x !== c) : [...value, c]);
+  return (
+    <div>
+      <span className="mb-1 block text-[15px] font-bold">Disponible seulement chez</span>
+      <div className="flex flex-wrap gap-2">
+        {CHAINS.filter((c) => c !== "Autre").map((c) => {
+          const on = value.includes(c);
+          return (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggle(c)}
+              className={cx(
+                "inline-flex min-h-11 items-center gap-2 rounded-full py-1 pr-4 pl-1.5 font-bold transition",
+                on ? "bg-ink text-white" : "bg-paper text-ink ring-1 ring-line active:bg-carrot-soft",
+              )}
+            >
+              <ChainMark chain={c} size={30} />
+              {c}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 text-[13px] text-muted">
+        {value.length
+          ? `Dans les autres magasins, il apparaît à part en bas de la liste${NBSP}: «${NBSP}À acheter chez ${value.join(" ou ")}${NBSP}».`
+          : "Rien de coché : on le trouve partout."}
+      </p>
+    </div>
+  );
+}

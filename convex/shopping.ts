@@ -53,6 +53,7 @@ export const list = query({
         _id: m._id,
         recipeId: m.recipeId,
         persons: m.persons,
+        extraPortions: m.extraPortions,
         fromLeftoverOf: m.fromLeftoverOf,
         cookedOn: m.cookedOn,
       })),
@@ -61,11 +62,20 @@ export const list = query({
       ingredients: Object.fromEntries(ingredients.map((i) => [i._id, i])),
       aisles,
       store: store && {
+        chain: store.chain,
         aisleOrder: store.aisleOrder,
         overrides: store.overrides,
         priceFactor: store.priceFactor,
       },
-      extras,
+      // Usual items bring their current price and chains (edits apply right away)
+      extras: await Promise.all(
+        extras.map(async (e) => {
+          const staple = e.stapleId ? await ctx.db.get(e.stapleId) : null;
+          return staple
+            ? { ...e, label: staple.name, aisleId: staple.aisleId ?? e.aisleId, priceChf: staple.priceChf, onlyChains: staple.onlyChains }
+            : e;
+        }),
+      ),
       checks: Object.fromEntries(checks.map((c) => [c.itemKey, c.checked])),
       skipped: skips.map((s) => s.itemKey),
     });

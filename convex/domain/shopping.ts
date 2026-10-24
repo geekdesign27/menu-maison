@@ -6,7 +6,8 @@ export interface ShoppingInput {
   meals: {
     _id: string;
     recipeId?: string;
-    persons: number;
+    persons: number; // portions eaten at this meal
+    extraPortions?: number; // portions cooked on top, for the fridge: bought too
     fromLeftoverOf?: string;
     cookedOn?: string;
   }[];
@@ -29,10 +30,12 @@ export interface ShoppingInput {
       priceQty?: number;
       pantry?: boolean; // usually in stock at home
       packSize?: number; // bought by the pack: content of one pack, in `unit`
+      onlyChains?: string[]; // sold only by these chains (e.g. ["Coop"])
     }
   >;
   aisles: { _id: string; name: string; emoji: string; order: number }[];
   store?: {
+    chain?: string;
     aisleOrder: string[];
     overrides: { ingredientId: string; aisleId: string }[];
     priceFactor: number;
@@ -43,6 +46,8 @@ export interface ShoppingInput {
     qty?: number;
     unit?: Unit;
     aisleId?: string;
+    priceChf?: number; // price of one item (usual items)
+    onlyChains?: string[];
   }[];
   checks: Record<string, boolean>; // itemKey → checked
   /** Item keys the family already has at home this week: kept out of the list. */
@@ -63,10 +68,13 @@ export interface ShoppingItem {
   pantry: boolean;
   packs?: number; // whole packs to buy, when the ingredient is bought by the pack
   packDetail?: string; // « ≈ 14 tranches »: what the recipes need, shown under the label
+  onlyChains?: string[];
 }
 
 export interface ShoppingSection {
   aisleId: string | null;
+  /** Items not sold by the chosen store's chain: « À acheter chez Coop ». */
+  elsewhere?: boolean;
   name: string;
   emoji: string;
   items: ShoppingItem[];
@@ -204,7 +212,8 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
     if (!recipe) continue;
     for (const item of recipe.items) {
       if (!input.ingredients[item.ingredientId]) continue;
-      const base = toBase(item.qtyPerPerson * meal.persons, item.unit);
+      const portions = meal.persons + (meal.extraPortions ?? 0);
+      const base = toBase(item.qtyPerPerson * portions, item.unit);
       const key = ingredientItemKey(item.ingredientId, base.unit);
       const entry = totals.get(key) ?? {
         ingredientId: item.ingredientId,
@@ -221,7 +230,15 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
   // 2. Dispatch items into aisles (null = « Divers »).
   const knownAisles = new Set(input.aisles.map((a) => a._id));
   const byAisle = new Map<string | null, ShoppingItem[]>();
+  // Products sold only by other chains go to their own sections at the end
+  const elsewhere = new Map<string, ShoppingItem[]>();
   const push = (aisleId: string | undefined, item: ShoppingItem) => {
+    const chains = item.onlyChains;
+    if (chains?.length && input.store?.chain && !chains.includes(input.store.chain)) {
+      const label = [...chains].sort((a, b) => a.localeCompare(b, "fr")).join(" ou ");
+      elsewhere.set(label, [...(elsewhere.get(label) ?? []), item]);
+      return;
+    }
     const target =
       aisleId !== undefined && knownAisles.has(aisleId) ? aisleId : null;
     const list = byAisle.get(target) ?? [];
@@ -252,6 +269,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       extra: false,
       ingredientId: entry.ingredientId,
       pantry: ing.pantry ?? false,
+      onlyChains: ing.onlyChains?.length ? ing.onlyChains : undefined,
     };
     if (skippedKeys.has(key)) skipped.push(item);
     else push(overrides.get(entry.ingredientId) ?? ing.aisleId, item);
@@ -269,9 +287,13 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       display:
         extra.qty !== undefined && unit ? formatQty(extra.qty, unit) : "",
       recipes: [],
+      // Usual items have a price per item
+      costChf:
+        extra.priceChf !== undefined ? roundChf(extra.priceChf * (extra.qty ?? 1) * priceFactor) : undefined,
       checked: input.checks[key] ?? false,
       extra: true,
       pantry: false,
+      onlyChains: extra.onlyChains?.length ? extra.onlyChains : undefined,
     });
   }
 
@@ -297,11 +319,16 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
     });
   }
 
+  // Counted for this store; items bought elsewhere still count in the week's cost
+  const here = sections.flatMap((s) => s.items);
+  for (const [label, items] of [...elsewhere].sort((a, b) => a[0].localeCompare(b[0], "fr"))) {
+    sections.push({ aisleId: null, elsewhere: true, name: `À acheter chez ${label}`, emoji: "🏪", items: items.sort(compareItems) });
+  }
   const all = sections.flatMap((s) => s.items);
   return {
     sections,
-    total: all.length,
-    remaining: all.filter((i) => !i.checked).length,
+    total: here.length,
+    remaining: here.filter((i) => !i.checked).length,
     costChf: roundChf(all.reduce((sum, i) => sum + (i.costChf ?? 0), 0)),
     skipped: skipped.sort((a, b) => a.label.localeCompare(b.label, "fr")),
   };

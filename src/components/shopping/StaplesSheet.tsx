@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Minus, Plus, Trash2 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { useBase, useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
 import { Button, cx, EmptyState, IconButton, Loading, Sheet } from "../ui";
-import { AislePicker } from "./AislePicker";
+import { StapleSheet } from "./StapleSheet";
 
 export type Staple = NonNullable<ReturnType<typeof useStaples>>[number];
 
@@ -21,7 +21,8 @@ export function useToggleStaple(start: string) {
   const run = useRun();
   const addExtra = useMutation(api.shopping.addExtra);
   const removeExtra = useMutation(api.shopping.removeExtra);
-  return (staple: Staple) =>
+  // `qty` set: added with that many pieces (else the item's usual quantity)
+  return (staple: Staple, qty?: number) =>
     staple.extraId
       ? run(() => removeExtra({ token, id: staple.extraId! }))
       : run(() =>
@@ -31,6 +32,7 @@ export function useToggleStaple(start: string) {
             label: staple.name,
             stapleId: staple._id,
             memberId: memberId ?? undefined,
+            ...(qty !== undefined ? { qty, unit: "pc" as const } : {}),
           }),
         );
 }
@@ -51,7 +53,6 @@ export function StaplesSheet({
   const removeStaple = useMutation(api.staples.remove);
   const [editing, setEditing] = useState(false);
   const [moving, setMoving] = useState<Staple | null>(null);
-  const setAisle = useMutation(api.staples.setAisle);
 
   const groups = (() => {
     if (!staples || !base) return [];
@@ -102,7 +103,7 @@ export function StaplesSheet({
           <div className="flex items-center justify-between gap-2">
             <p className="text-[15px] text-muted">
               {editing
-                ? "Touche un article pour changer son rayon, ou la corbeille pour le retirer de l'assortiment."
+                ? "Touche un article pour modifier son nom, son prix, son rayon ou ses magasins. La corbeille le retire de l'assortiment."
                 : "Touche un article pour l'ajouter à la liste de cette semaine."}
             </p>
             <button
@@ -128,7 +129,7 @@ export function StaplesSheet({
                       <button
                         type="button"
                         onClick={() => setMoving(s)}
-                        aria-label={`Changer le rayon\u00a0: ${s.name}`}
+                        aria-label={`Modifier\u00a0: ${s.name}`}
                         className="min-h-10 rounded-full px-3 font-bold underline decoration-line decoration-2 underline-offset-4 active:bg-carrot-soft"
                       >
                         {s.name}
@@ -147,25 +148,7 @@ export function StaplesSheet({
                       </IconButton>
                     </span>
                   ) : (
-                    <button
-                      key={s._id}
-                      type="button"
-                      aria-pressed={!!s.extraId}
-                      onClick={() => toggle(s)}
-                      className={cx(
-                        "inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 font-bold transition",
-                        s.extraId
-                          ? "bg-herb text-white"
-                          : "bg-paper text-ink ring-1 ring-line active:bg-carrot-soft",
-                      )}
-                    >
-                      {s.extraId ? (
-                        <Check size={18} strokeWidth={3} />
-                      ) : (
-                        <Plus size={18} />
-                      )}
-                      {s.name}
-                    </button>
+                    <StapleChip key={s._id} staple={s} onToggle={() => toggle(s)} />
                   ),
                 )}
               </div>
@@ -173,24 +156,54 @@ export function StaplesSheet({
           ))}
         </>
       )}
-      {moving && base && (
-        <Sheet open onClose={() => setMoving(null)} title={moving.name}>
-          <p className="mb-3 text-[15px] text-muted">Dans quel rayon range-t-on cet article&nbsp;?</p>
-          <AislePicker
-            aisles={base.aisles}
-            value={moving.aisleId ?? null}
-            onPick={async (aisleId) => {
-              const target = moving;
-              setMoving(null);
-              const aisle = base.aisles.find((a) => a._id === aisleId);
-              await run(
-                () => setAisle({ token, id: target._id, aisleId, start }),
-                `${target.name}\u00a0: ${aisle ? aisle.name : "Divers"}`,
-              );
-            }}
-          />
-        </Sheet>
-      )}
+      {moving && <StapleSheet staple={moving} onClose={() => setMoving(null)} />}
     </Sheet>
+  );
+}
+
+/** A usual item: tap to add or remove; once on the list, − n + sets how many. */
+function StapleChip({ staple, onToggle }: { staple: Staple; onToggle: () => void }) {
+  const { token } = useSession();
+  const run = useRun();
+  const setQty = useMutation(api.shopping.setExtraQty);
+  const qty = staple.extraQty ?? 1;
+  const change = (n: number) => staple.extraId && run(() => setQty({ token, id: staple.extraId!, qty: n, unit: "pc" }));
+  const main = (
+    <button
+      type="button"
+      aria-pressed={!!staple.extraId}
+      onClick={onToggle}
+      className={cx(
+        "inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 font-bold transition",
+        staple.extraId ? "bg-herb text-white" : "bg-paper text-ink ring-1 ring-line active:bg-carrot-soft",
+      )}
+    >
+      {staple.extraId ? <Check size={18} strokeWidth={3} /> : <Plus size={18} />}
+      {staple.name}
+    </button>
+  );
+  if (!staple.extraId) return main;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-herb-soft pr-1">
+      {main}
+      <button
+        type="button"
+        aria-label={`Un de moins\u00a0: ${staple.name}`}
+        disabled={qty <= 1}
+        onClick={() => change(qty - 1)}
+        className="flex size-9 items-center justify-center rounded-full text-herb active:bg-paper disabled:opacity-40"
+      >
+        <Minus size={18} strokeWidth={3} />
+      </button>
+      <span className="min-w-6 text-center font-black text-herb tabular-nums">{qty}</span>
+      <button
+        type="button"
+        aria-label={`Un de plus\u00a0: ${staple.name}`}
+        onClick={() => change(qty + 1)}
+        className="flex size-9 items-center justify-center rounded-full text-herb active:bg-paper"
+      >
+        <Plus size={18} strokeWidth={3} />
+      </button>
+    </span>
   );
 }

@@ -5,9 +5,9 @@ export function formatChf(amount: number) {
   return `CHF ${amount.toFixed(2)}`;
 }
 
-/** « 1 personne », « 3 personnes ». */
-export function persons(n: number) {
-  return `${n} ${n > 1 ? "personnes" : "personne"}`;
+/** « 1 portion », « 3 portions ». */
+export function portions(n: number) {
+  return `${n} ${n > 1 ? "portions" : "portion"}`;
 }
 
 export function minutes(n: number) {

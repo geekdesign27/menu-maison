@@ -42,6 +42,7 @@ async function entriesFromWeek(
       slot: m.slot,
       recipeId: m.recipeId!,
       persons: m.persons,
+      extraPortions: m.extraPortions,
       cookedDayOffset: daysBetween(start, m.cookedOn),
     }));
 }
@@ -104,9 +105,10 @@ export const apply = mutation({
         slot: e.slot,
         recipeId: e.recipeId,
         persons: e.persons,
+        extraPortions: e.extraPortions,
         cookedOn: addDays(start, e.cookedDayOffset),
         status: "prévu",
-        leftoverPortions: 0,
+        leftoverPortions: e.extraPortions ?? 0,
       });
     }
     // Archived recipes are skipped: tell the UI what was really added

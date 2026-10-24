@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertSession } from "./lib";
+import { assertDate, assertPositive, assertSession, cleanText } from "./lib";
+import { chainValidator } from "./schema";
 
 /** The usual items, most bought first, with the extra id when already on this week's list. */
 export const list = query({
@@ -15,11 +16,12 @@ export const list = query({
         .withIndex("by_period", (q) => q.eq("periodStart", start))
         .collect(),
     ]);
-    const added = new Map(
-      extras.filter((e) => e.stapleId).map((e) => [e.stapleId, e._id]),
-    );
+    const added = new Map(extras.filter((e) => e.stapleId).map((e) => [e.stapleId, e]));
     return staples
-      .map((s) => ({ ...s, extraId: added.get(s._id) ?? null }))
+      .map((s) => {
+        const extra = added.get(s._id);
+        return { ...s, extraId: extra?._id ?? null, extraQty: extra?.qty ?? null };
+      })
       .sort(
         (a, b) => b.useCount - a.useCount || a.name.localeCompare(b.name, "fr"),
       );
@@ -54,5 +56,34 @@ export const setAisle = mutation({
     for (const e of extras) {
       if (e.stapleId === id) await ctx.db.patch(e._id, { aisleId: aisleId ?? undefined });
     }
+  },
+});
+
+/** Edits a usual item: name, aisle, price of one item, chains selling it, usual quantity. */
+export const update = mutation({
+  args: {
+    token: v.string(),
+    id: v.id("staples"),
+    name: v.string(),
+    aisleId: v.union(v.id("aisles"), v.null()),
+    priceChf: v.union(v.number(), v.null()),
+    onlyChains: v.array(chainValidator),
+    qty: v.union(v.number(), v.null()),
+  },
+  handler: async (ctx, { token, id, name, aisleId, priceChf, onlyChains, qty }) => {
+    await assertSession(ctx, token);
+    const clean = cleanText(name, 80, "Article");
+    if (!clean) throw new ConvexError("Le nom de l'article est obligatoire.");
+    if (priceChf !== null) assertPositive(priceChf, 10000, "Prix");
+    if (qty !== null) assertPositive(qty, 1000, "Quantité");
+    if (!(await ctx.db.get(id))) throw new ConvexError("Article introuvable.");
+    await ctx.db.patch(id, {
+      name: clean,
+      aisleId: aisleId ?? undefined,
+      priceChf: priceChf ?? undefined,
+      onlyChains: onlyChains.length ? onlyChains : undefined,
+      qty: qty ?? undefined,
+      unit: qty !== null ? "pc" : undefined,
+    });
   },
 });

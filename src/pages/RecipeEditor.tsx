@@ -482,11 +482,11 @@ function RecipeForm({
           <div>
             <div className="font-extrabold">D'habitude pour</div>
             <div className="text-[15px] text-muted">
-              {draft.defaultPersons > 1 ? `${draft.defaultPersons}\u00a0personnes` : "1\u00a0personne"}, proposé en planifiant
+              {draft.defaultPersons > 1 ? `${draft.defaultPersons}\u00a0portions` : "1\u00a0portion"}, proposé en planifiant
             </div>
           </div>
           <Stepper
-            label="Personnes d'habitude"
+            label="Portions d'habitude"
             value={draft.defaultPersons}
             onChange={(n) => set("defaultPersons", n)}
             min={1}
@@ -503,8 +503,8 @@ function RecipeForm({
           aria-hidden
         />
         <span>
-          Quantités pour 1 personne, l'app multiplie selon le nombre de
-          personnes au menu.
+          Quantités pour 1 portion, l'app multiplie selon le nombre de
+          portions au menu.
         </span>
       </div>
       <div className="space-y-3">
@@ -548,7 +548,7 @@ function RecipeForm({
               </div>
               <div className="flex gap-2">
                 <input
-                  aria-label={`Quantité pour 1 personne, ingrédient ${index + 1}`}
+                  aria-label={`Quantité pour 1 portion, ingrédient ${index + 1}`}
                   inputMode="decimal"
                   value={item.qty}
                   onChange={(e) => setItem(item.key, { qty: e.target.value })}

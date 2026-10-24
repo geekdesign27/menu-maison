@@ -60,6 +60,11 @@ function MealActions({
   const remove = useMutation(api.meals.remove);
 
   const [persons, setPersons] = useState(meal.persons);
+  const [extra, setExtra] = useState(meal.extraPortions ?? 0);
+  const changeExtra = (n: number) => {
+    setExtra(n);
+    void run(() => update({ token, id: meal._id, extraPortions: n }));
+  };
   const [askPortions, setAskPortions] = useState(false);
   const [portions, setPortions] = useState(
     meal.leftoverPortions > 0 ? meal.leftoverPortions : 1,
@@ -163,9 +168,23 @@ function MealActions({
       </div>
 
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
-        <span className="font-extrabold">Personnes</span>
-        <Stepper label="Personnes" value={persons} onChange={changePersons} />
+        <span className="font-extrabold">Portions</span>
+        <Stepper label="Portions" value={persons} onChange={changePersons} />
       </div>
+      {meal.recipe && !meal.fromLeftoverOf && meal.status === "prévu" && (
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
+          <div>
+            <div className="font-extrabold">En plus pour le frigo</div>
+            <div className="text-[15px] text-muted">Achetées avec, au frigo une fois cuisinées</div>
+          </div>
+          <Stepper
+            label="Portions en plus pour le frigo"
+            value={extra}
+            onChange={changeExtra}
+            min={0}
+          />
+        </div>
+      )}
 
       <Field label="Statut">
         <div className="grid grid-cols-2 gap-2">
@@ -219,7 +238,7 @@ function MealActions({
             </Button>
           </div>
         )}
-        {!askPortions && meal.leftoverPortions > 0 && (
+        {!askPortions && meal.leftoverPortions > 0 && meal.status !== "prévu" && (
           <p className="mt-2 text-[15px] font-semibold text-muted">
             {plural(meal.leftoverPortions, "portion", "portions")} au frigo.
           </p>

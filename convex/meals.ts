@@ -66,10 +66,12 @@ export const add = mutation({
     tomorrowLunchPersons: v.optional(v.number()),
     // Lunch prepared the evening before
     cookedTheEveningBefore: v.optional(v.boolean()),
+    // Portions cooked on top, kept in the fridge for later in the week
+    extraPortions: v.optional(v.number()),
   },
   handler: async (
     ctx,
-    { token, tomorrowLunchPersons, cookedTheEveningBefore, ...m },
+    { token, tomorrowLunchPersons, cookedTheEveningBefore, extraPortions, ...m },
   ) => {
     await assertSession(ctx, token);
     assertDate(m.date);
@@ -80,12 +82,16 @@ export const add = mutation({
       m.slot !== "soir" && cookedTheEveningBefore
         ? addDays(m.date, -1)
         : m.date;
+    if (extraPortions !== undefined) assertInt(extraPortions, 0, 30, "Portions en plus");
+    const extra = m.recipeId && extraPortions ? extraPortions : undefined;
     const id = await ctx.db.insert("meals", {
       ...m,
       title: m.title ? cleanText(m.title, 80, "Titre") || undefined : undefined,
       cookedOn,
       status: "prévu",
-      leftoverPortions: 0,
+      extraPortions: extra,
+      // The extra portions go to the fridge once cooked (the fridge shows them from cookedOn)
+      leftoverPortions: extra ?? 0,
     });
     if (tomorrowLunchPersons && m.slot === "soir") {
       assertPersons(tomorrowLunchPersons);
@@ -113,11 +119,20 @@ export const update = mutation({
     title: v.optional(v.string()),
     date: v.optional(v.string()),
     slot: v.optional(slotValidator),
+    extraPortions: v.optional(v.number()),
   },
-  handler: async (ctx, { token, id, ...patch }) => {
+  handler: async (ctx, { token, id, extraPortions, ...patch }) => {
     await assertSession(ctx, token);
     const meal = await ctx.db.get(id);
     if (!meal) throw new ConvexError("Repas introuvable.");
+    if (extraPortions !== undefined) {
+      assertInt(extraPortions, 0, 30, "Portions en plus");
+      // Still planned: the fridge will get exactly the new extra portions
+      await ctx.db.patch(id, {
+        extraPortions: extraPortions || undefined,
+        ...(meal.status === "prévu" ? { leftoverPortions: extraPortions } : {}),
+      });
+    }
     if (patch.persons !== undefined) assertPersons(patch.persons);
     if (patch.date !== undefined) assertDate(patch.date);
     if (patch.title !== undefined) patch.title = cleanText(patch.title, 80, "Titre") || undefined;
@@ -152,12 +167,12 @@ export const setStatus = mutation({
     const meal = await ctx.db.get(id);
     if (!meal) throw new ConvexError("Repas introuvable.");
     if (leftoverPortions !== undefined) assertInt(leftoverPortions, 0, 60, "Portions restantes");
-    // A dish not eaten goes to the fridge whole
+    // A dish not eaten goes to the fridge whole, with the extra portions cooked for later
+    const extra = meal.extraPortions ?? 0;
     const portions =
       status === "pas mangé"
-        ? (leftoverPortions ?? meal.persons)
-        : (leftoverPortions ??
-          (status === "prévu" ? 0 : meal.leftoverPortions));
+        ? (leftoverPortions ?? meal.persons + extra)
+        : (leftoverPortions ?? (status === "prévu" ? extra : meal.leftoverPortions));
     await ctx.db.patch(id, { status, leftoverPortions: portions });
   },
 });
@@ -188,7 +203,8 @@ export const fridge = query({
     assertDate(today);
     // Nothing keeps more than a couple of weeks: only look back 21 days
     const recent = await mealsBetween(ctx, addDays(today, -21), today);
-    const withLeftovers = recent.filter((m) => m.leftoverPortions > 0);
+    // Planned extra portions appear once the dish has been cooked
+    const withLeftovers = recent.filter((m) => m.leftoverPortions > 0 && m.cookedOn <= today);
     const rows = await withRecipe(ctx, withLeftovers);
     return rows
       .map((m) => ({

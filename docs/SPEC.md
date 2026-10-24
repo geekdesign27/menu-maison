@@ -87,6 +87,13 @@ Serveurs de dev via Portly.
   - Unité « tranche ». Ingrédient acheté par paquet (`ingredients.packSize`, facultatif) :
     la liste compte des paquets entiers (« 2 paquets », « ≈ 14 tranches » dessous) et le
     coût estimé est celui des paquets entiers.
+  - Enseignes : un ingrédient ou un article habituel peut être « disponible seulement chez »
+    certaines enseignes (`onlyChains`). Dans un autre magasin, il va dans une section
+    « À acheter chez … » en bas, hors compteur du magasin mais compté dans le coût.
+  - Quantité à l'ajout (champ « Qté »), « − n + » sur les articles habituels ajoutés.
+    Fiche d'article habituel : nom, rayon, prix d'un article, enseignes, quantité habituelle.
+  - Portions au lieu de personnes. « En plus pour le frigo » (`meals.extraPortions`) :
+    achetées avec le plat, au frigo dès le jour de cuisson, réutilisables dans la semaine.
   - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
     5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.

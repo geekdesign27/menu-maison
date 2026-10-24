@@ -125,13 +125,13 @@ function SettingsContent({ base }: { base: Base }) {
         </p>
       </Card>
 
-      <SectionTitle>Nombre de personnes par défaut</SectionTitle>
+      <SectionTitle>Portions par défaut</SectionTitle>
       <Card className="flex items-center gap-3 p-4">
         <p className="min-w-0 flex-1 text-[15px] text-muted">
           Proposé à chaque nouveau repas planifié.
         </p>
         <Stepper
-          label="Personnes par défaut"
+          label="Portions par défaut"
           value={settings.defaultPersons}
           min={1}
           max={12}

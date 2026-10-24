@@ -17,6 +17,16 @@ export function QuickAdd({ start }: { start: string }) {
   const addExtra = useMutation(api.shopping.addExtra);
   const run = useRun();
   const [label, setLabel] = useState("");
+  // Quantity typed next to the field, applied to whatever is added (empty: none)
+  const [qtyText, setQtyText] = useState("");
+  const typedQty = () => {
+    const n = parseAmount(qtyText);
+    return n !== undefined && !Number.isNaN(n) ? n : undefined;
+  };
+  const reset = () => {
+    setLabel("");
+    setQtyText("");
+  };
   const [sheetOpen, setSheetOpen] = useState(false);
   const [staplesOpen, setStaplesOpen] = useState(false);
   const base = useBase();
@@ -34,10 +44,17 @@ export function QuickAdd({ start }: { start: string }) {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!label.trim()) return;
+    const qty = typedQty();
     const id = await run(() =>
-      addExtra({ token, start, label, memberId: memberId ?? undefined }),
+      addExtra({
+        token,
+        start,
+        label,
+        memberId: memberId ?? undefined,
+        ...(qty !== undefined ? { qty, unit: "pc" as const } : {}),
+      }),
     );
-    if (id) setLabel("");
+    if (id) reset();
   };
 
   return (
@@ -60,6 +77,14 @@ export function QuickAdd({ start }: { start: string }) {
             <SlidersHorizontal size={20} />
           </IconButton>
         </div>
+        <input
+          value={qtyText}
+          onChange={(e) => setQtyText(e.target.value)}
+          inputMode="decimal"
+          placeholder="Qté"
+          aria-label="Quantité de l'article ajouté"
+          className="min-h-12 w-16 shrink-0 rounded-2xl bg-paper px-2 text-center font-bold ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
+        />
         <IconButton
           type="submit"
           label="Ajouter"
@@ -80,7 +105,7 @@ export function QuickAdd({ start }: { start: string }) {
                   type="button"
                   disabled={!!s.extraId}
                   onClick={async () => {
-                    if (await toggleStaple(s)) setLabel("");
+                    if (await toggleStaple(s, typedQty())) reset();
                   }}
                   className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left active:bg-carrot-soft disabled:opacity-60"
                 >

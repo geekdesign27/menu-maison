@@ -189,6 +189,61 @@ describe("buildShoppingList", () => {
     expect(findItem(list, "ing:gruyere:g")?.packs).toBe(1);
   });
 
+  it("buys the extra portions cooked for the fridge", () => {
+    const list = buildShoppingList(
+      input({
+        // 3 tonight + 2 more cooked for later = 5 portions of chicken
+        meals: [{ _id: "m1", recipeId: "curry", persons: 3, extraPortions: 2 }],
+      }),
+    );
+    expect(findItem(list, "ing:poulet:g")?.qty).toBe(750);
+  });
+
+  it("sets apart products sold only by another chain", () => {
+    const list = buildShoppingList(
+      input({
+        meals: [{ _id: "m1", recipeId: "curry", persons: 2 }],
+        ingredients: {
+          ...ingredients,
+          oignon: { ...ingredients.oignon, onlyChains: ["Coop"] },
+        },
+        store: { chain: "Aldi", aisleOrder: [], overrides: [], priceFactor: 1 },
+        extras: [
+          {
+            _id: "x1",
+            label: "Julienne de légumes",
+            onlyChains: ["Coop", "Migros"],
+            priceChf: 3,
+            qty: 2,
+          },
+        ],
+      }),
+    );
+    const last = list.sections.at(-1)!;
+    expect(last.elsewhere).toBe(true);
+    expect(last.name).toBe("À acheter chez Coop ou Migros");
+    expect(
+      list.sections
+        .find((s) => s.name === "À acheter chez Coop")
+        ?.items.map((i) => i.label),
+    ).toEqual(["Oignon"]);
+    expect(list.total).toBe(2); // poulet + riz, here at Aldi
+    expect(findItem(list, "extra:x1")?.costChf).toBe(6); // 2 × 3.00, still in the week's cost
+
+    // At Coop, the same products are in their aisles
+    const atCoop = buildShoppingList(
+      input({
+        meals: [{ _id: "m1", recipeId: "curry", persons: 2 }],
+        ingredients: {
+          ...ingredients,
+          oignon: { ...ingredients.oignon, onlyChains: ["Coop"] },
+        },
+        store: { chain: "Coop", aisleOrder: [], overrides: [], priceFactor: 1 },
+      }),
+    );
+    expect(atCoop.sections.some((s) => s.elsewhere)).toBe(false);
+  });
+
   it("merges kg and g of the same ingredient", () => {
     const list = buildShoppingList(
       input({

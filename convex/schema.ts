@@ -54,6 +54,7 @@ export default defineSchema({
     pantry: v.optional(v.boolean()), // usually in stock at home (spices, oil, rice…)
     // Bought by the pack: how much of `unit` one pack holds (8 slices, 200 g…)
     packSize: v.optional(v.number()),
+    onlyChains: v.optional(v.array(chainValidator)), // sold only by these chains (julienne: Coop)
   }).index("by_name", ["name"]),
 
   recipes: defineTable({
@@ -109,7 +110,8 @@ export default defineSchema({
     slot: slotValidator,
     recipeId: v.optional(v.id("recipes")),
     title: v.optional(v.string()), // free text when no recipe (restaurant, pizza…)
-    persons: v.number(),
+    persons: v.number(), // portions eaten at this meal
+    extraPortions: v.optional(v.number()), // portions cooked on top for the fridge (bought too)
     cookedOn: v.string(), // YYYY-MM-DD, day it is prepared
     // Leftover meals reuse food already cooked: never added to the shopping list
     fromLeftoverOf: v.optional(v.id("meals")),
@@ -133,6 +135,7 @@ export default defineSchema({
         slot: slotValidator,
         recipeId: v.id("recipes"),
         persons: v.number(),
+        extraPortions: v.optional(v.number()),
         cookedDayOffset: v.number(), // usually dayOffset, or dayOffset-1 for a lunch cooked the evening before
       }),
     ),
@@ -167,6 +170,8 @@ export default defineSchema({
     // Last quantity used, proposed again next time
     qty: v.optional(v.number()),
     unit: v.optional(unitValidator),
+    priceChf: v.optional(v.number()), // price of one item
+    onlyChains: v.optional(v.array(chainValidator)),
   }).index("by_name", ["name"]),
 
   /** Items already at home for a shopping week: kept out of the list. */

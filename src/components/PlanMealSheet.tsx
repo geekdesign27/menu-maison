@@ -19,6 +19,7 @@ import {
 } from "./planning/data";
 import { useOverview, useRecipes } from "../lib/queries";
 import { Badge, Button, cx, Segmented, Sheet, Stepper } from "./ui";
+import { portions } from "../lib/format";
 
 interface Props {
   open: boolean;
@@ -61,6 +62,8 @@ function PlanMealForm({
   const [tomorrow, setTomorrow] = useState<boolean | null>(null);
   const [tomorrowPersons, setTomorrowPersons] = useState<number | null>(null);
   const [eveningBefore, setEveningBefore] = useState(false);
+  // Portions cooked on top, kept in the fridge for later in the week
+  const [extraPortions, setExtraPortions] = useState(0);
   const [saving, setSaving] = useState(false);
 
   // Default "also tomorrow lunch" to on, unless tomorrow's lunch is already planned
@@ -81,6 +84,9 @@ function PlanMealForm({
   const defaultPersons = recipe?.defaultPersons ?? base?.settings.defaultPersons ?? 3;
   const effectivePersons = persons ?? defaultPersons;
   const effectiveTomorrowPersons = tomorrowPersons ?? effectivePersons;
+  const isRecipe = !!choice && "recipeId" in choice;
+  const cookedPortions =
+    effectivePersons + (slot === "soir" && alsoTomorrow ? effectiveTomorrowPersons : 0) + extraPortions;
   const warning =
     choice && "recipeId" in choice
       ? repeatWarning(overview?.meals, choice.recipeId, date, today)
@@ -103,7 +109,8 @@ function PlanMealForm({
             slot === "soir" && alsoTomorrow
               ? effectiveTomorrowPersons
               : undefined,
-          cookedTheEveningBefore: slot === "midi" ? eveningBefore : undefined,
+          cookedTheEveningBefore: slot !== "soir" ? eveningBefore : undefined,
+          extraPortions: isRecipe && extraPortions > 0 ? extraPortions : undefined,
         }),
       "Ajouté au menu",
     );
@@ -177,9 +184,9 @@ function PlanMealForm({
             />
           </Field>
 
-          <Field label="Personnes">
+          <Field label={slot === "soir" ? "Portions ce soir" : slot === "midi" ? "Portions ce midi" : "Portions ce matin"}>
             <Stepper
-              label="Personnes"
+              label="Portions"
               value={effectivePersons}
               onChange={setPersons}
             />
@@ -204,9 +211,9 @@ function PlanMealForm({
               />
               {alsoTomorrow && (
                 <div className="mt-3 flex items-center justify-between gap-3">
-                  <span className="font-bold">Personnes demain</span>
+                  <span className="font-bold">Portions demain midi</span>
                   <Stepper
-                    label="Personnes demain midi"
+                    label="Portions demain midi"
                     value={effectiveTomorrowPersons}
                     onChange={setTomorrowPersons}
                   />
@@ -221,6 +228,22 @@ function PlanMealForm({
                 label="Préparé la veille au soir"
                 hint="Les restes se comptent à partir de la veille."
               />
+            </div>
+          )}
+
+          {isRecipe && (
+            <div className="rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-bold">En plus pour le frigo</div>
+                  <div className="text-[15px] text-muted">À manger plus tard dans la semaine</div>
+                </div>
+                <Stepper label="Portions en plus pour le frigo" value={extraPortions} onChange={setExtraPortions} min={0} />
+              </div>
+              <p className="mt-3 rounded-2xl bg-carrot-soft px-3 py-2 text-center font-extrabold text-carrot-dark">
+                Tu prépares {portions(cookedPortions)}
+                {extraPortions > 0 ? `, dont ${portions(extraPortions)} pour le frigo` : ""}
+              </p>
             </div>
           )}
         </div>

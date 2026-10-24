@@ -250,12 +250,20 @@ export function ShoppingPage() {
               )}
 
               {visibleSections.map((section) => (
-                <section key={section.aisleId ?? "divers"} className="mt-6">
+                <section
+                  key={section.elsewhere ? section.name : (section.aisleId ?? "divers")}
+                  className={section.elsewhere ? "mt-10" : "mt-6"}
+                >
                   <div className="mb-2 flex items-center gap-2 px-1">
                     <span className="text-2xl" aria-hidden>
                       {section.emoji}
                     </span>
-                    <h2 className="min-w-0 flex-1 truncate text-lg font-black">
+                    <h2
+                      className={cx(
+                        "min-w-0 flex-1 truncate text-lg font-black",
+                        section.elsewhere && "text-berry",
+                      )}
+                    >
                       {section.name}
                     </h2>
                     {section.done === section.count ? (
