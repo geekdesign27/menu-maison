@@ -21,6 +21,16 @@ déploiement vide, `npx convex run seed:run` fait la même chose.
 - `npm run typecheck` : TypeScript front et Convex.
 - `npm run build` : build de production.
 
+## En production
+
+- App : https://geekdesign27.github.io/menu-maison/ (dépôt public `geekdesign27/menu-maison`).
+- Convex : projet `menu-maison` (équipe `pierre-alain-schutz`), déploiement de production
+  `resolute-squid-776`, région Europe (Irlande). Mis en place le 2026-10-24.
+- Clé de déploiement : secret GitHub `CONVEX_DEPLOY_KEY` (clé « github-actions »).
+- Code famille : `npx convex env set FAMILY_CODE --deployment pierre-alain-schutz:menu-maison:production`
+  (sans valeur, la CLI la demande sans l'écrire dans l'historique). Changer le code
+  déconnecte tous les téléphones.
+
 ## Mise en ligne (GitHub Pages + Convex Cloud, comme evacecole)
 
 À faire une seule fois :
