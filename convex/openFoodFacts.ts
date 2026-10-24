@@ -17,6 +17,8 @@ const USER_AGENT =
 const SEARCH_URL = "https://search.openfoodfacts.org/search";
 const IMAGE_HOST = "images.openfoodfacts.org";
 const MAX_IMAGE_BYTES = 2_000_000;
+// SVG is left out: it can carry scripts
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const FIELDS = [
   "code",
   "product_name",
@@ -119,13 +121,18 @@ async function storeImage(
 ): Promise<Id<"_storage"> | null> {
   if (!url) return null;
   try {
-    if (new URL(url).hostname !== IMAGE_HOST) return null;
-    const response = await fetch(url, {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || parsed.hostname !== IMAGE_HOST) return null;
+    const response = await fetch(parsed, {
       headers: { "User-Agent": USER_AGENT },
       signal: AbortSignal.timeout(8000),
+      // A redirect could leave the checked host
+      redirect: "error",
     });
-    const type = response.headers.get("content-type") ?? "";
-    if (!response.ok || !type.startsWith("image/")) return null;
+    const type = (response.headers.get("content-type") ?? "").split(";")[0].trim();
+    if (!response.ok || !IMAGE_TYPES.includes(type)) return null;
+    const announced = Number(response.headers.get("content-length") ?? 0);
+    if (announced > MAX_IMAGE_BYTES) return null;
     const blob = await response.blob();
     if (blob.size > MAX_IMAGE_BYTES) return null;
     return await store(blob);
