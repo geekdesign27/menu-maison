@@ -39,7 +39,7 @@ Serveurs de dev via Portly.
 - Garde anti-force brute (table `accessGuard`) : 5 échecs en 10 min, puis refus 10 min.
   Garde globale : un inconnu peut bloquer les **nouvelles** connexions (les téléphones déjà
   connectés ne sont pas touchés). Déblocage : `npx convex run access:resetGuard`.
-- `FAMILY_CODE` : 12 caractères au minimum (refusé sinon), idéalement 4 mots au hasard.
+- `FAMILY_CODE` : 8 caractères au minimum (refusé sinon). Choix de PA le 2026-10-24 : code court, plus facile à taper, accepté malgré le risque de devinette.
   Seule une empreinte SHA-256 du jeton est stockée, et chaque session retient l'empreinte du
   code : **changer `FAMILY_CODE` déconnecte tous les téléphones**. Révocation d'urgence :
   `npx convex run access:revokeAll`. Sessions expirées purgées chaque nuit (`crons.ts`).

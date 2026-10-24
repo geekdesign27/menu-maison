@@ -6,7 +6,7 @@ import { addDays } from "./domain/dates";
 export const SESSION_DAYS = 365;
 export const MAX_FAILURES = 5;
 export const LOCK_MS = 10 * 60 * 1000;
-export const MIN_CODE_LENGTH = 12;
+export const MIN_CODE_LENGTH = 8;
 
 const EXPIRED = "Session expirée, entre à nouveau le code famille.";
 
