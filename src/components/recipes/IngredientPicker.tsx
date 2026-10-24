@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus } from "lucide-react";
-import type { Id } from "../../../convex/_generated/dataModel";
+import { ChevronRight, Package, Pencil, Plus } from "lucide-react";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { NBSP, type Unit } from "../../../convex/domain/quantities";
 import type { Base } from "../../lib/session";
 import { searchKey } from "../../lib/text";
 import { unitChoiceLabel } from "../../lib/units";
-import { Card, SearchInput, Sheet } from "../ui";
+import { Card, IconButton, SearchInput, Sheet } from "../ui";
 import { IngredientSheet } from "../shopping/IngredientSheet";
 
 export interface PickedIngredient {
@@ -30,6 +30,7 @@ export function IngredientPicker({
 }) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Doc<"ingredients"> | null>(null);
 
   const close = () => {
     setQuery("");
@@ -89,26 +90,48 @@ export function IngredientPicker({
             {matches.map((i) => {
               const aisle = aisleById.get(i.aisleId);
               return (
-                <li key={i._id}>
+                <li key={i._id} className="flex items-center">
                   <button
                     type="button"
                     onClick={() => pick(i)}
-                    className="flex min-h-13 w-full items-center gap-3 px-4 py-2 text-left active:bg-carrot-soft"
+                    className="flex min-h-13 min-w-0 flex-1 items-center gap-3 py-2 pr-1 pl-4 text-left active:bg-carrot-soft"
                   >
                     <span aria-hidden className="text-xl">
                       {aisle?.emoji ?? "🛒"}
                     </span>
-                    <span className="min-w-0 flex-1 font-bold">{i.name}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold">{i.name}</span>
+                      {i.pantry && (
+                        <span className="flex items-center gap-1 text-[13px] font-bold text-herb">
+                          <Package size={13} aria-hidden /> Souvent en stock
+                        </span>
+                      )}
+                    </span>
                     <span className="text-[15px] text-muted">
                       {unitChoiceLabel(i.unit)}
                     </span>
                   </button>
+                  <IconButton
+                    label={`Modifier l'ingrédient${NBSP}: ${i.name}`}
+                    onClick={() => setEditing(i)}
+                    className="mr-1 text-muted"
+                  >
+                    <Pencil size={18} />
+                  </IconButton>
                 </li>
               );
             })}
           </ul>
         </div>
       </Sheet>
+      {/* Editing name, aisle, unit, price or "souvent en stock" without leaving the picker */}
+      {open && editing && (
+        <IngredientSheet
+          ingredient={editing}
+          aisles={base.aisles}
+          onClose={() => setEditing(null)}
+        />
+      )}
       {/* Quick creation stacks the regular ingredient form over the picker */}
       {open && creating && (
         <IngredientSheet
