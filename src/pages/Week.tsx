@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import {
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   LayoutTemplate,
   Moon,
   Plus,
@@ -25,6 +26,7 @@ import { formatChf } from "../lib/format";
 import { PlanMealSheet } from "../components/PlanMealSheet";
 import { MealPill } from "../components/planning/MealPill";
 import { MealSheet } from "../components/planning/MealSheet";
+import { ValidateWeekSheet } from "../components/planning/ValidateWeekSheet";
 import {
   capitalize,
   SLOT_LABEL,
@@ -54,6 +56,7 @@ export function WeekPage() {
   const planParam = searchParams.get("plan") as Id<"recipes"> | null;
   const [plan, setPlan] = useState<{ date: string; slot: Slot } | null>(null);
   const [selectedId, setSelectedId] = useState<Id<"meals"> | null>(null);
+  const [validating, setValidating] = useState(false);
   const selected = meals?.find((m) => m._id === selectedId) ?? null;
 
   const closePlan = () => {
@@ -103,6 +106,15 @@ export function WeekPage() {
               />
             ))}
           </div>
+          {meals.some((m) => m.recipe && !m.fromLeftoverOf) && (
+            <div className="mt-6">
+              <Button size="lg" variant="herb" onClick={() => setValidating(true)}>
+                <ClipboardCheck size={22} />
+                Valider le menu de la semaine
+              </Button>
+              <p className="mt-2 text-center text-[15px] text-muted">On fait le tour de ce que vous avez déjà, puis la liste de courses est prête.</p>
+            </div>
+          )}
         </>
       )}
 
@@ -114,6 +126,7 @@ export function WeekPage() {
         recipeId={planParam ?? undefined}
       />
       <MealSheet meal={selected} onClose={() => setSelectedId(null)} />
+      <ValidateWeekSheet open={validating} onClose={() => setValidating(false)} start={start} />
     </Page>
   );
 }

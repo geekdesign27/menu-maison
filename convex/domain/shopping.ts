@@ -27,6 +27,7 @@ export interface ShoppingInput {
       unit: Unit;
       priceChf?: number;
       priceQty?: number;
+      pantry?: boolean; // usually in stock at home
     }
   >;
   aisles: { _id: string; name: string; emoji: string; order: number }[];
@@ -43,6 +44,8 @@ export interface ShoppingInput {
     aisleId?: string;
   }[];
   checks: Record<string, boolean>; // itemKey → checked
+  /** Item keys the family already has at home this week: kept out of the list. */
+  skipped?: string[];
 }
 
 export interface ShoppingItem {
@@ -56,6 +59,7 @@ export interface ShoppingItem {
   checked: boolean;
   extra: boolean;
   ingredientId?: string;
+  pantry: boolean;
 }
 
 export interface ShoppingSection {
@@ -70,6 +74,8 @@ export interface ShoppingList {
   total: number;
   remaining: number;
   costChf: number;
+  /** Already at home: not counted, shown apart so they can be put back. */
+  skipped: ShoppingItem[];
 }
 
 /** Label and emoji of the catch-all section (extras without a known aisle). */
@@ -209,9 +215,11 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
     byAisle.set(target, list);
   };
 
+  const skippedKeys = new Set(input.skipped ?? []);
+  const skipped: ShoppingItem[] = [];
   for (const [key, entry] of totals) {
     const ing = input.ingredients[entry.ingredientId];
-    push(overrides.get(entry.ingredientId) ?? ing.aisleId, {
+    const item: ShoppingItem = {
       key,
       label: ing.name,
       qty: entry.qty,
@@ -222,7 +230,10 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       checked: input.checks[key] ?? false,
       extra: false,
       ingredientId: entry.ingredientId,
-    });
+      pantry: ing.pantry ?? false,
+    };
+    if (skippedKeys.has(key)) skipped.push(item);
+    else push(overrides.get(entry.ingredientId) ?? ing.aisleId, item);
   }
 
   for (const extra of input.extras) {
@@ -239,6 +250,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       recipes: [],
       checked: input.checks[key] ?? false,
       extra: true,
+      pantry: false,
     });
   }
 
@@ -270,5 +282,6 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
     total: all.length,
     remaining: all.filter((i) => !i.checked).length,
     costChf: roundChf(all.reduce((sum, i) => sum + (i.costChf ?? 0), 0)),
+    skipped: skipped.sort((a, b) => a.label.localeCompare(b.label, "fr")),
   };
 }

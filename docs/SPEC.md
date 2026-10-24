@@ -61,6 +61,13 @@ Serveurs de dev via Portly.
   personne × personnes, unités normalisées g/ml/pc, additionnées par ingrédient), plus les
   articles libres. Triée par rayon selon le magasin choisi (ordre + exceptions).
   Coches synchronisées en temps réel, filtre « reste à acheter ».
+- **Valider le menu de la semaine** (demande de PA, 2026-10-24) : bouton en bas de la
+  Semaine. Fenêtre listant chaque ingrédient de la semaine une fois, avec la quantité
+  totale, tout coché. Ce qui est décoché (« déjà à la maison ») sort entièrement de la
+  liste (table `stockSkips`, par semaine), pas de quantité partielle. Ordre : ingrédients
+  « souvent en stock » (`ingredients.pantry`, rayons épices, huiles, pâtes et riz,
+  conserves, petit-déjeuner par défaut, modifiable dans Réglages) en haut, frais en bas.
+  Dans Courses, section repliable « Déjà à la maison » avec « Remettre ».
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.
 - **Stats** : nombre de fois par recette (4 et 12 dernières semaines), dernière fois,
   plats « oubliés » (aimés mais pas mangés depuis 30 jours), alerte au moment de planifier

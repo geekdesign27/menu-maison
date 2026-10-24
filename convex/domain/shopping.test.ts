@@ -118,6 +118,26 @@ describe("buildShoppingList", () => {
     expect(findItem(list, "ing:poulet:g")?.qty).toBe(750);
   });
 
+  it("keeps items already at home out of the list, totals and cost", () => {
+    const list = buildShoppingList(
+      input({
+        meals: [{ _id: "m1", recipeId: "curry", persons: 2 }],
+        ingredients: {
+          ...ingredients,
+          riz: { ...ingredients.riz, pantry: true },
+        },
+        skipped: ["ing:riz:g"],
+      }),
+    );
+    expect(findItem(list, "ing:riz:g")).toBeUndefined();
+    expect(list.skipped.map((i) => i.key)).toEqual(["ing:riz:g"]);
+    expect(list.skipped[0].pantry).toBe(true);
+    expect(list.skipped[0].display).toBe(`160${NBSP}g`);
+    expect(list.total).toBe(2); // poulet + oignon
+    expect(list.costChf).toBe(8); // 300 g poulet 7.50 + 1 oignon 0.50
+    expect(findItem(list, "ing:poulet:g")?.pantry).toBe(false);
+  });
+
   it("merges kg and g of the same ingredient", () => {
     const list = buildShoppingList(
       input({
@@ -271,7 +291,7 @@ describe("buildShoppingList", () => {
 
   it("omits empty sections and returns an empty list without meals", () => {
     const list = buildShoppingList(input());
-    expect(list).toEqual({ sections: [], total: 0, remaining: 0, costChf: 0 });
+    expect(list).toEqual({ sections: [], total: 0, remaining: 0, costChf: 0, skipped: [] });
   });
 
   it("computes costs with the store price factor", () => {

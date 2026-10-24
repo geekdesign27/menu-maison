@@ -49,6 +49,7 @@ export function IngredientSheet({
       ? formatNumber(ingredient.priceQty)
       : "1",
   );
+  const [pantry, setPantry] = useState(ingredient?.pantry ?? false);
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
@@ -80,6 +81,7 @@ export function IngredientSheet({
           unit,
           priceChf,
           priceQty: priceChf !== undefined ? priceQty : undefined,
+          pantry,
         }),
       ingredient ? "Ingrédient enregistré." : "Ingrédient ajouté.",
     );
@@ -147,6 +149,20 @@ export function IngredientSheet({
             inputMode="decimal"
           />
         </div>
+        <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl bg-paper px-4 py-3 ring-1 ring-line">
+          <input
+            type="checkbox"
+            checked={pantry}
+            onChange={(e) => setPantry(e.target.checked)}
+            className="size-6 shrink-0 accent-carrot"
+          />
+          <span>
+            <span className="block font-bold">On l'a souvent en stock</span>
+            <span className="block text-[15px] text-muted">
+              Proposé en haut de la liste quand on valide le menu de la semaine, pour le décocher facilement.
+            </span>
+          </span>
+        </label>
         <p className="rounded-2xl bg-sun-soft p-3 text-[15px] font-semibold text-[#6b4d00]">
           Prix estimés, indicatifs : ajuste-les à tes tickets de caisse.
         </p>

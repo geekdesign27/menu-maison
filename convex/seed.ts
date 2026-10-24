@@ -3,6 +3,10 @@ import type { Id } from "./_generated/dataModel";
 import { AISLES, INGREDIENTS, MEMBERS, RECIPES, STORES } from "./seedData";
 import { DEFAULT_SETTINGS } from "./lib";
 
+/** Aisles whose products usually stay in stock at home (bought in bulk, not every week). */
+const PANTRY_AISLES = new Set(["pates-riz", "conserves", "epices", "huiles", "petit-dej"]);
+const PANTRY_AISLE_NAMES = new Set(AISLES.filter((a) => PANTRY_AISLES.has(a.key)).map((a) => a.name));
+
 /** Fills an empty deployment with members, aisles, ingredients, recipes and stores. */
 export async function seedIfEmpty(ctx: MutationCtx) {
   if (await ctx.db.query("members").first()) return false;
@@ -31,6 +35,7 @@ export async function seedIfEmpty(ctx: MutationCtx) {
         unit: ing.unit,
         priceChf: ing.priceChf,
         priceQty: ing.priceQty,
+        pantry: PANTRY_AISLES.has(ing.aisle),
       }),
     );
   }
@@ -79,4 +84,24 @@ export async function seedIfEmpty(ctx: MutationCtx) {
 export const run = internalMutation({
   args: {},
   handler: async (ctx) => ({ seeded: await seedIfEmpty(ctx) }),
+});
+
+/**
+ * One-off migration (2026-10-24): marks pantry ingredients on deployments seeded
+ * before the "souvent en stock" flag existed. Leaves already-set flags alone.
+ * `npx convex run seed:setPantryDefaults`
+ */
+export const setPantryDefaults = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const aisles = await ctx.db.query("aisles").collect();
+    const pantryAisles = new Set(aisles.filter((a) => PANTRY_AISLE_NAMES.has(a.name)).map((a) => a._id));
+    let updated = 0;
+    for (const ing of await ctx.db.query("ingredients").collect()) {
+      if (ing.pantry !== undefined) continue;
+      await ctx.db.patch(ing._id, { pantry: pantryAisles.has(ing.aisleId) });
+      updated++;
+    }
+    return { updated };
+  },
 });

@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import {
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   RotateCcw,
@@ -292,6 +293,8 @@ export function ShoppingPage() {
                 </section>
               ))}
 
+              {list.skipped.length > 0 && <AtHomeSection start={week.start} items={list.skipped} />}
+
               {checkedCount > 0 && (
                 <div className="mt-8 flex justify-center">
                   <Button
@@ -466,5 +469,51 @@ function AisleOverrideSheet({
         onPick={pick}
       />
     </Sheet>
+  );
+}
+
+/** Items marked "already at home" when validating the week: one tap puts them back. */
+function AtHomeSection({ start, items }: { start: string; items: ShoppingItem[] }) {
+  const { token } = useSession();
+  const run = useRun();
+  const setOne = useMutation(api.shopping.setOneAtHome);
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="mt-8">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex min-h-12 w-full items-center gap-2 rounded-2xl px-1 text-left"
+      >
+        <span className="text-2xl" aria-hidden>
+          🏠
+        </span>
+        <span className="min-w-0 flex-1 text-lg font-black">Déjà à la maison</span>
+        <Badge tone="herb">{items.length}</Badge>
+        <ChevronDown size={22} className={open ? "rotate-180 text-muted transition" : "text-muted transition"} />
+      </button>
+      {open && (
+        <Card className="mt-2 overflow-hidden">
+          <ul className="divide-y divide-line">
+            {items.map((item) => (
+              <li key={item.key} className="flex min-h-14 items-center gap-3 px-4 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-muted">{item.label}</span>
+                  <span className="block text-[13px] text-muted">{item.display}</span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => run(() => setOne({ token, start, itemKey: item.key, atHome: false }), `${item.label} remis sur la liste`)}
+                >
+                  Remettre
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+    </section>
   );
 }

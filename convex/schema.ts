@@ -50,6 +50,7 @@ export default defineSchema({
     // Estimated price in CHF for `priceQty` of `unit` (e.g. 3.50 CHF for 1000 g)
     priceChf: v.optional(v.number()),
     priceQty: v.optional(v.number()),
+    pantry: v.optional(v.boolean()), // usually in stock at home (spices, oil, rice…)
   }).index("by_name", ["name"]),
 
   recipes: defineTable({
@@ -149,6 +150,12 @@ export default defineSchema({
     unit: v.optional(unitValidator),
     aisleId: v.optional(v.id("aisles")),
     addedBy: v.optional(v.id("members")),
+  }).index("by_period", ["periodStart"]),
+
+  /** Items already at home for a shopping week: kept out of the list. */
+  stockSkips: defineTable({
+    periodStart: v.string(),
+    itemKey: v.string(),
   }).index("by_period", ["periodStart"]),
 
   /** "Envies": dishes someone feels like eating soon. */

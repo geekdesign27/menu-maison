@@ -113,6 +113,7 @@ export const upsertIngredient = mutation({
     unit: unitValidator,
     priceChf: v.optional(v.number()),
     priceQty: v.optional(v.number()),
+    pantry: v.optional(v.boolean()),
   },
   handler: async (ctx, { token, id, ...data }) => {
     await assertSession(ctx, token);

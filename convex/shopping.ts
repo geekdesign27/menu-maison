@@ -16,7 +16,7 @@ export const list = query({
     await assertSession(ctx, token);
     assertDate(start);
     const end = addDays(start, 6);
-    const [eaten, ingredients, aisles, extras, checks] = await Promise.all([
+    const [eaten, ingredients, aisles, extras, checks, skips] = await Promise.all([
       // One extra day: next week's first lunch may be cooked on this week's last evening
       ctx.db
         .query("meals")
@@ -30,6 +30,10 @@ export const list = query({
         .collect(),
       ctx.db
         .query("shoppingChecks")
+        .withIndex("by_period", (q) => q.eq("periodStart", start))
+        .collect(),
+      ctx.db
+        .query("stockSkips")
         .withIndex("by_period", (q) => q.eq("periodStart", start))
         .collect(),
     ]);
@@ -63,6 +67,7 @@ export const list = query({
       },
       extras,
       checks: Object.fromEntries(checks.map((c) => [c.itemKey, c.checked])),
+      skipped: skips.map((s) => s.itemKey),
     });
     const checkedBy = Object.fromEntries(
       checks.filter((c) => c.checked).map((c) => [c.itemKey, c.checkedBy]),
@@ -151,5 +156,39 @@ export const removeExtra = mutation({
   handler: async (ctx, { token, id }) => {
     await assertSession(ctx, token);
     await ctx.db.delete(id);
+  },
+});
+
+/** "Valider le menu de la semaine": the full set of items already at home this week. */
+export const setAtHome = mutation({
+  args: { token: v.string(), start: v.string(), itemKeys: v.array(v.string()) },
+  handler: async (ctx, { token, start, itemKeys }) => {
+    await assertSession(ctx, token);
+    assertDate(start);
+    if (itemKeys.length > 500 || itemKeys.some((k) => k.length > 120)) throw new ConvexError("Liste invalide.");
+    const existing = await ctx.db
+      .query("stockSkips")
+      .withIndex("by_period", (q) => q.eq("periodStart", start))
+      .collect();
+    for (const s of existing) await ctx.db.delete(s._id);
+    for (const itemKey of new Set(itemKeys)) await ctx.db.insert("stockSkips", { periodStart: start, itemKey });
+  },
+});
+
+/** One item back to (or out of) the list, from the shopping screen. */
+export const setOneAtHome = mutation({
+  args: { token: v.string(), start: v.string(), itemKey: v.string(), atHome: v.boolean() },
+  handler: async (ctx, { token, start, itemKey, atHome }) => {
+    await assertSession(ctx, token);
+    assertDate(start);
+    if (itemKey.length > 120) throw new ConvexError("Article invalide.");
+    const existing = (
+      await ctx.db
+        .query("stockSkips")
+        .withIndex("by_period", (q) => q.eq("periodStart", start))
+        .collect()
+    ).filter((s) => s.itemKey === itemKey);
+    for (const s of existing) await ctx.db.delete(s._id);
+    if (atHome) await ctx.db.insert("stockSkips", { periodStart: start, itemKey });
   },
 });
