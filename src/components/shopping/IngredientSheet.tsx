@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { Trash2 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { Unit } from "../../../convex/domain/quantities";
@@ -26,12 +27,15 @@ export function IngredientSheet({
   aisles,
   initialName = "",
   onSaved,
+  onDelete,
   onClose,
 }: {
   ingredient?: Doc<"ingredients">;
   aisles: Doc<"aisles">[];
   initialName?: string;
   onSaved?: (saved: SavedIngredient) => void;
+  /** Shown as a « Supprimer » button when editing an existing ingredient. */
+  onDelete?: () => void;
   onClose: () => void;
 }) {
   const { token } = useSession();
@@ -198,6 +202,11 @@ export function IngredientSheet({
         <p className="rounded-2xl bg-sun-soft p-3 text-[15px] font-semibold text-[#6b4d00]">
           Prix estimés, indicatifs : ajuste-les à tes tickets de caisse.
         </p>
+        {ingredient && onDelete && (
+          <Button variant="danger" onClick={onDelete}>
+            <Trash2 size={18} /> Supprimer l'ingrédient
+          </Button>
+        )}
       </div>
     </Sheet>
   );

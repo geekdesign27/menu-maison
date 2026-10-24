@@ -32,6 +32,22 @@ export const list = query({
   },
 });
 
+/** Adds a usual item from the « Produits » page (the shopping list adds them on the fly too). */
+export const create = mutation({
+  args: { token: v.string(), name: v.string() },
+  handler: async (ctx, { token, name }) => {
+    await assertSession(ctx, token);
+    const clean = cleanText(name, 80, "Article");
+    if (!clean) throw new ConvexError("Le nom de l'article est obligatoire.");
+    const duplicate = await ctx.db
+      .query("staples")
+      .withIndex("by_name", (q) => q.eq("name", clean))
+      .first();
+    if (duplicate) throw new ConvexError(`« ${clean} » existe déjà.`);
+    return ctx.db.insert("staples", { name: clean, useCount: 0 });
+  },
+});
+
 /** Removes an item from the usual items (this week's list keeps it). */
 export const remove = mutation({
   args: { token: v.string(), id: v.id("staples") },

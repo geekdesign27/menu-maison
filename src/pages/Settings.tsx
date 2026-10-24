@@ -7,7 +7,6 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { DAY_NAMES } from "../../convex/domain/dates";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun } from "../lib/toast";
-import { formatChf } from "../lib/format";
 import { BackButton } from "../components/Layout";
 import {
   Avatar,
@@ -16,7 +15,6 @@ import {
   Chip,
   Loading,
   Page,
-  SearchInput,
   SectionTitle,
   Stepper,
 } from "../components/ui";
@@ -24,9 +22,6 @@ import { ChainMark } from "../components/shopping/chains";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { MemberSheet } from "../components/shopping/MemberSheet";
 import { AisleSheet } from "../components/shopping/AisleSheet";
-import { IngredientSheet } from "../components/shopping/IngredientSheet";
-import { amountLabel } from "../lib/units";
-import { searchKey } from "../lib/text";
 
 // Monday first, as on a Swiss calendar; values follow Date.getDay()
 const DAYS = [1, 2, 3, 4, 5, 6, 0].map((value) => {
@@ -38,12 +33,9 @@ const DAYS = [1, 2, 3, 4, 5, 6, 0].map((value) => {
   };
 });
 
-const INGREDIENTS_SHOWN = 30;
-
 type Editing =
   | { kind: "member"; id?: Id<"members"> }
   | { kind: "aisle"; id?: Id<"aisles"> }
-  | { kind: "ingredient"; id?: Id<"ingredients"> }
   | null;
 
 export function SettingsPage() {
@@ -61,17 +53,11 @@ function SettingsContent({ base }: { base: Base }) {
   const updateSettings = useMutation(api.catalog.updateSettings);
   const logout = useMutation(api.access.logout);
   const [editing, setEditing] = useState<Editing>(null);
-  const [search, setSearch] = useState("");
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [newShoppingDay, setNewShoppingDay] = useState<number | null>(null);
 
   const { settings } = base;
   const shoppingDayName = DAY_NAMES[settings.shoppingDay] ?? "samedi";
-  const aisleById = new Map(base.aisles.map((a) => [a._id, a]));
-  const needle = searchKey(search);
-  const ingredients = base.ingredients.filter((i) =>
-    searchKey(i.name).includes(needle),
-  );
   const close = () => setEditing(null);
 
   return (
@@ -202,56 +188,20 @@ function SettingsContent({ base }: { base: Base }) {
       </Card>
 
       <SectionTitle>Ingrédients et prix</SectionTitle>
-      <p className="mb-3 px-1 text-[15px] text-muted">
-        Prix estimés, indicatifs : ajuste-les à tes tickets de caisse.
-      </p>
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Chercher un ingrédient"
-      />
-      <Card className="mt-3 overflow-hidden">
-        <ul className="divide-y divide-line">
-          {ingredients.slice(0, INGREDIENTS_SHOWN).map((i) => {
-            const aisle = aisleById.get(i.aisleId);
-            const price =
-              i.priceChf !== undefined && i.priceQty !== undefined
-                ? `${formatChf(i.priceChf)} pour ${amountLabel(i.priceQty, i.unit)}`
-                : "Pas de prix";
-            return (
-              <li key={i._id}>
-                <Row
-                  onClick={() => setEditing({ kind: "ingredient", id: i._id })}
-                  icon={
-                    <span className="text-2xl" aria-hidden>
-                      {aisle?.emoji ?? "🛒"}
-                    </span>
-                  }
-                  title={i.name}
-                  subtitle={price}
-                />
-              </li>
-            );
-          })}
-          {ingredients.length === 0 && (
-            <li className="px-4 py-5 text-center text-[15px] text-muted">
-              Aucun ingrédient ne correspond.
-            </li>
-          )}
-          {ingredients.length > INGREDIENTS_SHOWN && (
-            <li className="px-4 py-3 text-center text-[15px] text-muted">
-              Et {ingredients.length - INGREDIENTS_SHOWN} autres : affine la
-              recherche.
-            </li>
-          )}
-          <li>
-            <AddRow
-              label="Ajouter un ingrédient"
-              onClick={() => setEditing({ kind: "ingredient" })}
-            />
-          </li>
-        </ul>
-      </Card>
+      <Link to="/produits">
+        <Card className="flex min-h-14 items-center gap-3 px-4 py-3">
+          <span className="text-2xl" aria-hidden>
+            🧺
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[17px] font-extrabold">Produits</span>
+            <span className="block text-[15px] text-muted">
+              {base.ingredients.length} ingrédients, avec leur prix, leur rayon et leur photo
+            </span>
+          </span>
+          <ChevronRight className="shrink-0 text-muted" size={20} />
+        </Card>
+      </Link>
 
       <SectionTitle>Ce téléphone</SectionTitle>
       <div className="grid gap-2">
@@ -276,13 +226,6 @@ function SettingsContent({ base }: { base: Base }) {
       {editing?.kind === "aisle" && (
         <AisleSheet
           aisle={base.aisles.find((a) => a._id === editing.id)}
-          onClose={close}
-        />
-      )}
-      {editing?.kind === "ingredient" && (
-        <IngredientSheet
-          ingredient={base.ingredients.find((i) => i._id === editing.id)}
-          aisles={base.aisles}
           onClose={close}
         />
       )}

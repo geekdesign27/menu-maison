@@ -23,6 +23,12 @@ const LINKS = [
     text: "Ce qu'on mange, et à quelle fréquence",
   },
   {
+    to: "/produits",
+    emoji: "🧺",
+    title: "Produits",
+    text: "Ingrédients et articles hors recette : prix, rayon, photo",
+  },
+  {
     to: "/magasins",
     emoji: "🏪",
     title: "Magasins",
@@ -32,7 +38,7 @@ const LINKS = [
     to: "/reglages",
     emoji: "⚙️",
     title: "Réglages",
-    text: "Profils, jour des courses, ingrédients",
+    text: "Profils, jour des courses, rayons",
   },
 ];
 

@@ -16,6 +16,7 @@ function memberName(name: string) {
   return n;
 }
 import { chainValidator, unitValidator } from "./schema";
+import { deletionBlocker } from "./domain/products";
 
 /** Everything small the UI needs on every screen, in one subscription. */
 export const base = query({
@@ -145,6 +146,20 @@ export const upsertIngredient = mutation({
       return id;
     }
     return ctx.db.insert("ingredients", { ...data, name });
+  },
+});
+
+/** Deletes an ingredient no recipe uses, archived recipes included. */
+export const removeIngredient = mutation({
+  args: { token: v.string(), id: v.id("ingredients") },
+  handler: async (ctx, { token, id }) => {
+    await assertSession(ctx, token);
+    if (!(await ctx.db.get(id))) throw new ConvexError("Ingrédient introuvable.");
+    const recipes = await ctx.db.query("recipes").collect();
+    const users = recipes.filter((r) => r.items.some((it) => it.ingredientId === id));
+    const blocker = deletionBlocker(users);
+    if (blocker) throw new ConvexError(blocker);
+    await ctx.db.delete(id);
   },
 });
 

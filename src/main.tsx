@@ -25,6 +25,7 @@ import { StatsPage } from "./pages/Stats";
 import { StoresPage } from "./pages/Stores";
 import { StoreEditorPage } from "./pages/StoreEditor";
 import { SettingsPage } from "./pages/Settings";
+import { ProductsPage } from "./pages/Products";
 
 function App() {
   if (!convexConfigured) {
@@ -71,6 +72,7 @@ function App() {
                         path="/magasin/:id"
                         element={<StoreEditorPage />}
                       />
+                      <Route path="/produits" element={<ProductsPage />} />
                       <Route path="/reglages" element={<SettingsPage />} />
                       <Route path="*" element={<WeekPage />} />
                     </Route>

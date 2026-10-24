@@ -24,6 +24,20 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
 12. Design sympa dans l'esprit Planivore. Prix suisses si possible (estimations en CHF,
     aucune API gratuite fiable n'existe pour Coop / Migros).
 
+## Demandes de PA (2026-10-24)
+
+1. **Lot 1, page « Produits »** (`/produits`, depuis « Plus ») : ingrédients et articles
+   hors recette dans une seule liste, recherche, filtres (type, rayon, enseigne, sans prix,
+   sans photo), modification par les fiches existantes, suppression d'un ingrédient
+   seulement si aucune recette (archivées comprises) ne l'utilise.
+2. **Lot 2, gestion sur ordinateur** (`/gestion`) : même code famille, mise en page large,
+   tableaux triables (recettes, produits, rayons, magasins), édition dans un panneau.
+3. **Lot 3, Open Food Facts** : chercher un produit depuis l'éditeur de recette ou la fiche
+   d'un produit, importer photo, allergènes et nutrition. L'ingrédient reste générique
+   (« Spaghetti ») et achetable partout : ni marque ni enseigne imposée. Pas de doublon
+   (code-barres, puis nom). Allergènes et calories par portion affichés sur la recette.
+4. Plus tard : scanner les tickets de caisse pour ajuster les prix.
+
 ## Stack
 
 Identique à `~/dev/evacecole` : Vite + React 19 + TypeScript + Tailwind 4, React Router
@@ -134,6 +148,8 @@ Serveurs de dev via Portly.
   magasin, articles avec quantité totale, recettes d'origine, coût estimé, clé de coche).
 - `leftovers.ts` : `leftoverStatus(cookedOn, fridgeDays, today)`.
 - `stats.ts` : fréquences, dernière fois, alertes de répétition.
+- `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
+  refus de suppression.
 
 ## Règles
 

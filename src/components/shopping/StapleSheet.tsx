@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { Trash2 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { formatNumber } from "../../../convex/domain/quantities";
@@ -11,12 +12,20 @@ import { ChainsPicker, type Chain } from "./chains";
 import { ProductPhotoField } from "./ProductPhotoField";
 import type { Staple } from "./StaplesSheet";
 
+export type EditableStaple = Pick<
+  Staple,
+  "_id" | "name" | "aisleId" | "priceChf" | "qty" | "onlyChains" | "imageId" | "imageUrl"
+>;
+
 /** Full card of a usual item: name, aisle, price of one item, chains, usual quantity. */
 export function StapleSheet({
   staple,
+  onDelete,
   onClose,
 }: {
-  staple: Staple;
+  staple: EditableStaple;
+  /** Shown as a « Supprimer » button when given. */
+  onDelete?: () => void;
   onClose: () => void;
 }) {
   const base = useBase();
@@ -119,6 +128,11 @@ export function StapleSheet({
         </div>
         <ProductPhotoField imageUrl={image.url} onChange={(img) => setImage(img ? { id: img.id, url: img.url } : { id: null, url: null })} />
         <ChainsPicker value={onlyChains} onChange={setOnlyChains} />
+        {onDelete && (
+          <Button variant="danger" onClick={onDelete}>
+            <Trash2 size={18} /> Supprimer l'article
+          </Button>
+        )}
       </div>
     </Sheet>
   );
