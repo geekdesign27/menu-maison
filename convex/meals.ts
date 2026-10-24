@@ -232,6 +232,7 @@ export const planLeftover = mutation({
     if (!source) throw new ConvexError("Restes introuvables.");
     if (source.leftoverPortions < 1)
       throw new ConvexError("Il n'y a plus de portions de ce plat.");
+    if (date < source.cookedOn) throw new ConvexError("Les restes ne peuvent pas être mangés avant d'être cuisinés.");
     const taken = Math.min(persons, source.leftoverPortions);
     await ctx.db.patch(sourceId, {
       leftoverPortions: source.leftoverPortions - taken,

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation } from "convex/react";
 import {
   CalendarDays,
+  CalendarPlus,
   Check,
   ChevronRight,
   Refrigerator,
@@ -19,6 +20,7 @@ import { Button, cx, Segmented, Sheet, Stepper } from "../ui";
 import { WeekDayPicker } from "./DayPicker";
 import { Field, SLOT_OPTIONS } from "./controls";
 import { capitalize, SLOT_LABEL, type Slot, type WeekMeal } from "./data";
+import { PlanLeftoverSheet } from "./PlanLeftoverSheet";
 
 type StatusChoice = "prévu" | "mangé" | "pas mangé" | "reste";
 
@@ -61,6 +63,7 @@ function MealActions({
 
   const [persons, setPersons] = useState(meal.persons);
   const [extra, setExtra] = useState(meal.extraPortions ?? 0);
+  const [planningLeftovers, setPlanningLeftovers] = useState(false);
   const changeExtra = (n: number) => {
     setExtra(n);
     void run(() => update({ token, id: meal._id, extraPortions: n }));
@@ -171,6 +174,12 @@ function MealActions({
         <span className="font-extrabold">Portions</span>
         <Stepper label="Portions" value={persons} onChange={changePersons} />
       </div>
+      {meal.leftoverPortions > 0 && !meal.fromLeftoverOf && (
+        <Button variant="herb" size="lg" className="mt-2" onClick={() => setPlanningLeftovers(true)}>
+          <CalendarPlus size={20} />
+          Planifier les restes ({plural(meal.leftoverPortions, "portion", "portions")})
+        </Button>
+      )}
       {meal.recipe && !meal.fromLeftoverOf && meal.status === "prévu" && (
         <div className="mt-2 flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
           <div>
@@ -286,6 +295,7 @@ function MealActions({
           Retirer du menu
         </Button>
       )}
+      <PlanLeftoverSheet source={planningLeftovers ? meal : null} onClose={() => setPlanningLeftovers(false)} />
     </div>
   );
 }

@@ -3,14 +3,12 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { CalendarPlus, Info, Trash } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import { formatDayLong, weekDays } from "../../convex/domain/dates";
+import { formatDayLong } from "../../convex/domain/dates";
 import { useSession } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { useRun } from "../lib/toast";
 import { plural } from "../lib/format";
-import { DayGrid } from "../components/planning/DayPicker";
-import { Field, SLOT_OPTIONS } from "../components/planning/controls";
-import { capitalize, type Slot } from "../components/planning/data";
+import { PlanLeftoverSheet } from "../components/planning/PlanLeftoverSheet";
 import {
   Badge,
   Button,
@@ -18,9 +16,6 @@ import {
   EmptyState,
   Loading,
   Page,
-  Segmented,
-  Sheet,
-  Stepper,
 } from "../components/ui";
 
 type FridgeRow = FunctionReturnType<typeof api.meals.fridge>[number];
@@ -75,7 +70,7 @@ export function FridgePage() {
         </p>
       </div>
 
-      <PlanLeftoverSheet row={planning} onClose={() => setPlanning(null)} />
+      <PlanLeftoverSheet source={planning} onClose={() => setPlanning(null)} />
     </Page>
   );
 }
@@ -126,96 +121,5 @@ function FridgeCard({ row, onPlan }: { row: FridgeRow; onPlan: () => void }) {
         </Button>
       </div>
     </Card>
-  );
-}
-
-function PlanLeftoverSheet({
-  row,
-  onClose,
-}: {
-  row: FridgeRow | null;
-  onClose: () => void;
-}) {
-  return (
-    <Sheet open={!!row} onClose={onClose} title="Planifier les restes">
-      {row && <PlanLeftoverForm key={row._id} row={row} onClose={onClose} />}
-    </Sheet>
-  );
-}
-
-function PlanLeftoverForm({
-  row,
-  onClose,
-}: {
-  row: FridgeRow;
-  onClose: () => void;
-}) {
-  const { token } = useSession();
-  const { today } = useWeek();
-  const run = useRun();
-  const planLeftover = useMutation(api.meals.planLeftover);
-  const [date, setDate] = useState(today);
-  const [slot, setSlot] = useState<Slot>("midi");
-  const [persons, setPersons] = useState(row.leftoverPortions);
-  const [saving, setSaving] = useState(false);
-  const days = weekDays(today);
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <span className="text-4xl" aria-hidden>
-          {row.recipe?.emoji ?? "🍽️"}
-        </span>
-        <div className="min-w-0">
-          <div className="truncate text-lg font-black">
-            {row.recipe?.name ?? row.title}
-          </div>
-          <div className="text-[15px] text-muted">{keepLabel(row)}</div>
-        </div>
-      </div>
-      <Field label="Jour">
-        <DayGrid days={days} value={date} onChange={setDate} />
-        <p className="mt-2 text-[15px] font-semibold text-muted">
-          {capitalize(formatDayLong(date))}
-          {date > row.keep.until && (
-            <span className="text-berry"> · après la date limite</span>
-          )}
-        </p>
-      </Field>
-      <Field label="Repas">
-        <Segmented
-          label="Repas"
-          value={slot}
-          options={SLOT_OPTIONS}
-          onChange={setSlot}
-        />
-      </Field>
-      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
-        <span className="font-extrabold">Portions</span>
-        <Stepper
-          label="Portions"
-          value={persons}
-          max={row.leftoverPortions}
-          onChange={setPersons}
-        />
-      </div>
-      <Button
-        size="lg"
-        variant="herb"
-        disabled={saving}
-        onClick={async () => {
-          setSaving(true);
-          const id = await run(
-            () =>
-              planLeftover({ token, sourceId: row._id, date, slot, persons }),
-            "Restes ajoutés au menu",
-          );
-          setSaving(false);
-          if (id) onClose();
-        }}
-      >
-        Ajouter au menu
-      </Button>
-    </div>
   );
 }
