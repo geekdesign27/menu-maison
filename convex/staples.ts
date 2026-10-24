@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { assertDate, assertSession } from "./lib";
 
 /** The usual items, most bought first, with the extra id when already on this week's list. */
@@ -32,5 +32,27 @@ export const remove = mutation({
   handler: async (ctx, { token, id }) => {
     await assertSession(ctx, token);
     await ctx.db.delete(id);
+  },
+});
+
+/**
+ * Moves a usual item to another aisle (null = « Divers »). Its entries on the lists
+ * from `start` onwards follow, so this week's list reorders right away.
+ */
+export const setAisle = mutation({
+  args: { token: v.string(), id: v.id("staples"), aisleId: v.union(v.id("aisles"), v.null()), start: v.string() },
+  handler: async (ctx, { token, id, aisleId, start }) => {
+    await assertSession(ctx, token);
+    assertDate(start);
+    const staple = await ctx.db.get(id);
+    if (!staple) throw new ConvexError("Article introuvable.");
+    await ctx.db.patch(id, { aisleId: aisleId ?? undefined });
+    const extras = await ctx.db
+      .query("shoppingExtras")
+      .withIndex("by_period", (q) => q.gte("periodStart", start))
+      .collect();
+    for (const e of extras) {
+      if (e.stapleId === id) await ctx.db.patch(e._id, { aisleId: aisleId ?? undefined });
+    }
   },
 });

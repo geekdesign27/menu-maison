@@ -6,6 +6,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { useBase, useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
 import { Button, cx, EmptyState, IconButton, Loading, Sheet } from "../ui";
+import { AislePicker } from "./AislePicker";
 
 export type Staple = NonNullable<ReturnType<typeof useStaples>>[number];
 
@@ -49,6 +50,8 @@ export function StaplesSheet({
   const toggle = useToggleStaple(start);
   const removeStaple = useMutation(api.staples.remove);
   const [editing, setEditing] = useState(false);
+  const [moving, setMoving] = useState<Staple | null>(null);
+  const setAisle = useMutation(api.staples.setAisle);
 
   const groups = (() => {
     if (!staples || !base) return [];
@@ -99,7 +102,7 @@ export function StaplesSheet({
           <div className="flex items-center justify-between gap-2">
             <p className="text-[15px] text-muted">
               {editing
-                ? "Touche la corbeille pour retirer un article de l'assortiment."
+                ? "Touche un article pour changer son rayon, ou la corbeille pour le retirer de l'assortiment."
                 : "Touche un article pour l'ajouter à la liste de cette semaine."}
             </p>
             <button
@@ -120,9 +123,16 @@ export function StaplesSheet({
                   editing ? (
                     <span
                       key={s._id}
-                      className="inline-flex min-h-10 items-center gap-1 rounded-full bg-paper pl-4 ring-1 ring-line"
+                      className="inline-flex min-h-10 items-center gap-1 rounded-full bg-paper pl-1 ring-1 ring-line"
                     >
-                      <span className="font-bold">{s.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setMoving(s)}
+                        aria-label={`Changer le rayon\u00a0: ${s.name}`}
+                        className="min-h-10 rounded-full px-3 font-bold underline decoration-line decoration-2 underline-offset-4 active:bg-carrot-soft"
+                      >
+                        {s.name}
+                      </button>
                       <IconButton
                         label={`Retirer de l'assortiment : ${s.name}`}
                         onClick={() =>
@@ -162,6 +172,24 @@ export function StaplesSheet({
             </section>
           ))}
         </>
+      )}
+      {moving && base && (
+        <Sheet open onClose={() => setMoving(null)} title={moving.name}>
+          <p className="mb-3 text-[15px] text-muted">Dans quel rayon range-t-on cet article&nbsp;?</p>
+          <AislePicker
+            aisles={base.aisles}
+            value={moving.aisleId ?? null}
+            onPick={async (aisleId) => {
+              const target = moving;
+              setMoving(null);
+              const aisle = base.aisles.find((a) => a._id === aisleId);
+              await run(
+                () => setAisle({ token, id: target._id, aisleId, start }),
+                `${target.name}\u00a0: ${aisle ? aisle.name : "Divers"}`,
+              );
+            }}
+          />
+        </Sheet>
       )}
     </Sheet>
   );
