@@ -138,6 +138,57 @@ describe("buildShoppingList", () => {
     expect(findItem(list, "ing:poulet:g")?.pantry).toBe(false);
   });
 
+  it("counts whole packs for ingredients bought by the pack", () => {
+    const list = buildShoppingList(
+      input({
+        recipes: {
+          croque: {
+            name: "Croque-monsieur",
+            items: [
+              { ingredientId: "jambon", qtyPerPerson: 2, unit: "tranche" },
+            ],
+          },
+          gratin: {
+            name: "Gratin",
+            items: [
+              { ingredientId: "gruyere", qtyPerPerson: 0.05, unit: "kg" },
+            ],
+          },
+        },
+        ingredients: {
+          // 8 slices per pack at 4.00 CHF the pack
+          jambon: {
+            name: "Jambon",
+            aisleId: "boucherie",
+            unit: "tranche",
+            priceChf: 4,
+            priceQty: 8,
+            packSize: 8,
+          },
+          // 200 g per pack
+          gruyere: {
+            name: "Gruyère",
+            aisleId: "frais",
+            unit: "g",
+            priceChf: 5,
+            priceQty: 200,
+            packSize: 200,
+          },
+        },
+        meals: [
+          { _id: "m1", recipeId: "croque", persons: 7 }, // 14 slices
+          { _id: "m2", recipeId: "gratin", persons: 4 }, // 200 g, exactly one pack
+        ],
+      }),
+    );
+    const jambon = findItem(list, "ing:jambon:tranche");
+    expect(jambon?.packs).toBe(2);
+    expect(jambon?.display).toBe(`2${NBSP}paquets`);
+    expect(jambon?.packDetail).toBe(`≈${NBSP}14${NBSP}tranches`);
+    expect(jambon?.costChf).toBe(8); // two whole packs
+    expect(findItem(list, "ing:gruyere:g")?.packs).toBe(1);
+  });
+
   it("merges kg and g of the same ingredient", () => {
     const list = buildShoppingList(
       input({
@@ -291,7 +342,13 @@ describe("buildShoppingList", () => {
 
   it("omits empty sections and returns an empty list without meals", () => {
     const list = buildShoppingList(input());
-    expect(list).toEqual({ sections: [], total: 0, remaining: 0, costChf: 0, skipped: [] });
+    expect(list).toEqual({
+      sections: [],
+      total: 0,
+      remaining: 0,
+      costChf: 0,
+      skipped: [],
+    });
   });
 
   it("computes costs with the store price factor", () => {

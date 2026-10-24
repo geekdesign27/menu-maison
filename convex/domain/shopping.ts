@@ -1,6 +1,6 @@
 // Shopping list built live from the week's meals, sorted by the chosen store's aisles.
 import type { BaseUnit, Unit } from "./quantities";
-import { formatQty, sameFamily, toBase } from "./quantities";
+import { formatQty, NBSP, sameFamily, toBase } from "./quantities";
 
 export interface ShoppingInput {
   meals: {
@@ -28,6 +28,7 @@ export interface ShoppingInput {
       priceChf?: number;
       priceQty?: number;
       pantry?: boolean; // usually in stock at home
+      packSize?: number; // bought by the pack: content of one pack, in `unit`
     }
   >;
   aisles: { _id: string; name: string; emoji: string; order: number }[];
@@ -60,6 +61,8 @@ export interface ShoppingItem {
   extra: boolean;
   ingredientId?: string;
   pantry: boolean;
+  packs?: number; // whole packs to buy, when the ingredient is bought by the pack
+  packDetail?: string; // « ≈ 14 tranches »: what the recipes need, shown under the label
 }
 
 export interface ShoppingSection {
@@ -172,6 +175,17 @@ export function compareItems(a: ShoppingItem, b: ShoppingItem): number {
   return a.label.localeCompare(b.label, "fr");
 }
 
+/** Whole packs covering `qty` of `unit`, or undefined when not bought by the pack. */
+export function packsFor(
+  ing: { unit: Unit; packSize?: number },
+  qty: number,
+  unit: Unit,
+): number | undefined {
+  if (!ing.packSize || ing.packSize <= 0 || !sameFamily(ing.unit, unit)) return undefined;
+  const perPack = toBase(ing.packSize, ing.unit).qty;
+  return Math.max(1, Math.ceil(toBase(qty, unit).qty / perPack - 1e-9));
+}
+
 export function buildShoppingList(input: ShoppingInput): ShoppingList {
   const priceFactor = input.store?.priceFactor ?? 1;
   const overrides = new Map(
@@ -219,14 +233,21 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
   const skipped: ShoppingItem[] = [];
   for (const [key, entry] of totals) {
     const ing = input.ingredients[entry.ingredientId];
+    const packs = packsFor(ing, entry.qty, entry.unit);
     const item: ShoppingItem = {
       key,
       label: ing.name,
       qty: entry.qty,
       unit: entry.unit,
-      display: formatQty(entry.qty, entry.unit),
+      // Bought by the pack: « 2 paquets » to take from the shelf, « ≈ 14 tranches » needed
+      display: packs ? formatQty(packs, "paquet") : formatQty(entry.qty, entry.unit),
+      packs,
+      packDetail: packs ? `≈${NBSP}${formatQty(entry.qty, entry.unit)}` : undefined,
       recipes: [...entry.recipes].sort((a, b) => a.localeCompare(b, "fr")),
-      costChf: ingredientCost(ing, entry.qty, entry.unit, priceFactor),
+      // Bought by the pack: the cost is that of the whole packs
+      costChf: packs
+        ? ingredientCost(ing, packs * toBase(ing.packSize!, ing.unit).qty, entry.unit, priceFactor)
+        : ingredientCost(ing, entry.qty, entry.unit, priceFactor),
       checked: input.checks[key] ?? false,
       extra: false,
       ingredientId: entry.ingredientId,

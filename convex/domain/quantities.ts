@@ -11,7 +11,8 @@ export type Unit =
   | "botte"
   | "boîte"
   | "paquet"
-  | "pincée";
+  | "pincée"
+  | "tranche";
 
 export type BaseUnit = Exclude<Unit, "kg" | "l">;
 
@@ -90,6 +91,7 @@ export function formatQty(qty: number, unit: Unit): string {
     case "boîte":
     case "paquet":
     case "pincée":
+    case "tranche":
       return formatCount(base.qty, base.unit);
   }
 }

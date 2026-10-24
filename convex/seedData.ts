@@ -17,7 +17,8 @@ export type Unit =
   | "botte"
   | "boîte"
   | "paquet"
-  | "pincée";
+  | "pincée"
+  | "tranche";
 
 export type Chain = "Aldi" | "Lidl" | "Coop" | "Migros" | "Denner" | "Autre";
 

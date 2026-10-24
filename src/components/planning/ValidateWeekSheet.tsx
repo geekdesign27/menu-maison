@@ -187,6 +187,7 @@ function ItemList({
                 >
                   {item.label}
                 </span>
+                {item.packDetail && <span className="block text-[13px] text-muted">{item.packDetail}</span>}
                 {!buy && (
                   <span className="block text-[13px] font-bold text-herb">
                     Déjà à la maison

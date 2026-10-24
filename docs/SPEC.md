@@ -84,6 +84,9 @@ Serveurs de dev via Portly.
   - Dupliquer une recette (« … (copie) », gardée dans Nos recettes, éditeur ouvert).
   - Nombre de personnes habituel par recette (`recipes.defaultPersons`), proposé en
     planifiant et sur la fiche (1 pour un petit-déjeuner individuel), sinon le réglage du foyer.
+  - Unité « tranche ». Ingrédient acheté par paquet (`ingredients.packSize`, facultatif) :
+    la liste compte des paquets entiers (« 2 paquets », « ≈ 14 tranches » dessous) et le
+    coût estimé est celui des paquets entiers.
   - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
     5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.

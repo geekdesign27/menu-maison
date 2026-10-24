@@ -14,6 +14,7 @@ export const unitValidator = v.union(
   v.literal("boîte"),
   v.literal("paquet"),
   v.literal("pincée"),
+  v.literal("tranche"),
 );
 
 export const slotValidator = v.union(v.literal("matin"), v.literal("midi"), v.literal("soir"));
@@ -51,6 +52,8 @@ export default defineSchema({
     priceChf: v.optional(v.number()),
     priceQty: v.optional(v.number()),
     pantry: v.optional(v.boolean()), // usually in stock at home (spices, oil, rice…)
+    // Bought by the pack: how much of `unit` one pack holds (8 slices, 200 g…)
+    packSize: v.optional(v.number()),
   }).index("by_name", ["name"]),
 
   recipes: defineTable({

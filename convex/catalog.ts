@@ -114,6 +114,7 @@ export const upsertIngredient = mutation({
     priceChf: v.optional(v.number()),
     priceQty: v.optional(v.number()),
     pantry: v.optional(v.boolean()),
+    packSize: v.optional(v.number()),
   },
   handler: async (ctx, { token, id, ...data }) => {
     await assertSession(ctx, token);
@@ -123,6 +124,7 @@ export const upsertIngredient = mutation({
       assertPositive(data.priceChf, 10000, "Prix");
     if (data.priceQty !== undefined)
       assertPositive(data.priceQty, 100000, "Quantité de référence du prix");
+    if (data.packSize !== undefined) assertPositive(data.packSize, 100000, "Contenu d'un paquet");
     const duplicate = await ctx.db
       .query("ingredients")
       .withIndex("by_name", (q) => q.eq("name", name))
@@ -131,7 +133,7 @@ export const upsertIngredient = mutation({
       throw new ConvexError(`« ${name} » existe déjà.`);
     if (id) {
       // Explicit undefined so that clearing a price removes it
-      await ctx.db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty });
+      await ctx.db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty, packSize: data.packSize });
       return id;
     }
     return ctx.db.insert("ingredients", { ...data, name });

@@ -72,6 +72,9 @@ export function ShoppingRow({
           >
             {item.label}
           </span>
+          {item.packDetail && (
+            <span className="block text-[15px] font-bold text-carrot-dark">{item.packDetail}</span>
+          )}
           {item.recipes.length > 0 && (
             <span className="block truncate text-[15px] text-muted">
               {item.recipes.join(", ")}

@@ -19,6 +19,7 @@ export const UNITS: Unit[] = [
   "boîte",
   "paquet",
   "pincée",
+  "tranche",
 ];
 
 // Singular and plural name of each unit, the single source of unit labels
@@ -34,6 +35,7 @@ const UNIT_NAMES: Record<Unit, { one: string; many: string }> = {
   boîte: { one: "boîte", many: "boîtes" },
   paquet: { one: "paquet", many: "paquets" },
   pincée: { one: "pincée", many: "pincées" },
+  tranche: { one: "tranche", many: "tranches" },
 };
 
 /** Unit name agreed with a quantity: « pièce », « pièces ». */

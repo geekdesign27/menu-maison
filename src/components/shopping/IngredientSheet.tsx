@@ -50,6 +50,9 @@ export function IngredientSheet({
       : "1",
   );
   const [pantry, setPantry] = useState(ingredient?.pantry ?? false);
+  const [packText, setPackText] = useState(
+    ingredient?.packSize !== undefined ? formatNumber(ingredient.packSize) : "",
+  );
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
@@ -64,6 +67,11 @@ export function IngredientSheet({
         "Le prix et la quantité doivent être des nombres positifs.",
         "error",
       );
+      return;
+    }
+    const packSize = parseAmount(packText);
+    if (Number.isNaN(packSize)) {
+      toast("Le contenu d'un paquet doit être un nombre positif.", "error");
       return;
     }
     if (priceChf !== undefined && priceQty === undefined) {
@@ -82,6 +90,7 @@ export function IngredientSheet({
           priceChf,
           priceQty: priceChf !== undefined ? priceQty : undefined,
           pantry,
+          packSize,
         }),
       ingredient ? "Ingrédient enregistré." : "Ingrédient ajouté.",
     );
@@ -148,6 +157,18 @@ export function IngredientSheet({
             onChange={(e) => setQtyText(e.target.value)}
             inputMode="decimal"
           />
+        </div>
+        <div>
+          <TextInput
+            label={`Contenu d'un paquet (en ${unitName(unit, 2)}, facultatif)`}
+            value={packText}
+            onChange={(e) => setPackText(e.target.value)}
+            inputMode="decimal"
+            placeholder="Ex. 8 si un paquet contient 8 tranches"
+          />
+          <p className="mt-1 text-[13px] text-muted">
+            Rempli, la liste de courses compte des paquets entiers. Vide, elle garde la quantité exacte.
+          </p>
         </div>
         <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl bg-paper px-4 py-3 ring-1 ring-line">
           <input
