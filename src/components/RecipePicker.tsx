@@ -5,7 +5,8 @@ import { api } from "../../convex/_generated/api";
 import { forgottenRecipes } from "../../convex/domain/stats";
 import { useBase, useSession, type Member } from "../lib/session";
 import { useWeek } from "../lib/week";
-import { formatChf, minutes } from "../lib/format";
+import { formatChf, minutes, plural } from "../lib/format";
+import { formatDayShort } from "../../convex/domain/dates";
 import { repeatWarning, type MealChoice } from "./planning/data";
 import {
   isLoved,
@@ -48,6 +49,7 @@ export function RecipePicker({
   onPick,
   date,
   allowFreeText = false,
+  showLeftovers = false,
   title = "Choisir un plat",
 }: {
   open: boolean;
@@ -55,12 +57,14 @@ export function RecipePicker({
   onPick: (choice: MealChoice) => void;
   date?: string;
   allowFreeText?: boolean;
+  /** With `date`: offer spare portions still good that day, before the recipes. */
+  showLeftovers?: boolean;
   title?: string;
 }) {
   return (
     <Sheet open={open} onClose={onClose} title={title}>
       {open && (
-        <PickerBody onPick={onPick} date={date} allowFreeText={allowFreeText} />
+        <PickerBody onPick={onPick} date={date} allowFreeText={allowFreeText} showLeftovers={showLeftovers} />
       )}
     </Sheet>
   );
@@ -70,12 +74,15 @@ function PickerBody({
   onPick,
   date,
   allowFreeText,
+  showLeftovers,
 }: {
   onPick: (choice: MealChoice) => void;
   date?: string;
   allowFreeText: boolean;
+  showLeftovers: boolean;
 }) {
   const { token } = useSession();
+  const leftovers = useQuery(api.meals.leftoversFor, token && date && showLeftovers ? { token, date } : "skip");
   const { today } = useWeek();
   const base = useBase();
   const pricing = usePricing();
@@ -207,6 +214,44 @@ function PickerBody({
                 </button>
               ))}
             </div>
+          )}
+          {leftovers && leftovers.length > 0 && !tag && (
+            <section>
+              <h3 className="mb-2 text-[13px] font-extrabold tracking-wider text-herb uppercase">♻️ Restes à finir</h3>
+              <ul className="space-y-2">
+                {leftovers
+                  .filter((m) => !search || searchKey(m.recipe?.name ?? m.title ?? "").includes(searchKey(search)))
+                  .map((m) => (
+                    <li key={m._id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onPick({
+                            leftoverOf: m._id,
+                            available: m.leftoverPortions,
+                            name: m.recipe?.name ?? m.title ?? "Plat",
+                            emoji: m.recipe?.emoji ?? "🍽️",
+                            until: m.until,
+                          })
+                        }
+                        className="flex w-full items-center gap-3 rounded-[var(--radius-card)] bg-herb-soft p-3 text-left ring-1 ring-herb/30 transition active:scale-[0.99]"
+                      >
+                        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-paper text-3xl" aria-hidden>
+                          {m.recipe?.emoji ?? "🍽️"}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[17px] font-black">{m.recipe?.name ?? m.title}</span>
+                          <span className="block text-[15px] font-semibold text-herb">
+                            {plural(m.leftoverPortions, "portion", "portions")}, bon jusqu'au {formatDayShort(m.until)}
+                          </span>
+                          <span className="block text-[13px] text-muted">Cuisiné le {formatDayShort(m.cookedOn)}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+              <h3 className="mt-4 mb-2 text-[13px] font-extrabold tracking-wider text-muted uppercase">Recettes</h3>
+            </section>
           )}
           {rows === undefined ? (
             <Loading label="Chargement des recettes" />

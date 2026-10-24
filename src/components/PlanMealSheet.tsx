@@ -48,6 +48,7 @@ function PlanMealForm({
   const overview = useOverview();
   const add = useMutation(api.meals.add);
   const addRecurring = useMutation(api.meals.addRecurring);
+  const planLeftover = useMutation(api.meals.planLeftover);
   const toast = useToast();
   const run = useRun();
 
@@ -91,6 +92,8 @@ function PlanMealForm({
   const effectivePersons = persons ?? defaultPersons;
   const effectiveTomorrowPersons = tomorrowPersons ?? effectivePersons;
   const isRecipe = !!choice && "recipeId" in choice;
+  // Spare portions of a dish already cooked: no shopping, no repeat, no extra portions
+  const leftover = choice && "leftoverOf" in choice ? choice : null;
   const cookedPortions =
     effectivePersons + (slot === "soir" && alsoTomorrow ? effectiveTomorrowPersons : 0) + extraPortions;
   const warning =
@@ -108,7 +111,16 @@ function PlanMealForm({
   const submit = async () => {
     if (!choice || !token) return;
     setSaving(true);
-    if (repeat) {
+    if ("leftoverOf" in choice) {
+      const id = await run(
+        () => planLeftover({ token, sourceId: choice.leftoverOf, date, slot, persons: Math.min(effectivePersons, choice.available) }),
+        "Restes ajoutés au menu",
+      );
+      setSaving(false);
+      if (id) onClose();
+      return;
+    }
+    if (repeat && !("leftoverOf" in choice)) {
       const res = await run(() =>
         addRecurring({
           token,
@@ -160,10 +172,10 @@ function PlanMealForm({
           <Button
             size="lg"
             onClick={submit}
-            disabled={!choice || saving || (repeat && repeatCount === 0)}
+            disabled={!choice || saving || (repeat && !leftover && repeatCount === 0) || (!!leftover && date > leftover.until)}
             className="mb-2"
           >
-            {repeat ? `Ajouter ${plural(repeatCount, "repas", "repas")}` : "Ajouter au menu"}
+            {repeat && !leftover ? `Ajouter ${plural(repeatCount, "repas", "repas")}` : "Ajouter au menu"}
           </Button>
         }
       >
@@ -177,11 +189,12 @@ function PlanMealForm({
               className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-carrot-soft text-4xl"
               aria-hidden
             >
-              {recipe?.emoji ?? (choice ? "🍽️" : "➕")}
+              {leftover?.emoji ?? recipe?.emoji ?? (choice ? "🍽️" : "➕")}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-lg font-black">
-                {recipe?.name ??
+                {(leftover && `Restes\u00a0: ${leftover.name}`) ??
+                  recipe?.name ??
                   (choice && "title" in choice
                     ? choice.title
                     : choice
@@ -194,7 +207,17 @@ function PlanMealForm({
               </span>
             </span>
           </button>
-          {warning && (
+          {leftover && (
+            <div className="-mt-2">
+              <Badge tone="herb">
+                {plural(leftover.available, "portion disponible", "portions disponibles")}, bon jusqu'au {formatDayLong(leftover.until)}
+              </Badge>
+              {date > leftover.until && (
+                <p className="mt-1 text-[15px] font-bold text-berry">Après la date limite&nbsp;: choisis un jour plus tôt.</p>
+              )}
+            </div>
+          )}
+          {warning && !leftover && (
             <div className="-mt-2">
               <Badge tone="sun">⚠️ Déjà {warning}</Badge>
             </div>
@@ -219,11 +242,13 @@ function PlanMealForm({
           <Field label={slot === "soir" ? "Portions ce soir" : slot === "midi" ? "Portions ce midi" : "Portions ce matin"}>
             <Stepper
               label="Portions"
-              value={effectivePersons}
+              value={leftover ? Math.min(effectivePersons, leftover.available) : effectivePersons}
+              max={leftover ? leftover.available : undefined}
               onChange={setPersons}
             />
           </Field>
 
+          {!leftover && (
           <div className={cx("rounded-[var(--radius-card)] p-4 transition", repeat ? "bg-sun-soft" : "bg-paper ring-1 ring-line")}>
             <Toggle checked={repeat} onChange={setRepeat} label="Répéter ce plat" hint="Les mêmes jours, plusieurs semaines de suite." />
             {repeat && (
@@ -259,8 +284,9 @@ function PlanMealForm({
               </div>
             )}
           </div>
+          )}
 
-          {repeat ? null : slot === "soir" ? (
+          {repeat || leftover ? null : slot === "soir" ? (
             <div
               className={cx(
                 "rounded-[var(--radius-card)] p-4 transition",
@@ -321,6 +347,7 @@ function PlanMealForm({
         onClose={() => setPicking(false)}
         date={date}
         allowFreeText
+        showLeftovers
         onPick={(c) => {
           setChoice(c);
           setPersons(null);

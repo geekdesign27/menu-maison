@@ -17,6 +17,12 @@ async function mealsBetween(ctx: QueryCtx, from: string, to: string) {
     .collect();
 }
 
+/** Portions of this dish already put on other meals (planned leftovers). */
+async function placedFrom(ctx: QueryCtx, meal: Doc<"meals">) {
+  const later = await mealsBetween(ctx, meal.cookedOn, addDays(meal.cookedOn, 30));
+  return later.filter((m) => m.fromLeftoverOf === meal._id).reduce((sum, m) => sum + m.persons, 0);
+}
+
 async function withRecipe(ctx: QueryCtx, meals: Doc<"meals">[]) {
   const cache = new Map<Id<"recipes">, Doc<"recipes"> | null>();
   const out = [];
@@ -127,10 +133,11 @@ export const update = mutation({
     if (!meal) throw new ConvexError("Repas introuvable.");
     if (extraPortions !== undefined) {
       assertInt(extraPortions, 0, 30, "Portions en plus");
-      // Still planned: the fridge will get exactly the new extra portions
+      // Still planned: the fridge gets the new extra portions, minus those already placed
+      const placed = meal.status === "prévu" ? await placedFrom(ctx, meal) : 0;
       await ctx.db.patch(id, {
         extraPortions: extraPortions || undefined,
-        ...(meal.status === "prévu" ? { leftoverPortions: extraPortions } : {}),
+        ...(meal.status === "prévu" ? { leftoverPortions: Math.max(0, extraPortions - placed) } : {}),
       });
     }
     if (patch.persons !== undefined) assertPersons(patch.persons);
@@ -169,10 +176,11 @@ export const setStatus = mutation({
     if (leftoverPortions !== undefined) assertInt(leftoverPortions, 0, 60, "Portions restantes");
     // A dish not eaten goes to the fridge whole, with the extra portions cooked for later
     const extra = meal.extraPortions ?? 0;
+    const placed = leftoverPortions === undefined && status !== "mangé" ? await placedFrom(ctx, meal) : 0;
     const portions =
       status === "pas mangé"
-        ? (leftoverPortions ?? meal.persons + extra)
-        : (leftoverPortions ?? (status === "prévu" ? extra : meal.leftoverPortions));
+        ? (leftoverPortions ?? Math.max(0, meal.persons + extra - placed))
+        : (leftoverPortions ?? (status === "prévu" ? Math.max(0, extra - placed) : meal.leftoverPortions));
     await ctx.db.patch(id, { status, leftoverPortions: portions });
   },
 });
@@ -307,5 +315,26 @@ export const addRecurring = mutation({
       added++;
     }
     return { added };
+  },
+});
+
+/**
+ * Leftovers that can be eaten on `date`: dishes with spare portions, cooked on or
+ * before that day and still good then (cookedOn + fridgeDays ≥ date).
+ */
+export const leftoversFor = query({
+  args: { token: v.string(), date: v.string() },
+  handler: async (ctx, { token, date }) => {
+    await assertSession(ctx, token);
+    assertDate(date);
+    const recent = await mealsBetween(ctx, addDays(date, -21), date);
+    const rows = await withRecipe(
+      ctx,
+      recent.filter((m) => m.leftoverPortions > 0 && !m.fromLeftoverOf && m.cookedOn <= date),
+    );
+    return rows
+      .map((m) => ({ ...m, until: addDays(m.cookedOn, m.recipe?.fridgeDays ?? 2) }))
+      .filter((m) => m.until >= date)
+      .sort((a, b) => a.until.localeCompare(b.until));
   },
 });

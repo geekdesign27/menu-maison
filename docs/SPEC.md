@@ -102,6 +102,10 @@ Serveurs de dev via Portly.
     conseil affiché d'ajouter l'app à l'écran d'accueil (non concernée).
   - Plat récurrent : option « Répéter » à l'ajout (jours de la semaine + 1 à 12 semaines,
     `meals.addRecurring`), sans doublon si le plat est déjà à ce créneau ce jour-là.
+  - « Restes à finir » en tête du choix du plat (`meals.leftoversFor`) : portions en plus
+    ou restes cuisinés au plus tard ce jour-là et encore bons à cette date. Choisis, ils
+    sont pris du frigo (`planLeftover`), sans courses. Les portions déjà placées sont
+    déduites quand on modifie les portions en plus ou le statut d'un plat.
   - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
     5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.

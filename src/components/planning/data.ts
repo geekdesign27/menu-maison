@@ -12,7 +12,11 @@ export const SLOT_LABEL: Record<Slot, string> = { matin: "Matin", midi: "Midi", 
 export const SLOTS: Slot[] = ["matin", "midi", "soir"];
 
 /** What a planned meal is made of: a recipe or a free title. */
-export type MealChoice = { recipeId: Id<"recipes"> } | { title: string };
+export type MealChoice =
+  | { recipeId: Id<"recipes"> }
+  | { title: string }
+  // Spare portions of a dish already cooked (or cooked before that day)
+  | { leftoverOf: Id<"meals">; available: number; name: string; emoji: string; until: string };
 
 export function useWeekMeals(start: string) {
   const { token } = useSession();
