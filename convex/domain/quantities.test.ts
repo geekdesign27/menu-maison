@@ -60,16 +60,16 @@ describe("formatQty", () => {
 
   it("never shows 0 for a positive quantity", () => {
     expect(formatQty(0.2, "g")).toBe(s("1 g"));
-    expect(formatQty(0.1, "pc")).toBe("1");
+    expect(formatQty(0.1, "pc")).toBe(`1${NBSP}pièce`);
     expect(formatQty(0.1, "cs")).toBe(s("0,5 c. à s."));
     expect(formatQty(0.1, "pincée")).toBe(s("1 pincée"));
   });
 
   it("rounds pieces up and shows them without unit", () => {
-    expect(formatQty(2.2, "pc")).toBe("3");
-    expect(formatQty(3, "pc")).toBe("3");
+    expect(formatQty(2.2, "pc")).toBe(`3${NBSP}pièces`);
+    expect(formatQty(3, "pc")).toBe(`3${NBSP}pièces`);
     // floating point noise must not round up
-    expect(formatQty(0.1 * 3 * 10, "pc")).toBe("3");
+    expect(formatQty(0.1 * 3 * 10, "pc")).toBe(`3${NBSP}pièces`);
   });
 
   it("rounds spoons up to the half", () => {

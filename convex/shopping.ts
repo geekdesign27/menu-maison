@@ -182,6 +182,8 @@ export const addExtra = mutation({
       addedBy: memberId,
       stapleId: staple._id,
       ...rest,
+      qty: rest.qty ?? staple.qty,
+      unit: rest.qty !== undefined ? rest.unit : staple.unit,
       aisleId: rest.aisleId ?? staple.aisleId,
     });
   },
@@ -226,5 +228,19 @@ export const setOneAtHome = mutation({
     ).filter((s) => s.itemKey === itemKey);
     for (const s of existing) await ctx.db.delete(s._id);
     if (atHome) await ctx.db.insert("stockSkips", { periodStart: start, itemKey });
+  },
+});
+
+/** Quantity of a free item (null clears it). A usual item remembers it for next time. */
+export const setExtraQty = mutation({
+  args: { token: v.string(), id: v.id("shoppingExtras"), qty: v.union(v.number(), v.null()), unit: v.optional(unitValidator) },
+  handler: async (ctx, { token, id, qty, unit }) => {
+    await assertSession(ctx, token);
+    if (qty !== null) assertPositive(qty, 100000, "Quantité");
+    const extra = await ctx.db.get(id);
+    if (!extra) throw new ConvexError("Article introuvable.");
+    const patch = { qty: qty ?? undefined, unit: qty === null ? undefined : (unit ?? "pc") };
+    await ctx.db.patch(id, patch);
+    if (extra.stapleId && (await ctx.db.get(extra.stapleId))) await ctx.db.patch(extra.stapleId, patch);
   },
 });

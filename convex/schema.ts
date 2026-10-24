@@ -16,7 +16,7 @@ export const unitValidator = v.union(
   v.literal("pincée"),
 );
 
-export const slotValidator = v.union(v.literal("midi"), v.literal("soir"));
+export const slotValidator = v.union(v.literal("matin"), v.literal("midi"), v.literal("soir"));
 
 export const chainValidator = v.union(
   v.literal("Aldi"),
@@ -69,6 +69,7 @@ export default defineSchema({
       }),
     ),
     steps: v.array(v.string()),
+    imageId: v.optional(v.id("_storage")), // photo taken by the family
     // true once the family keeps it ("Nos recettes"); catalog recipes start false
     saved: v.boolean(),
     archived: v.boolean(),
@@ -159,6 +160,9 @@ export default defineSchema({
     aisleId: v.optional(v.id("aisles")),
     useCount: v.number(),
     lastUsedAt: v.optional(v.number()),
+    // Last quantity used, proposed again next time
+    qty: v.optional(v.number()),
+    unit: v.optional(unitValidator),
   }).index("by_name", ["name"]),
 
   /** Items already at home for a shopping week: kept out of the list. */

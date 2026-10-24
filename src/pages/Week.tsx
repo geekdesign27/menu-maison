@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  Coffee,
   LayoutTemplate,
   Moon,
   Plus,
@@ -30,6 +31,7 @@ import { ValidateWeekSheet } from "../components/planning/ValidateWeekSheet";
 import {
   capitalize,
   SLOT_LABEL,
+  SLOTS,
   useWeekMeals,
   type Slot,
   type WeekMeal,
@@ -47,7 +49,6 @@ import {
   SectionTitle,
 } from "../components/ui";
 
-const SLOTS: Slot[] = ["midi", "soir"];
 
 export function WeekPage() {
   const { start, end, isCurrent, prev, next, goToday } = useWeek();
@@ -282,13 +283,13 @@ function DayCard({
       </div>
       {SLOTS.map((slot) => {
         const list = meals.filter((m) => m.slot === slot);
-        const Icon = slot === "midi" ? Sun : Moon;
+        const Icon = slot === "matin" ? Coffee : slot === "midi" ? Sun : Moon;
         return (
           <div
             key={slot}
             className={cx(
               "flex gap-2 py-2",
-              slot === "soir" && "border-t border-line/70",
+              slot !== "matin" && "border-t border-line/70",
             )}
           >
             <div className="flex w-11 shrink-0 flex-col items-center pt-2.5 text-muted">

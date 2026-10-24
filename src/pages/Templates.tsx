@@ -16,7 +16,7 @@ import { useRun, useToast } from "../lib/toast";
 import { plural } from "../lib/format";
 import { BackButton } from "../components/Layout";
 import { Field } from "../components/planning/controls";
-import { useWeekMeals } from "../components/planning/data";
+import { SLOTS, useWeekMeals } from "../components/planning/data";
 import {
   Button,
   Card,
@@ -113,7 +113,7 @@ function TemplateCard({
         {Array.from({ length: 7 }, (_, i) => {
           const entries = template.entries
             .filter((e) => e.dayOffset === i)
-            .sort((a, b) => a.slot.localeCompare(b.slot));
+            .sort((a, b) => SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot));
           return (
             <div
               key={i}

@@ -77,7 +77,7 @@ export const add = mutation({
     if (!m.recipeId && !m.title?.trim())
       throw new ConvexError("Choisis une recette ou écris un titre.");
     const cookedOn =
-      m.slot === "midi" && cookedTheEveningBefore
+      m.slot !== "soir" && cookedTheEveningBefore
         ? addDays(m.date, -1)
         : m.date;
     const id = await ctx.db.insert("meals", {

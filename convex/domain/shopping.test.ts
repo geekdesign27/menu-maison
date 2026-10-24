@@ -98,7 +98,7 @@ describe("buildShoppingList", () => {
     expect(poulet?.qty).toBe(750);
     expect(poulet?.display).toBe(`750${NBSP}g`);
     expect(poulet?.recipes).toEqual(["Curry de poulet"]);
-    expect(findItem(list, "ing:oignon:pc")?.display).toBe("3");
+    expect(findItem(list, "ing:oignon:pc")?.display).toBe(`3${NBSP}pièces`);
   });
 
   it("buys a dish in the week it is cooked, not the week it is eaten", () => {
@@ -282,7 +282,7 @@ describe("buildShoppingList", () => {
     expect(last.items.map((i) => [i.key, i.display])).toEqual([
       ["extra:x2", `2${NBSP}paquets`],
       ["extra:x1", ""],
-      ["extra:x3", "6"],
+      ["extra:x3", `6${NBSP}pièces`],
     ]);
     expect(last.items.every((i) => i.extra && i.recipes.length === 0)).toBe(
       true,

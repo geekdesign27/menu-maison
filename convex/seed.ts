@@ -123,3 +123,35 @@ export const addStaples = internalMutation({
   args: {},
   handler: async (ctx) => ({ added: await seedStaples(ctx) }),
 });
+
+/**
+ * Adds seed recipes missing from an existing deployment (matched by name), when all
+ * their ingredients exist. `npx convex run seed:addMissingRecipes`
+ */
+export const addMissingRecipes = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = new Set((await ctx.db.query("recipes").collect()).map((r) => r.name));
+    const ingredients = new Map((await ctx.db.query("ingredients").collect()).map((i) => [i.name, i._id]));
+    const added: string[] = [];
+    for (const r of RECIPES) {
+      if (existing.has(r.name)) continue;
+      const items = r.items.map((it) => ({ ingredientId: ingredients.get(it.ingredient), qtyPerPerson: it.qtyPerPerson, unit: it.unit }));
+      if (items.some((i) => !i.ingredientId)) continue;
+      await ctx.db.insert("recipes", {
+        name: r.name,
+        emoji: r.emoji,
+        description: r.description,
+        tags: r.tags,
+        prepMinutes: r.prepMinutes,
+        fridgeDays: r.fridgeDays,
+        steps: r.steps,
+        items: items.map((i) => ({ ...i, ingredientId: i.ingredientId! })),
+        saved: false,
+        archived: false,
+      });
+      added.push(r.name);
+    }
+    return { added };
+  },
+});

@@ -97,9 +97,13 @@ export function RecipeCard({
             className="flex aspect-[4/3] items-center justify-center text-[64px] leading-none"
             style={{ background: pastelFor(recipe.name) }}
           >
-            <span aria-hidden className="drop-shadow-sm">
-              {recipe.emoji}
-            </span>
+            {recipe.imageUrl ? (
+              <img src={recipe.imageUrl} alt="" loading="lazy" className="size-full object-cover" />
+            ) : (
+              <span aria-hidden className="drop-shadow-sm">
+                {recipe.emoji}
+              </span>
+            )}
           </div>
           <div className="flex flex-1 flex-col gap-1 p-3">
             <h3 className="line-clamp-2 text-[16px] leading-snug font-black">

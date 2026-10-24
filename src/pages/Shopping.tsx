@@ -36,6 +36,7 @@ import { ShoppingRow } from "../components/shopping/ShoppingRow";
 import { QuickAdd } from "../components/shopping/QuickAdd";
 import { AislePicker } from "../components/shopping/AislePicker";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
+import { ExtraQtySheet } from "../components/shopping/ExtraQtySheet";
 
 type Filter = "all" | "todo";
 const FILTER_KEY = "mm.shoppingFilter";
@@ -64,6 +65,7 @@ export function ShoppingPage() {
   const run = useRun();
   const [filter, setFilter] = useState<Filter>(readFilter);
   const [moreItem, setMoreItem] = useState<ShoppingItem | null>(null);
+  const [qtyItem, setQtyItem] = useState<ShoppingItem | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const list = useQuery(
@@ -282,9 +284,11 @@ export function ShoppingPage() {
                             item.extra ? () => onRemove(item) : undefined
                           }
                           onMore={
-                            !item.extra && store
-                              ? () => setMoreItem(item)
-                              : undefined
+                            item.extra
+                              ? () => setQtyItem(item)
+                              : store
+                                ? () => setMoreItem(item)
+                                : undefined
                           }
                         />
                       ))}
@@ -310,6 +314,7 @@ export function ShoppingPage() {
         </>
       )}
 
+      {qtyItem && <ExtraQtySheet item={qtyItem} onClose={() => setQtyItem(null)} />}
       {moreItem && store && base && (
         <AisleOverrideSheet
           item={moreItem}

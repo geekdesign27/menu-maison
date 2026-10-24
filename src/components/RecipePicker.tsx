@@ -278,10 +278,10 @@ function RecipeLine({
       className="flex w-full items-center gap-3 rounded-[var(--radius-card)] bg-paper p-3 text-left shadow-[0_1px_0_rgba(43,36,32,0.04),0_4px_14px_rgba(43,36,32,0.06)] transition active:scale-[0.99] active:bg-carrot-soft"
     >
       <span
-        className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-cream text-3xl"
+        className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-cream text-3xl"
         aria-hidden
       >
-        {recipe.emoji}
+        {recipe.imageUrl ? <img src={recipe.imageUrl} alt="" loading="lazy" className="size-full object-cover" /> : recipe.emoji}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[17px] font-black">

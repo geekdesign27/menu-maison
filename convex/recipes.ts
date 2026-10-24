@@ -18,15 +18,14 @@ export const list = query({
       ctx.db.query("recipes").collect(),
       ctx.db.query("likes").collect(),
     ]);
-    return recipes
-      .filter((r) => !r.archived)
-      .sort((a, b) => a.name.localeCompare(b.name, "fr"))
-      .map((r) => ({
+    const visible = recipes.filter((r) => !r.archived).sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    return Promise.all(
+      visible.map(async (r) => ({
         ...r,
-        likedBy: likes
-          .filter((l) => l.recipeId === r._id)
-          .map((l) => l.memberId),
-      }));
+        imageUrl: r.imageId ? await ctx.storage.getUrl(r.imageId) : null,
+        likedBy: likes.filter((l) => l.recipeId === r._id).map((l) => l.memberId),
+      })),
+    );
   },
 });
 
@@ -40,7 +39,8 @@ export const get = query({
       .query("likes")
       .withIndex("by_recipe", (q) => q.eq("recipeId", id))
       .collect();
-    return { ...recipe, likedBy: likes.map((l) => l.memberId) };
+    const imageUrl = recipe.imageId ? await ctx.storage.getUrl(recipe.imageId) : null;
+    return { ...recipe, imageUrl, likedBy: likes.map((l) => l.memberId) };
   },
 });
 
@@ -75,6 +75,7 @@ const recipeFields = {
   fridgeDays: v.number(),
   items: v.array(itemValidator),
   steps: v.array(v.string()),
+  imageId: v.optional(v.id("_storage")),
 };
 
 export const create = mutation({
@@ -106,6 +107,8 @@ export const update = mutation({
       ...data,
       name: data.name.trim(),
       steps: data.steps.map((s) => s.trim()).filter(Boolean),
+      // Explicit: a photo removed in the editor is unset (undefined is dropped on the wire)
+      imageId: data.imageId,
     });
   },
 });
@@ -148,5 +151,34 @@ export const toggleLike = mutation({
     await ctx.db.insert("likes", { recipeId, memberId });
     await ctx.db.patch(recipeId, { saved: true });
     return true;
+  },
+});
+
+/** Short-lived URL the phone uploads a recipe photo to (resized beforehand). */
+export const generateUploadUrl = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await assertSession(ctx, token);
+    return ctx.storage.generateUploadUrl();
+  },
+});
+
+/** Copy of a recipe, kept in "Nos recettes", to adapt it without touching the original. */
+export const duplicate = mutation({
+  args: { token: v.string(), id: v.id("recipes"), memberId: v.optional(v.id("members")) },
+  handler: async (ctx, { token, id, memberId }) => {
+    await assertSession(ctx, token);
+    const source = await ctx.db.get(id);
+    if (!source) throw new ConvexError("Recette introuvable.");
+    const { _id, _creationTime, ...fields } = source;
+    void _id;
+    void _creationTime;
+    return ctx.db.insert("recipes", {
+      ...fields,
+      name: `${source.name} (copie)`.slice(0, 100),
+      saved: true,
+      archived: false,
+      createdBy: memberId,
+    });
   },
 });

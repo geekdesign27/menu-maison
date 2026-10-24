@@ -74,6 +74,16 @@ Serveurs de dev via Portly.
   avec son rayon. Bouton « Articles habituels » : tout l'assortiment par rayon, un tap
   ajoute ou retire de la semaine, mode « Modifier » pour retirer de l'assortiment.
   Un même article habituel n'est jamais ajouté deux fois à la même semaine.
+- **Ajouts du 2026-10-24** (demandes de PA) :
+  - Quantités en pièces affichées « 3 pièces ». Quantité d'un article libre modifiable
+    (bouton « ⋯ »), retenue par l'article habituel pour la fois suivante.
+  - Unité « pièce » proposée pour tout ingrédient dans l'éditeur (pièces et grammes d'un
+    même ingrédient restent sur deux lignes de la liste).
+  - Photo de recette (`recipes.imageId`, stockage Convex), réduite à 1200 px en JPEG sur
+    le téléphone avant l'envoi. Affichée à la place de l'emoji.
+  - Dupliquer une recette (« … (copie) », gardée dans Nos recettes, éditeur ouvert).
+  - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
+    5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.
 - **Stats** : nombre de fois par recette (4 et 12 dernières semaines), dernière fois,
   plats « oubliés » (aimés mais pas mangés depuis 30 jours), alerte au moment de planifier

@@ -7,6 +7,7 @@ import {
   BookmarkPlus,
   CalendarPlus,
   Clock,
+  Copy,
   Heart,
   Pencil,
   Refrigerator,
@@ -77,6 +78,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
   const toggleLike = useToggleLike();
   const setSaved = useMutation(api.recipes.setSaved);
   const archive = useMutation(api.recipes.archive);
+  const duplicate = useMutation(api.recipes.duplicate);
   const overview = useOverview();
   const [count, setCount] = useState(base.settings.defaultPersons);
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -111,12 +113,16 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
     >
       {/* Hero */}
       <div
-        className="flex aspect-[16/9] items-center justify-center rounded-[1.75rem] text-[96px] leading-none"
+        className="flex aspect-[16/9] items-center justify-center overflow-hidden rounded-[1.75rem] text-[96px] leading-none"
         style={{ background: pastelFor(recipe.name) }}
       >
-        <span aria-hidden className="drop-shadow">
-          {recipe.emoji}
-        </span>
+        {recipe.imageUrl ? (
+          <img src={recipe.imageUrl} alt={`Photo\u00a0: ${recipe.name}`} className="size-full object-cover" />
+        ) : (
+          <span aria-hidden className="drop-shadow">
+            {recipe.emoji}
+          </span>
+        )}
       </div>
       <h2 className="mt-4 text-3xl leading-tight font-black tracking-tight">
         {recipe.name}
@@ -317,6 +323,23 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
           <Button variant="secondary" onClick={() => navigate(editPath)}>
             <Pencil size={18} />
             Modifier
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              const copyId = await run(
+                () => duplicate({ token, id: recipe._id, memberId: memberId ?? undefined }),
+                "Copie créée, tu peux l'adapter",
+              );
+              if (copyId) {
+                // The copy takes the original's place in history: saving the editor comes back to it
+                navigate(`/recette/${copyId}`, { replace: true });
+                navigate(`/recette/${copyId}/modifier`);
+              }
+            }}
+          >
+            <Copy size={18} />
+            Dupliquer
           </Button>
           {recipe.saved ? (
             <Button

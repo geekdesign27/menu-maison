@@ -1,5 +1,6 @@
 /** Recipe styles used by filters and the recipe editor. */
 export const TAGS: string[] = [
+  "Petit-déj",
   "Suisse",
   "Express",
   "Familial",

@@ -78,8 +78,10 @@ export function formatQty(qty: number, unit: Unit): string {
       return formatMetric(base.qty, "g", "kg");
     case "ml":
       return formatMetric(base.qty, "ml", "l");
-    case "pc":
-      return String(base.qty > 0 ? Math.max(1, ceilSafe(base.qty)) : 0);
+    case "pc": {
+      const n = base.qty > 0 ? Math.max(1, ceilSafe(base.qty)) : 0;
+      return `${n}${NBSP}${n > 1 ? "pièces" : "pièce"}`;
+    }
     case "cs":
       return formatSpoon(base.qty, "c. à s.");
     case "cc":

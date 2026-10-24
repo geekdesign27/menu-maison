@@ -1,9 +1,17 @@
 import type { ReactNode } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Coffee, Moon, Sun } from "lucide-react";
 import { cx } from "../ui";
 import type { Slot } from "./data";
 
 export const SLOT_OPTIONS: { value: Slot; label: ReactNode }[] = [
+  {
+    value: "matin",
+    label: (
+      <span className="inline-flex items-center gap-1.5">
+        <Coffee size={18} aria-hidden /> Matin
+      </span>
+    ),
+  },
   {
     value: "midi",
     label: (

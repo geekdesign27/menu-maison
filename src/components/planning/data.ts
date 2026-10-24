@@ -5,9 +5,11 @@ import { daysBetween, formatDayShort } from "../../../convex/domain/dates";
 import { lastEatenBefore, type MealLite } from "../../../convex/domain/stats";
 import { useSession } from "../../lib/session";
 
-export type Slot = "midi" | "soir";
+export type Slot = "matin" | "midi" | "soir";
 
-export const SLOT_LABEL: Record<Slot, string> = { midi: "Midi", soir: "Soir" };
+export const SLOT_LABEL: Record<Slot, string> = { matin: "Matin", midi: "Midi", soir: "Soir" };
+/** Order of the day: breakfast, lunch, dinner. */
+export const SLOTS: Slot[] = ["matin", "midi", "soir"];
 
 /** What a planned meal is made of: a recipe or a free title. */
 export type MealChoice = { recipeId: Id<"recipes"> } | { title: string };

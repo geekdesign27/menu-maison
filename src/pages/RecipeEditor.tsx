@@ -37,6 +37,7 @@ import { useIngredientMap, useRecipes, type RecipeRow } from "../lib/queries";
 import { compatibleUnits, parseAmount, unitChoiceLabel } from "../lib/units";
 import { RecipeNotFound } from "../components/recipes/RecipeNotFound";
 import { IngredientPicker } from "../components/recipes/IngredientPicker";
+import { PhotoField } from "../components/recipes/PhotoField";
 
 const EMOJIS = [
   "🍝",
@@ -97,6 +98,8 @@ interface Draft {
   fridgeDays: number;
   items: ItemDraft[];
   steps: StepDraft[];
+  imageId: Id<"_storage"> | null;
+  imageUrl: string | null;
 }
 
 let keySeq = 0;
@@ -122,6 +125,8 @@ function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
       fridgeDays: 2,
       items: [emptyItem()],
       steps: [emptyStep()],
+      imageId: null,
+      imageUrl: null,
     };
   }
   return {
@@ -141,6 +146,8 @@ function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
     steps: recipe.steps.length
       ? recipe.steps.map((text) => ({ key: newKey(), text }))
       : [emptyStep()],
+    imageId: recipe.imageId ?? null,
+    imageUrl: recipe.imageUrl ?? null,
   };
 }
 
@@ -285,6 +292,7 @@ function RecipeForm({
           unit: i.unit,
         })),
       steps: draft.steps.map((s) => s.text.trim()).filter(Boolean),
+      imageId: draft.imageId ?? undefined,
     };
     setSaving(true);
     if (recipeId) {
@@ -365,6 +373,11 @@ function RecipeForm({
           />
         </div>
       </Card>
+
+      <PhotoField
+        imageUrl={draft.imageUrl}
+        onChange={(image) => setDraft((d) => ({ ...d, imageId: image?.id ?? null, imageUrl: image?.url ?? null }))}
+      />
 
       <SectionTitle>Description</SectionTitle>
       <textarea
@@ -480,7 +493,9 @@ function RecipeForm({
           const ing = item.ingredientId
             ? ingredients[item.ingredientId]
             : undefined;
-          const units = compatibleUnits(ing?.unit ?? item.unit);
+          // Pieces are always offered (« 1 poivron »): they get their own line on the list
+          const family = compatibleUnits(ing?.unit ?? item.unit);
+          const units = family.includes("pc") ? family : [...family, "pc" as const];
           return (
             <Card key={item.key} className="space-y-2 p-3">
               <div className="flex items-center gap-2">
