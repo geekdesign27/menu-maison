@@ -26,6 +26,7 @@ import { StoresPage } from "./pages/Stores";
 import { StoreEditorPage } from "./pages/StoreEditor";
 import { SettingsPage } from "./pages/Settings";
 import { ProductsPage } from "./pages/Products";
+import { ReceiptScanPage } from "./pages/ReceiptScan";
 import { GestionLayout } from "./gestion/GestionLayout";
 import { RecipesSection } from "./gestion/RecipesSection";
 import { ProductsSection } from "./gestion/ProductsSection";
@@ -65,6 +66,7 @@ function App() {
                     <Route element={<Layout />}>
                       <Route path="/" element={<WeekPage />} />
                       <Route path="/courses" element={<ShoppingPage />} />
+                      <Route path="/courses/ticket" element={<ReceiptScanPage />} />
                       <Route path="/recettes" element={<RecipesPage />} />
                       <Route
                         path="/recette/nouvelle"

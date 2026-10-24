@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertPositive, assertSession, cleanText } from "./lib";
+import { assertDate, assertPositive, assertSession, cleanText, loadChainPrices } from "./lib";
 import { unitValidator } from "./schema";
 import { addDays } from "./domain/dates";
 import { buildShoppingList } from "./domain/shopping";
@@ -38,6 +38,7 @@ export const list = query({
         .collect(),
     ]);
     const meals = eaten.filter((m) => m.cookedOn >= start && m.cookedOn <= end);
+    const chainPrices = await loadChainPrices(ctx);
     const store = storeId ? await ctx.db.get(storeId) : null;
 
     const recipes: Parameters<typeof buildShoppingList>[0]["recipes"] = {};
@@ -61,7 +62,17 @@ export const list = query({
       recipes,
       ingredients: Object.fromEntries(
         await Promise.all(
-          ingredients.map(async (i) => [i._id, { ...i, imageUrl: i.imageId ? await ctx.storage.getUrl(i.imageId) : null }] as const),
+          ingredients.map(
+            async (i) =>
+              [
+                i._id,
+                {
+                  ...i,
+                  imageUrl: i.imageId ? await ctx.storage.getUrl(i.imageId) : null,
+                  chainPrices: chainPrices.ingredients.get(i._id),
+                },
+              ] as const,
+          ),
         ),
       ),
       aisles,
@@ -83,6 +94,7 @@ export const list = query({
                 priceChf: staple.priceChf,
                 onlyChains: staple.onlyChains,
                 imageUrl: staple.imageId ? await ctx.storage.getUrl(staple.imageId) : null,
+                chainPrices: chainPrices.staples.get(staple._id),
               }
             : e;
         }),

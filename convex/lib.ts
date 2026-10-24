@@ -1,7 +1,8 @@
 import { ConvexError } from "convex/values";
-import type { QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { addDays } from "./domain/dates";
+import type { ChainPrices } from "./domain/shopping";
 
 export const SESSION_DAYS = 365;
 export const MAX_FAILURES = 5;
@@ -98,4 +99,31 @@ export function assertColor(c: string) {
 
 export function assertEmoji(e: string) {
   if (!e.trim() || e.length > 16) throw new ConvexError("Emoji invalide.");
+}
+
+/** Prices and receipt labels of a product, removed with the product. */
+export async function removeReceiptData(
+  ctx: MutationCtx,
+  of: { ingredientId: Id<"ingredients"> } | { stapleId: Id<"staples"> },
+) {
+  const prices =
+    "ingredientId" in of
+      ? await ctx.db.query("chainPrices").withIndex("by_ingredient", (q) => q.eq("ingredientId", of.ingredientId)).collect()
+      : await ctx.db.query("chainPrices").withIndex("by_staple", (q) => q.eq("stapleId", of.stapleId)).collect();
+  const aliases = (await ctx.db.query("receiptAliases").collect()).filter((a) =>
+    "ingredientId" in of ? a.ingredientId === of.ingredientId : a.stapleId === of.stapleId,
+  );
+  for (const row of [...prices, ...aliases]) await ctx.db.delete(row._id);
+}
+
+/** Receipt prices grouped by product, in the shape the cost helpers expect. */
+export async function loadChainPrices(ctx: QueryCtx) {
+  const ingredients = new Map<string, ChainPrices>();
+  const staples = new Map<string, ChainPrices>();
+  for (const p of await ctx.db.query("chainPrices").collect()) {
+    const map = p.ingredientId ? ingredients : staples;
+    const key = (p.ingredientId ?? p.stapleId) as string;
+    map.set(key, { ...map.get(key), [p.chain]: { priceChf: p.priceChf, priceQty: p.priceQty } });
+  }
+  return { ingredients, staples };
 }

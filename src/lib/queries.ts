@@ -43,9 +43,10 @@ export function usePricing() {
   const ingredients = useIngredientMap();
   const { store } = useStoreChoice();
   const priceFactor = store?.priceFactor ?? 1;
+  const chain = store?.chain;
   return useMemo(() => {
     const cost = (recipe: Pick<RecipeRow, "items">, persons: number) =>
-      recipeCost(recipe, persons, ingredients, priceFactor);
+      recipeCost(recipe, persons, ingredients, priceFactor, chain);
     return {
       ready: !!base,
       cost,
@@ -56,5 +57,5 @@ export function usePricing() {
         return `${complete ? "" : "env. "}${formatChf(total)}`;
       },
     };
-  }, [base, ingredients, priceFactor]);
+  }, [base, ingredients, priceFactor, chain]);
 }

@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertPositive, assertSession, cleanText } from "./lib";
+import { assertDate, assertPositive, assertSession, cleanText, removeReceiptData } from "./lib";
 import { chainValidator } from "./schema";
 
 /** The usual items, most bought first, with the extra id when already on this week's list. */
@@ -53,6 +53,7 @@ export const remove = mutation({
   args: { token: v.string(), id: v.id("staples") },
   handler: async (ctx, { token, id }) => {
     await assertSession(ctx, token);
+    await removeReceiptData(ctx, { stapleId: id });
     await ctx.db.delete(id);
   },
 });

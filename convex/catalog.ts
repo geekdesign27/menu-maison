@@ -8,6 +8,7 @@ import {
   assertSession,
   cleanText,
   getSettings,
+  loadChainPrices,
 } from "./lib";
 
 function memberName(name: string) {
@@ -17,12 +18,14 @@ function memberName(name: string) {
 }
 import { chainValidator, unitValidator } from "./schema";
 import { deletionBlocker } from "./domain/products";
+import { removeReceiptData } from "./lib";
 
 /** Everything small the UI needs on every screen, in one subscription. */
 export const base = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
     await assertSession(ctx, token);
+    const chainPrices = await loadChainPrices(ctx);
     const [members, aisles, ingredients, stores, settings] = await Promise.all([
       ctx.db.query("members").collect(),
       ctx.db.query("aisles").collect(),
@@ -40,7 +43,11 @@ export const base = query({
       ingredients: await Promise.all(
         ingredients
           .sort((a, b) => a.name.localeCompare(b.name, "fr"))
-          .map(async (i) => ({ ...i, imageUrl: i.imageId ? await ctx.storage.getUrl(i.imageId) : null })),
+          .map(async (i) => ({
+            ...i,
+            imageUrl: i.imageId ? await ctx.storage.getUrl(i.imageId) : null,
+            chainPrices: chainPrices.ingredients.get(i._id),
+          })),
       ),
       stores: stores
         .filter((s) => !s.archived)
@@ -159,6 +166,7 @@ export const removeIngredient = mutation({
     const users = recipes.filter((r) => r.items.some((it) => it.ingredientId === id));
     const blocker = deletionBlocker(users);
     if (blocker) throw new ConvexError(blocker);
+    await removeReceiptData(ctx, { ingredientId: id });
     await ctx.db.delete(id);
   },
 });

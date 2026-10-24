@@ -43,7 +43,15 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
    incomplètes : l'app dit « aucun indiqué » et rappelle de vérifier l'emballage.
    Calories : g et ml comptés pareil, c. à s. = 15 g, c. à c. = 5 g ; les pièces ne
    comptent pas (calcul affiché comme partiel).
-4. Plus tard : scanner les tickets de caisse pour ajuster les prix.
+4. **Lot 4, tickets de caisse** (`/courses/ticket`, bouton sur Courses) : photo lue par
+   Claude Opus 5.5 (effort low, repli serveur activé, environ 0,09 USD par ticket mesuré),
+   écran de vérification, puis prix par enseigne (table `chainPrices`, dernier prix vu,
+   date du ticket) et alias de libellés par enseigne (`receiptAliases`, avec le contenu du
+   paquet). Produits pesés : prix au kilo exact ; paquets : contenu demandé une fois.
+   Achats hors liste : ignorés ou ajoutés aux articles habituels. La photo n'est pas
+   gardée, les lignes ressemblant à un numéro de carte sont écartées. Les estimations
+   (liste, coût des recettes) prennent le prix de l'enseigne du magasin choisi avant
+   l'estimation × coefficient.
 
 ## Stack
 
@@ -158,6 +166,8 @@ Serveurs de dev via Portly.
 - `sort.ts` : tri des tableaux de la gestion (ordre français, cases vides en dernier).
 - `openFoodFacts.ts` : lecture d'un produit Open Food Facts, nom court générique, rayon
   suggéré, doublons (code-barres puis nom), allergènes et nutrition d'une portion.
+- `receipts.ts` : lecture validée de la réponse de Claude, contrôle du total, prix d'un
+  ingrédient depuis une ligne (kilo ou paquet), contenu de paquet plausible.
 - `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
   refus de suppression.
 

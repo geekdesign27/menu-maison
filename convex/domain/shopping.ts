@@ -2,6 +2,27 @@
 import type { BaseUnit, Unit } from "./quantities";
 import { formatQty, NBSP, sameFamily, toBase } from "./quantities";
 
+/** Last receipt price per chain: `priceChf` buys `priceQty` of the product's unit (1 item for usual items). */
+export type ChainPrices = Partial<Record<string, { priceChf: number; priceQty: number }>>;
+
+/**
+ * Price to count at a chain: the last price read on one of its receipts, as is;
+ * otherwise the family's estimate adjusted by the store's price factor.
+ */
+export function effectivePrice(
+  product: { priceChf?: number; priceQty?: number; chainPrices?: ChainPrices },
+  chain: string | undefined,
+  priceFactor = 1,
+): { priceChf?: number; priceQty?: number; fromReceipt: boolean } {
+  const seen = chain ? product.chainPrices?.[chain] : undefined;
+  if (seen) return { priceChf: seen.priceChf, priceQty: seen.priceQty, fromReceipt: true };
+  return {
+    priceChf: product.priceChf !== undefined ? product.priceChf * priceFactor : undefined,
+    priceQty: product.priceQty,
+    fromReceipt: false,
+  };
+}
+
 export interface ShoppingInput {
   meals: {
     _id: string;
@@ -32,6 +53,7 @@ export interface ShoppingInput {
       packSize?: number; // bought by the pack: content of one pack, in `unit`
       onlyChains?: string[]; // sold only by these chains (e.g. ["Coop"])
       imageUrl?: string | null; // photo of the exact product
+      chainPrices?: ChainPrices; // read on receipts
     }
   >;
   aisles: { _id: string; name: string; emoji: string; order: number }[];
@@ -43,6 +65,7 @@ export interface ShoppingInput {
   } | null;
   extras: {
     _id: string;
+    stapleId?: string;
     label: string;
     qty?: number;
     unit?: Unit;
@@ -50,6 +73,7 @@ export interface ShoppingInput {
     priceChf?: number; // price of one item (usual items)
     onlyChains?: string[];
     imageUrl?: string | null;
+    chainPrices?: ChainPrices; // price of one item read on receipts
   }[];
   checks: Record<string, boolean>; // itemKey → checked
   /** Item keys the family already has at home this week: kept out of the list. */
@@ -67,6 +91,7 @@ export interface ShoppingItem {
   checked: boolean;
   extra: boolean;
   ingredientId?: string;
+  stapleId?: string; // usual item added to the list
   pantry: boolean;
   packs?: number; // whole packs to buy, when the ingredient is bought by the pack
   packDetail?: string; // « ≈ 14 tranches »: what the recipes need, shown under the label
@@ -144,13 +169,14 @@ export function recipeCost(
   persons: number,
   ingredients: ShoppingInput["ingredients"],
   priceFactor = 1,
+  chain?: string,
 ): { total: number; complete: boolean } {
   let total = 0;
   let complete = true;
   for (const item of recipe.items) {
     const ing = ingredients[item.ingredientId];
     const cost = ing
-      ? ingredientCost(ing, item.qtyPerPerson * persons, item.unit, priceFactor)
+      ? ingredientCost({ unit: ing.unit, ...effectivePrice(ing, chain, priceFactor) }, item.qtyPerPerson * persons, item.unit)
       : undefined;
     if (cost === undefined) complete = false;
     else total += cost;
@@ -199,6 +225,7 @@ export function packsFor(
 
 export function buildShoppingList(input: ShoppingInput): ShoppingList {
   const priceFactor = input.store?.priceFactor ?? 1;
+  const chain = input.store?.chain;
   const overrides = new Map(
     (input.store?.overrides ?? []).map((o) => [o.ingredientId, o.aisleId]),
   );
@@ -254,6 +281,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
   for (const [key, entry] of totals) {
     const ing = input.ingredients[entry.ingredientId];
     const packs = packsFor(ing, entry.qty, entry.unit);
+    const priced = { unit: ing.unit, ...effectivePrice(ing, chain, priceFactor) };
     const item: ShoppingItem = {
       key,
       label: ing.name,
@@ -266,8 +294,8 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       recipes: [...entry.recipes].sort((a, b) => a.localeCompare(b, "fr")),
       // Bought by the pack: the cost is that of the whole packs
       costChf: packs
-        ? ingredientCost(ing, packs * toBase(ing.packSize!, ing.unit).qty, entry.unit, priceFactor)
-        : ingredientCost(ing, entry.qty, entry.unit, priceFactor),
+        ? ingredientCost(priced, packs * toBase(ing.packSize!, ing.unit).qty, entry.unit)
+        : ingredientCost(priced, entry.qty, entry.unit),
       checked: input.checks[key] ?? false,
       extra: false,
       ingredientId: entry.ingredientId,
@@ -292,10 +320,13 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
         extra.qty !== undefined && unit ? formatQty(extra.qty, unit) : "",
       recipes: [],
       // Usual items have a price per item
-      costChf:
-        extra.priceChf !== undefined ? roundChf(extra.priceChf * (extra.qty ?? 1) * priceFactor) : undefined,
+      costChf: (() => {
+        const { priceChf } = effectivePrice(extra, chain, priceFactor);
+        return priceChf !== undefined ? roundChf(priceChf * (extra.qty ?? 1)) : undefined;
+      })(),
       checked: input.checks[key] ?? false,
       extra: true,
+      stapleId: extra.stapleId,
       pantry: false,
       onlyChains: extra.onlyChains?.length ? extra.onlyChains : undefined,
       imageUrl: extra.imageUrl ?? undefined,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ShoppingInput } from "./shopping";
 import {
   buildShoppingList,
+  effectivePrice,
   ingredientCost,
   orderAisles,
   recipeCost,
@@ -480,5 +481,41 @@ describe("orderAisles", () => {
       "boucherie",
       "epicerie",
     ]);
+  });
+});
+
+describe("chain prices read on receipts", () => {
+  const spaghetti = {
+    name: "Spaghetti",
+    aisleId: "epicerie",
+    unit: "g" as const,
+    priceChf: 2,
+    priceQty: 500,
+    chainPrices: { Lidl: { priceChf: 1.19, priceQty: 1000 } },
+  };
+
+  it("uses the receipt price at that chain, without the store factor", () => {
+    expect(effectivePrice(spaghetti, "Lidl", 0.85)).toEqual({ priceChf: 1.19, priceQty: 1000, fromReceipt: true });
+    expect(effectivePrice(spaghetti, "Coop", 1.1)).toEqual({ priceChf: 2.2, priceQty: 500, fromReceipt: false });
+    expect(effectivePrice(spaghetti, undefined)).toEqual({ priceChf: 2, priceQty: 500, fromReceipt: false });
+  });
+
+  it("prices recipes and the list with it", () => {
+    const recipe = { items: [{ ingredientId: "spag", qtyPerPerson: 100, unit: "g" as const }] };
+    expect(recipeCost(recipe, 5, { spag: spaghetti }, 0.85, "Lidl")).toEqual({ total: 0.6, complete: true });
+    expect(recipeCost(recipe, 5, { spag: spaghetti }, 0.85, "Aldi")).toEqual({ total: 1.7, complete: true });
+
+    const list = buildShoppingList({
+      meals: [{ _id: "m1", recipeId: "r1", persons: 5 }],
+      recipes: { r1: { name: "Bolo", ...recipe } },
+      ingredients: { spag: spaghetti },
+      aisles,
+      store: { chain: "Lidl", aisleOrder: [], overrides: [], priceFactor: 0.85 },
+      extras: [{ _id: "x1", label: "Papier toilette", qty: 2, priceChf: 8, chainPrices: { Lidl: { priceChf: 19.89, priceQty: 1 } } }],
+      checks: {},
+    });
+    const items = list.sections.flatMap((s) => s.items);
+    expect(items.find((i) => i.label === "Spaghetti")?.costChf).toBe(0.6);
+    expect(items.find((i) => i.label === "Papier toilette")?.costChf).toBe(39.8); // 2 × 19.89, rounded to 5 centimes
   });
 });

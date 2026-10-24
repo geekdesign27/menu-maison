@@ -215,6 +215,32 @@ export default defineSchema({
     createdAt: v.number(),
   }),
 
+  /** Last price seen on a receipt for one product at one chain. */
+  chainPrices: defineTable({
+    chain: chainValidator,
+    ingredientId: v.optional(v.id("ingredients")),
+    stapleId: v.optional(v.id("staples")),
+    priceChf: v.number(),
+    // Ingredient: quantity of its unit the price buys (1000 g, 10 eggs); staple: 1 item
+    priceQty: v.number(),
+    label: v.string(), // as printed on the receipt
+    observedOn: v.string(), // YYYY-MM-DD, receipt date
+  })
+    .index("by_ingredient", ["ingredientId"])
+    .index("by_staple", ["stapleId"]),
+
+  /**
+   * How a chain prints a product on its receipts, learnt when a receipt is
+   * checked. No ingredient nor staple: the line is off the family list.
+   */
+  receiptAliases: defineTable({
+    chain: chainValidator,
+    labelKey: v.string(),
+    ingredientId: v.optional(v.id("ingredients")),
+    stapleId: v.optional(v.id("staples")),
+    packQty: v.optional(v.number()), // content of one pack, in the ingredient unit
+  }).index("by_chain_label", ["chain", "labelKey"]),
+
   /** Single-row settings. */
   settings: defineTable({
     shoppingDay: v.number(), // 0 = Sunday … 6 = Saturday; planning weeks start that day

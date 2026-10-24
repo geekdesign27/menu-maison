@@ -43,3 +43,13 @@ export async function uploadPhoto(
   const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
   return { id: storageId, previewUrl: URL.createObjectURL(blob) };
 }
+
+/** Shrinks a photo and returns its JPEG data as base64 (no data: prefix), to send to an action. */
+export async function photoToBase64(file: File, maxSide: number): Promise<string> {
+  const blob = await shrink(file, maxSide);
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  // Chunks keep String.fromCharCode below the argument limit
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}

@@ -8,6 +8,7 @@ import { ChainMark, type Chain } from "../components/shopping/chains";
 import {
   ProductsContent,
   productPriceText,
+  receiptPricesText,
   useProductRows,
   type ProductRowData,
 } from "../pages/Products";
@@ -62,8 +63,15 @@ export function ProductsSection() {
       label: "Prix",
       sort: (p) => p.ingredient?.priceChf ?? p.staple?.priceChf,
       render: (p) => (
-        <span className={p.priced ? undefined : "text-berry"}>
-          {productPriceText(p)}
+        <span>
+          <span className={p.priced ? undefined : "text-berry"}>
+            {productPriceText(p)}
+          </span>
+          {receiptPricesText(p) && (
+            <span className="block text-[13px] font-semibold text-herb">
+              {receiptPricesText(p)}
+            </span>
+          )}
         </span>
       ),
     },

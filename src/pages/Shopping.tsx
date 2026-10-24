@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import {
   CalendarDays,
@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  ScanLine,
   Settings2,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -62,6 +63,7 @@ export function ShoppingPage() {
   const base = useBase();
   const week = useWeek();
   const { store, stores, choose } = useStoreChoice();
+  const navigate = useNavigate();
   const run = useRun();
   const [filter, setFilter] = useState<Filter>(readFilter);
   const [moreItem, setMoreItem] = useState<ShoppingItem | null>(null);
@@ -306,8 +308,14 @@ export function ShoppingPage() {
 
               {list.skipped.length > 0 && <AtHomeSection start={week.start} items={list.skipped} />}
 
+              <div className="mt-8 flex justify-center">
+                <Button variant="secondary" onClick={() => navigate("/courses/ticket")}>
+                  <ScanLine size={18} /> Scanner le ticket de caisse
+                </Button>
+              </div>
+
               {checkedCount > 0 && (
-                <div className="mt-8 flex justify-center">
+                <div className="mt-3 flex justify-center">
                   <Button
                     variant="secondary"
                     onClick={() => setConfirmReset(true)}

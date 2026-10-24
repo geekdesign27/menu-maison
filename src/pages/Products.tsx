@@ -12,6 +12,7 @@ import {
   type ProductKind,
 } from "../../convex/domain/products";
 import { MISC_SECTION } from "../../convex/domain/shopping";
+import { NBSP } from "../../convex/domain/quantities";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun, useToast } from "../lib/toast";
 import { formatChf, plural } from "../lib/format";
@@ -75,6 +76,18 @@ export function productPriceText(p: Row): string {
   if (p.staple?.priceChf !== undefined)
     return `${formatChf(p.staple.priceChf)} l'article`;
   return "Pas de prix";
+}
+
+/** « Lidl CHF 1.19 pour 1000 g (24.10) », prices read on receipts; "" when none. */
+export function receiptPricesText(p: Row): string {
+  const source = p.ingredient ?? p.staple!;
+  return source.receiptPrices
+    .map((r) => {
+      const [, month, day] = r.observedOn.split("-");
+      const amount = p.ingredient ? ` pour ${amountLabel(r.priceQty, p.ingredient.unit)}` : "";
+      return `${r.chain} ${formatChf(r.priceChf)}${amount} (${day}.${month})`;
+    })
+    .join(", ");
 }
 
 export function ProductsPage() {
@@ -334,6 +347,7 @@ function ProductRow({
   const chains = (source.onlyChains ?? []) as Chain[];
   const used = p.recipes.filter((r) => !r.archived).length;
   const price = productPriceText(p);
+  const receipts = receiptPricesText(p);
 
   return (
     <button
@@ -369,6 +383,11 @@ function ProductRow({
         >
           {price}
         </span>
+        {receipts && (
+          <span className="block text-[13px] font-semibold text-herb">
+            Ticket{NBSP}: {receipts}
+          </span>
+        )}
         <span className="mt-1 flex flex-wrap items-center gap-1.5">
           <span className="text-[13px] font-bold text-muted">
             {aisle?.name ?? MISC_SECTION.name}
