@@ -21,6 +21,7 @@ import { useStoreChoice } from "../lib/week";
 import { useRun } from "../lib/toast";
 import { formatChf, minutes, portions } from "../lib/format";
 import { BackButton } from "../components/Layout";
+import { RecipeNutrition } from "../components/off/RecipeNutrition";
 import {
   Avatar,
   Badge,
@@ -293,6 +294,8 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
           </div>
         )}
       </Card>
+
+      <RecipeNutrition items={recipe.items} ingredients={ingredients} />
 
       {/* Steps */}
       {recipe.steps.length > 0 && (

@@ -37,6 +37,12 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
    d'un produit, importer photo, allergènes et nutrition. L'ingrédient reste générique
    (« Spaghetti ») et achetable partout : ni marque ni enseigne imposée. Pas de doublon
    (code-barres, puis nom). Allergènes et calories par portion affichés sur la recette.
+   Recherche via `search.openfoodfacts.org` (l'ancienne recherche répond 503), en Suisse
+   d'abord, 800 ms après la frappe et 3 lettres minimum (limite d'environ 10 recherches
+   par minute). La photo n'est importée que si l'ingrédient n'en a pas. Données parfois
+   incomplètes : l'app dit « aucun indiqué » et rappelle de vérifier l'emballage.
+   Calories : g et ml comptés pareil, c. à s. = 15 g, c. à c. = 5 g ; les pièces ne
+   comptent pas (calcul affiché comme partiel).
 4. Plus tard : scanner les tickets de caisse pour ajuster les prix.
 
 ## Stack
@@ -150,6 +156,8 @@ Serveurs de dev via Portly.
 - `leftovers.ts` : `leftoverStatus(cookedOn, fridgeDays, today)`.
 - `stats.ts` : fréquences, dernière fois, alertes de répétition.
 - `sort.ts` : tri des tableaux de la gestion (ordre français, cases vides en dernier).
+- `openFoodFacts.ts` : lecture d'un produit Open Food Facts, nom court générique, rayon
+  suggéré, doublons (code-barres puis nom), allergènes et nutrition d'une portion.
 - `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
   refus de suppression.
 

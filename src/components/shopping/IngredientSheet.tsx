@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { Trash2 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { Unit } from "../../../convex/domain/quantities";
-import { formatNumber } from "../../../convex/domain/quantities";
+import { formatNumber, toBase } from "../../../convex/domain/quantities";
+import type { OffHit } from "../../../convex/domain/openFoodFacts";
+import { OffIngredientSection } from "../off/OffIngredientSection";
 import { useSession } from "../../lib/session";
 import { useRun, useToast } from "../../lib/toast";
 import { Button, Select, Sheet, TextInput } from "../ui";
@@ -26,6 +28,9 @@ export function IngredientSheet({
   ingredient,
   aisles,
   initialName = "",
+  initialAisleId,
+  initialUnit,
+  initialOff,
   onSaved,
   onDelete,
   onClose,
@@ -33,6 +38,10 @@ export function IngredientSheet({
   ingredient?: Doc<"ingredients">;
   aisles: Doc<"aisles">[];
   initialName?: string;
+  initialAisleId?: Id<"aisles">;
+  initialUnit?: Unit;
+  /** Open Food Facts product chosen before creating the ingredient. */
+  initialOff?: OffHit;
   onSaved?: (saved: SavedIngredient) => void;
   /** Shown as a « Supprimer » button when editing an existing ingredient. */
   onDelete?: () => void;
@@ -42,11 +51,13 @@ export function IngredientSheet({
   const run = useRun();
   const toast = useToast();
   const upsert = useMutation(api.catalog.upsertIngredient);
+  const importProduct = useAction(api.openFoodFacts.importProduct);
+  const [pendingOff, setPendingOff] = useState<OffHit | null>(initialOff ?? null);
   const [name, setName] = useState(ingredient?.name ?? initialName);
   const [aisleId, setAisleId] = useState<Id<"aisles"> | "">(
-    ingredient?.aisleId ?? "",
+    ingredient?.aisleId ?? initialAisleId ?? "",
   );
-  const [unit, setUnit] = useState<Unit>(ingredient?.unit ?? "g");
+  const [unit, setUnit] = useState<Unit>(ingredient?.unit ?? initialUnit ?? "g");
   const [priceText, setPriceText] = useState(
     ingredient?.priceChf !== undefined ? ingredient.priceChf.toFixed(2) : "",
   );
@@ -107,6 +118,13 @@ export function IngredientSheet({
         }),
       ingredient ? "Ingrédient enregistré." : "Ingrédient ajouté.",
     );
+    if (id && !ingredient && pendingOff) {
+      // The ingredient exists even if Open Food Facts fails: the error is only shown
+      await run(
+        () => importProduct({ token, id, code: pendingOff.code }),
+        "Allergènes et nutrition ajoutés.",
+      );
+    }
     setBusy(false);
     if (id) {
       onSaved?.({ _id: id, name: name.trim(), unit });
@@ -183,6 +201,14 @@ export function IngredientSheet({
             Rempli, la liste de courses compte des paquets entiers. Vide, elle garde la quantité exacte.
           </p>
         </div>
+        <OffIngredientSection
+          ingredientId={ingredient?._id}
+          name={name}
+          liquid={toBase(1, unit).unit === "ml"}
+          pending={pendingOff}
+          onPending={setPendingOff}
+          onImported={(img) => img.imageId && setImage({ id: img.imageId, url: img.imageUrl })}
+        />
         <ProductPhotoField imageUrl={image.url} onChange={(img) => setImage(img ? { id: img.id, url: img.url } : { id: null, url: null })} />
         <ChainsPicker value={onlyChains} onChange={setOnlyChains} />
         <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl bg-paper px-4 py-3 ring-1 ring-line">

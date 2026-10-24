@@ -19,6 +19,28 @@ export const unitValidator = v.union(
 
 export const slotValidator = v.union(v.literal("matin"), v.literal("midi"), v.literal("soir"));
 
+/** Data borrowed from an Open Food Facts product; the ingredient itself stays generic. */
+export const offValidator = v.object({
+  code: v.string(), // barcode
+  productName: v.string(), // for reference only, never shown as a brand to buy
+  allergens: v.array(v.string()), // Open Food Facts tags, e.g. "en:gluten"
+  nutriscore: v.optional(v.union(v.literal("a"), v.literal("b"), v.literal("c"), v.literal("d"), v.literal("e"))),
+  // Per 100 g, or per 100 ml for drinks
+  per100: v.optional(
+    v.object({
+      kcal: v.optional(v.number()),
+      fat: v.optional(v.number()),
+      saturatedFat: v.optional(v.number()),
+      carbs: v.optional(v.number()),
+      sugars: v.optional(v.number()),
+      fiber: v.optional(v.number()),
+      proteins: v.optional(v.number()),
+      salt: v.optional(v.number()),
+    }),
+  ),
+  fetchedAt: v.number(),
+});
+
 export const chainValidator = v.union(
   v.literal("Aldi"),
   v.literal("Lidl"),
@@ -57,6 +79,7 @@ export default defineSchema({
     packSize: v.optional(v.number()),
     onlyChains: v.optional(v.array(chainValidator)), // sold only by these chains (julienne: Coop)
     imageId: v.optional(v.id("_storage")), // photo of the exact product to buy
+    off: v.optional(offValidator), // photo, allergens and nutrition from Open Food Facts
   }).index("by_name", ["name"]),
 
   recipes: defineTable({

@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 
 // Production only: the local Convex backend runs on http://127.0.0.1 during dev
 const CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.convex.cloud; " +
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.convex.cloud https://images.openfoodfacts.org; " +
   "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud; manifest-src 'self'; base-uri 'self'; form-action 'self'";
 
 // GitHub Pages serves the app under /<repo-name>/

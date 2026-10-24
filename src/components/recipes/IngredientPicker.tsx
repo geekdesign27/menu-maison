@@ -2,11 +2,22 @@ import { useMemo, useState } from "react";
 import { ChevronRight, Package, Pencil, Plus } from "lucide-react";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { NBSP, type Unit } from "../../../convex/domain/quantities";
-import type { Base } from "../../lib/session";
 import { searchKey } from "../../lib/text";
 import { unitChoiceLabel } from "../../lib/units";
 import { Card, IconButton, SearchInput, Sheet } from "../ui";
 import { IngredientSheet } from "../shopping/IngredientSheet";
+import { ConfirmSheet } from "../shopping/ConfirmSheet";
+import { OffResults } from "../off/OffSearch";
+import { useAction } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import {
+  findExisting,
+  shortName,
+  suggestAisleName,
+  type OffHit,
+} from "../../../convex/domain/openFoodFacts";
+import { useSession, type Base } from "../../lib/session";
+import { useRun } from "../../lib/toast";
 
 export interface PickedIngredient {
   _id: Id<"ingredients">;
@@ -31,11 +42,31 @@ export function IngredientPicker({
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Doc<"ingredients"> | null>(null);
+  // Open Food Facts product to create as a new ingredient, or to complete an existing one with
+  const [fromOff, setFromOff] = useState<OffHit | null>(null);
+  const [completing, setCompleting] = useState<{ ingredient: Doc<"ingredients">; hit: OffHit } | null>(null);
+  const { token } = useSession();
+  const run = useRun();
+  const importProduct = useAction(api.openFoodFacts.importProduct);
 
   const close = () => {
     setQuery("");
     setCreating(false);
+    setFromOff(null);
+    setCompleting(null);
     onClose();
+  };
+
+  /** Same barcode: reuse it; same name: offer to complete it; else create it. */
+  const chooseOff = (hit: OffHit) => {
+    const found = findExisting(base.ingredients, hit.code, shortName(hit.productName, hit.brands, query));
+    if (found?.by === "code") pick(found.ingredient);
+    else if (found) setCompleting({ ingredient: found.ingredient, hit });
+    else setFromOff(hit);
+  };
+  const aisleFor = (hit: OffHit) => {
+    const name = suggestAisleName(hit.categories);
+    return name ? base.aisles.find((a) => searchKey(a.name) === searchKey(name))?._id : undefined;
   };
   const pick = (ingredient: PickedIngredient) => {
     onPick(ingredient);
@@ -122,6 +153,7 @@ export function IngredientPicker({
               );
             })}
           </ul>
+          <OffResults query={query} onChoose={chooseOff} />
         </div>
       </Sheet>
       {/* Editing name, aisle, unit, price or "souvent en stock" without leaving the picker */}
@@ -132,6 +164,34 @@ export function IngredientPicker({
           onClose={() => setEditing(null)}
         />
       )}
+      {open && fromOff && (
+        <IngredientSheet
+          key={fromOff.code}
+          aisles={base.aisles}
+          initialName={shortName(fromOff.productName, fromOff.brands, query)}
+          initialAisleId={aisleFor(fromOff)}
+          initialUnit={fromOff.liquid ? "ml" : "g"}
+          initialOff={fromOff}
+          onSaved={pick}
+          onClose={() => setFromOff(null)}
+        />
+      )}
+      <ConfirmSheet
+        open={open && completing !== null}
+        onClose={() => setCompleting(null)}
+        title={`Compléter «${NBSP}${completing?.ingredient.name ?? ""}${NBSP}» ?`}
+        text={`L'ingrédient existe déjà. Il reçoit les allergènes, la nutrition et la photo de ce produit s'il n'en a pas, puis il est ajouté à la recette.`}
+        confirmLabel="Compléter et ajouter"
+        onConfirm={async () => {
+          if (!completing) return;
+          const { ingredient, hit } = completing;
+          const done = await run(
+            () => importProduct({ token, id: ingredient._id, code: hit.code }),
+            "Allergènes et nutrition ajoutés.",
+          );
+          if (done) pick(ingredient);
+        }}
+      />
       {/* Quick creation stacks the regular ingredient form over the picker */}
       {open && creating && (
         <IngredientSheet
