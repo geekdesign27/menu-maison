@@ -3,7 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { assertDate, assertInt, assertSession, cleanText } from "./lib";
 import { slotValidator } from "./schema";
-import { addDays, daysBetween } from "./domain/dates";
+import { addDays, dayOfWeek, daysBetween } from "./domain/dates";
 import { leftoverStatus } from "./domain/leftovers";
 
 function assertPersons(n: number) {
@@ -256,5 +256,56 @@ export const discardLeftover = mutation({
   handler: async (ctx, { token, id }) => {
     await assertSession(ctx, token);
     await ctx.db.patch(id, { leftoverPortions: 0 });
+  },
+});
+
+/**
+ * Recurring dish (birchermüesli every weekday morning…): one meal on each chosen
+ * weekday, from `date` on, for `weeks` weeks. Days already holding this dish at
+ * this slot are skipped.
+ */
+export const addRecurring = mutation({
+  args: {
+    token: v.string(),
+    date: v.string(),
+    slot: slotValidator,
+    recipeId: v.optional(v.id("recipes")),
+    title: v.optional(v.string()),
+    persons: v.number(),
+    weekdays: v.array(v.number()), // 0 = Sunday … 6 = Saturday
+    weeks: v.number(),
+  },
+  handler: async (ctx, { token, date, slot, recipeId, title, persons, weekdays, weeks }) => {
+    await assertSession(ctx, token);
+    assertDate(date);
+    assertPersons(persons);
+    assertInt(weeks, 1, 12, "Nombre de semaines");
+    if (weekdays.length === 0 || weekdays.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+      throw new ConvexError("Choisis au moins un jour.");
+    }
+    if (!recipeId && !title?.trim()) throw new ConvexError("Choisis une recette ou écris un titre.");
+    const cleanTitle = title ? cleanText(title, 80, "Titre") || undefined : undefined;
+    const end = addDays(date, weeks * 7 - 1);
+    const existing = await mealsBetween(ctx, date, end);
+    let added = 0;
+    for (let day = date; day <= end; day = addDays(day, 1)) {
+      if (!weekdays.includes(dayOfWeek(day))) continue;
+      const twin = existing.some(
+        (m) => m.date === day && m.slot === slot && (recipeId ? m.recipeId === recipeId : m.title === cleanTitle),
+      );
+      if (twin) continue;
+      await ctx.db.insert("meals", {
+        date: day,
+        slot,
+        recipeId,
+        title: cleanTitle,
+        persons,
+        cookedOn: day,
+        status: "prévu",
+        leftoverPortions: 0,
+      });
+      added++;
+    }
+    return { added };
   },
 });

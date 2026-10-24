@@ -3,10 +3,10 @@ import { useMutation } from "convex/react";
 import { RefreshCw } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { addDays, formatDayLong, weekStart } from "../../convex/domain/dates";
+import { addDays, DAY_SHORT, dayOfWeek, formatDayLong, weekStart } from "../../convex/domain/dates";
 import { useBase, useSession } from "../lib/session";
 import { useWeek } from "../lib/week";
-import { useRun } from "../lib/toast";
+import { useRun, useToast } from "../lib/toast";
 import { RecipePicker } from "./RecipePicker";
 import { WeekDayPicker } from "./planning/DayPicker";
 import { Field, SLOT_OPTIONS, Toggle } from "./planning/controls";
@@ -19,7 +19,7 @@ import {
 } from "./planning/data";
 import { useOverview, useRecipes } from "../lib/queries";
 import { Badge, Button, cx, Segmented, Sheet, Stepper } from "./ui";
-import { portions } from "../lib/format";
+import { plural, portions } from "../lib/format";
 
 interface Props {
   open: boolean;
@@ -47,6 +47,8 @@ function PlanMealForm({
   const recipes = useRecipes();
   const overview = useOverview();
   const add = useMutation(api.meals.add);
+  const addRecurring = useMutation(api.meals.addRecurring);
+  const toast = useToast();
   const run = useRun();
 
   const [choice, setChoice] = useState<MealChoice | null>(
@@ -64,6 +66,10 @@ function PlanMealForm({
   const [eveningBefore, setEveningBefore] = useState(false);
   // Portions cooked on top, kept in the fridge for later in the week
   const [extraPortions, setExtraPortions] = useState(0);
+  // « Répéter » : same dish on chosen weekdays for a few weeks (birchermüesli every morning)
+  const [repeat, setRepeat] = useState(false);
+  const [repeatDays, setRepeatDays] = useState<number[] | null>(null);
+  const [repeatWeeks, setRepeatWeeks] = useState(3);
   const [saving, setSaving] = useState(false);
 
   // Default "also tomorrow lunch" to on, unless tomorrow's lunch is already planned
@@ -92,9 +98,35 @@ function PlanMealForm({
       ? repeatWarning(overview?.meals, choice.recipeId, date, today)
       : null;
 
+  const chosenDays = repeatDays ?? [dayOfWeek(date)];
+  const repeatCount = (() => {
+    let n = 0;
+    for (let i = 0; i < repeatWeeks * 7; i++) if (chosenDays.includes(dayOfWeek(addDays(date, i)))) n++;
+    return n;
+  })();
+
   const submit = async () => {
     if (!choice || !token) return;
     setSaving(true);
+    if (repeat) {
+      const res = await run(() =>
+        addRecurring({
+          token,
+          date,
+          slot,
+          persons: effectivePersons,
+          ...("recipeId" in choice ? { recipeId: choice.recipeId } : { title: choice.title }),
+          weekdays: chosenDays,
+          weeks: repeatWeeks,
+        }),
+      );
+      setSaving(false);
+      if (res) {
+        toast(res.added > 0 ? `${plural(res.added, "repas ajouté", "repas ajoutés")} au menu` : "Ces jours avaient déjà ce plat");
+        onClose();
+      }
+      return;
+    }
     const id = await run(
       () =>
         add({
@@ -128,10 +160,10 @@ function PlanMealForm({
           <Button
             size="lg"
             onClick={submit}
-            disabled={!choice || saving}
+            disabled={!choice || saving || (repeat && repeatCount === 0)}
             className="mb-2"
           >
-            Ajouter au menu
+            {repeat ? `Ajouter ${plural(repeatCount, "repas", "repas")}` : "Ajouter au menu"}
           </Button>
         }
       >
@@ -192,7 +224,43 @@ function PlanMealForm({
             />
           </Field>
 
-          {slot === "soir" ? (
+          <div className={cx("rounded-[var(--radius-card)] p-4 transition", repeat ? "bg-sun-soft" : "bg-paper ring-1 ring-line")}>
+            <Toggle checked={repeat} onChange={setRepeat} label="Répéter ce plat" hint="Les mêmes jours, plusieurs semaines de suite." />
+            {repeat && (
+              <div className="mt-3 space-y-3">
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Jours de la répétition">
+                  {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+                    const on = chosenDays.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setRepeatDays(on ? chosenDays.filter((x) => x !== d) : [...chosenDays, d])}
+                        className={cx(
+                          "min-h-11 min-w-11 rounded-full px-2 font-extrabold transition",
+                          on ? "bg-ink text-white" : "bg-paper text-ink ring-1 ring-line",
+                        )}
+                      >
+                        {DAY_SHORT[d]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-bold">Pendant {plural(repeatWeeks, "semaine", "semaines")}</span>
+                  <Stepper label="Nombre de semaines" value={repeatWeeks} onChange={setRepeatWeeks} min={1} max={12} />
+                </div>
+                <p className="text-[15px] font-semibold text-muted">
+                  {repeatCount > 0
+                    ? `${plural(repeatCount, "repas", "repas")} à partir du ${formatDayLong(date)}.`
+                    : "Choisis au moins un jour."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {repeat ? null : slot === "soir" ? (
             <div
               className={cx(
                 "rounded-[var(--radius-card)] p-4 transition",
@@ -231,7 +299,7 @@ function PlanMealForm({
             </div>
           )}
 
-          {isRecipe && (
+          {isRecipe && !repeat && (
             <div className="rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
               <div className="flex items-center justify-between gap-3">
                 <div>

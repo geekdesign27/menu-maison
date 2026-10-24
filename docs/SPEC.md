@@ -100,6 +100,8 @@ Serveurs de dev via Portly.
   - Connexion : jeton et profil gardés 365 jours sur l'appareil, stockage durable demandé
     au navigateur. Les onglets Safari effacent les données après 7 jours sans visite :
     conseil affiché d'ajouter l'app à l'écran d'accueil (non concernée).
+  - Plat récurrent : option « Répéter » à l'ajout (jours de la semaine + 1 à 12 semaines,
+    `meals.addRecurring`), sans doublon si le plat est déjà à ce créneau ce jour-là.
   - Créneau « Matin » (petit-déjeuner) en plus de midi et soir, tag « Petit-déj » et
     5 recettes de départ. Migration `seed:addMissingRecipes` pour les bases existantes.
 - **Prix** : estimation CHF par ingrédient, × `store.priceFactor`. Indicatif.
