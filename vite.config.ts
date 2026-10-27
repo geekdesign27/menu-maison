@@ -8,9 +8,9 @@ const CSP =
   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.convex.cloud https://images.openfoodfacts.org; " +
   "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud; manifest-src 'self'; base-uri 'self'; form-action 'self'";
 
-// GitHub Pages serves the app under /<repo-name>/
-export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/menu-maison/" : "/",
+// Served at the root of menumaison.ch (custom domain of GitHub Pages)
+export default defineConfig(() => ({
+  base: "/",
   plugins: [
     react(),
     tailwindcss(),

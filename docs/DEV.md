@@ -34,7 +34,8 @@ déploiement vide, `npx convex run seed:run` fait la même chose.
 
 ## En production
 
-- App : https://geekdesign27.github.io/menu-maison/ (dépôt public `geekdesign27/menu-maison`).
+- App : https://menumaison.ch (domaine Infomaniak, DNS vers GitHub Pages ; l'ancienne adresse
+  geekdesign27.github.io/menu-maison redirige). Dépôt public `geekdesign27/menu-maison`.
 - Convex : projet `menu-maison` (équipe `pierre-alain-schutz`), déploiement de production
   `resolute-squid-776`, région Europe (Irlande). Mis en place le 2026-10-24.
 - Clé de déploiement : secret GitHub `CONVEX_DEPLOY_KEY` (clé « github-actions »).
@@ -53,7 +54,7 @@ déploiement vide, `npx convex run seed:run` fait la même chose.
 2. **GitHub** : créer le dépôt `menu-maison` (compte `geekdesign27`), ajouter le secret
    `CONVEX_DEPLOY_KEY` (Settings, Secrets and variables, Actions), activer Pages avec la
    source « GitHub Actions », puis pousser `main`.
-3. L'app est publiée sur https://geekdesign27.github.io/menu-maison/ .
+3. L'app est publiée sur https://menumaison.ch .
    Sur chaque téléphone : ouvrir le lien, entrer le code famille, choisir son profil, puis
    « Ajouter à l'écran d'accueil ».
 
