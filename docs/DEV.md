@@ -7,8 +7,9 @@ Serveurs gérés par Portly (projet `menu-maison`) :
 - `menu-maison/convex` : `npx convex dev` en mode local anonyme (`CONVEX_AGENT_MODE=anonymous`), aucun compte requis.
 - `menu-maison/web` : Vite sur http://localhost:5190
 
-Code famille du backend local de test : `test-famille`
-(`CONVEX_AGENT_MODE=anonymous npx convex env set FAMILY_CODE test-famille`).
+Backend local : une famille de test se crée avec
+`CONVEX_AGENT_MODE=anonymous npx convex run families:create '{"name":"Famille Test","admin":"Test"}'`,
+puis on ouvre `http://localhost:5190/#/activer/<invite>` pour choisir pseudo et mot de passe.
 Le code de production est différent et n'est jamais écrit dans le dépôt.
 
 Lecture des tickets et import de recettes : clé Anthropic `ANTHROPIC_API_KEY` dans l'environnement Convex, jamais
@@ -22,9 +23,8 @@ même méthode : `pbpaste | CONVEX_AGENT_MODE=anonymous npx convex env set GROQ_
 En place depuis le 2026-10-24.
 Sans clé, l'écran de scan l'indique clairement. Les tokens de chaque lecture sont journalisés.
 
-Au premier code famille correct, le backend se remplit tout seul (profils, rayons,
-ingrédients avec prix estimés, recettes, 5 magasins autour de Fribourg). Sur un
-déploiement vide, `npx convex run seed:run` fait la même chose.
+Chaque nouvelle famille reçoit le catalogue de départ (`seedFamily`) : rayons, ingrédients
+avec prix estimés, recettes à découvrir, 5 magasins autour de Fribourg, articles habituels.
 
 ## Tests
 
@@ -39,7 +39,9 @@ déploiement vide, `npx convex run seed:run` fait la même chose.
 - Convex : projet `menu-maison` (équipe `pierre-alain-schutz`), déploiement de production
   `resolute-squid-776`, région Europe (Irlande). Mis en place le 2026-10-24.
 - Clé de déploiement : secret GitHub `CONVEX_DEPLOY_KEY` (clé « github-actions »).
-- Code famille : `npx convex env set FAMILY_CODE --deployment pierre-alain-schutz:menu-maison:production`
+- Comptes : voir « Accès » dans SPEC.md. Nouvelle famille en production :
+  `npx convex run families:create '{"name":"…","admin":"…"}' --prod`, puis envoyer à l'admin
+  le lien `https://menumaison.ch/#/activer/<invite>`.
   (sans valeur, la CLI la demande sans l'écrire dans l'historique). Changer le code
   déconnecte tous les téléphones.
 
@@ -49,13 +51,13 @@ déploiement vide, `npx convex run seed:run` fait la même chose.
 
 1. **Convex** : `npx convex login`, puis `npx convex deploy` crée le déploiement de
    production (plan gratuit). Dans le Dashboard Convex du projet, Settings,
-   Environment Variables : ajouter `FAMILY_CODE` (un code long que toute la famille connaît).
+   Environment Variables : ajouter les clés `ANTHROPIC_API_KEY` et `GROQ_API_KEY`.
    Toujours dans Settings : générer une **Production Deploy Key**.
 2. **GitHub** : créer le dépôt `menu-maison` (compte `geekdesign27`), ajouter le secret
    `CONVEX_DEPLOY_KEY` (Settings, Secrets and variables, Actions), activer Pages avec la
    source « GitHub Actions », puis pousser `main`.
 3. L'app est publiée sur https://menumaison.ch .
-   Sur chaque téléphone : ouvrir le lien, entrer le code famille, choisir son profil, puis
+   Sur chaque téléphone : ouvrir le lien d'invitation ou de la famille, se connecter, puis
    « Ajouter à l'écran d'accueil ».
 
 Chaque push sur `main` relance les tests, déploie les fonctions Convex et publie le front.

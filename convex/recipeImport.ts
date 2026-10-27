@@ -2,7 +2,7 @@ import { action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
-import { assertSession, getSettings } from "./lib";
+import { requireMember, getSettings } from "./lib";
 import { askClaude } from "./claude";
 import { UNITS, type Unit } from "./domain/quantities";
 import { TAGS } from "./domain/tags";
@@ -112,18 +112,18 @@ const SCHEMA = {
 export const checkSession = internalQuery({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
+    await requireMember(ctx, token);
   },
 });
 
 export const catalog = internalQuery({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     const [ingredients, aisles, settings] = await Promise.all([
-      ctx.db.query("ingredients").collect(),
-      ctx.db.query("aisles").collect(),
-      getSettings(ctx),
+      db.query("ingredients").collect(),
+      db.query("aisles").collect(),
+      getSettings(db),
     ]);
     return {
       ingredients: ingredients.map((i) => ({
@@ -245,6 +245,7 @@ async function storeImage(
 export const dropUnusedPhoto = internalMutation({
   args: { imageId: v.id("_storage") },
   handler: async (ctx, { imageId }) => {
+    // Any family's recipe may use it: the check spans the whole deployment
     const recipes = await ctx.db.query("recipes").collect();
     if (!recipes.some((r) => r.imageId === imageId)) await ctx.storage.delete(imageId);
   },
@@ -313,8 +314,10 @@ export const transcribe = action({
 export const audioMeta = internalQuery({
   args: { token: v.string(), audioId: v.id("_storage") },
   handler: async (ctx, { token, audioId }) => {
-    await assertSession(ctx, token);
-    return ctx.db.system.get(audioId);
+    await requireMember(ctx, token);
+    const meta = await ctx.db.system.get(audioId);
+    // Only a recording just uploaded: an older file is not this member's dictation
+    return meta && Date.now() - meta._creationTime < AUDIO_MAX_AGE_MS ? meta : null;
   },
 });
 

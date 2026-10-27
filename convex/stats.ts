@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { assertDate, assertSession } from "./lib";
+import { assertDate, requireMember } from "./lib";
 import { addDays } from "./domain/dates";
 import { recipeStats } from "./domain/stats";
 
@@ -11,11 +11,9 @@ import { recipeStats } from "./domain/stats";
 export const overview = query({
   args: { token: v.string(), today: v.string() },
   handler: async (ctx, { token, today }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     assertDate(today);
-    const meals = await ctx.db
-      .query("meals")
-      .withIndex("by_date", (q) =>
+    const meals = await db.index("meals", "by_family_date", (q) =>
         q.gte("date", addDays(today, -180)).lte("date", addDays(today, 60)),
       )
       .collect();

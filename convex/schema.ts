@@ -50,24 +50,55 @@ export const chainValidator = v.union(
   v.literal("Autre"),
 );
 
+export const themeValidator = v.union(v.literal("carotte"), v.literal("sauge"), v.literal("myrtille"));
+export const fontValidator = v.union(
+  v.literal("nunito"),
+  v.literal("quicksand"),
+  v.literal("lexend"),
+  v.literal("atkinson"),
+);
+export const roleValidator = v.union(v.literal("admin"), v.literal("membre"));
+
+// Optional only until the migration to families has run on every deployment
+const familyId = v.optional(v.id("families"));
+
 export default defineSchema({
+  /** One household. Everything else belongs to exactly one family. */
+  families: defineTable({
+    name: v.string(), // « Famille Schütz »
+    slug: v.string(), // in the sign-in link: menumaison.ch/#/f/schutz
+    suspended: v.boolean(),
+    aiCapUsd: v.optional(v.number()), // monthly Claude budget set by the super-admin
+    createdAt: v.number(),
+  }).index("by_slug", ["slug"]),
+
   /** Family members (profiles picked on the home screen). */
   members: defineTable({
+    familyId,
     name: v.string(),
     emoji: v.string(),
     color: v.string(), // hex, used for avatar backgrounds
     order: v.number(),
     imageId: v.optional(v.id("_storage")), // profile photo, shown instead of the emoji
-  }),
+    // Sign-in, only for members who have an account (young children may not)
+    username: v.optional(v.string()), // unique within the family, lowercase
+    passwordHash: v.optional(v.string()), // "pbkdf2-sha256$<iterations>$<salt>$<hash>"
+    role: v.optional(roleValidator),
+    superadmin: v.optional(v.boolean()), // manages every family (PA)
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_username", ["familyId", "username"]),
 
   /** Generic aisles (rayons). Each store orders them its own way. */
   aisles: defineTable({
+    familyId,
     name: v.string(),
     emoji: v.string(),
     order: v.number(), // default order when no store is selected
-  }),
+  }).index("by_family", ["familyId"]),
 
   ingredients: defineTable({
+    familyId,
     name: v.string(),
     aisleId: v.id("aisles"),
     unit: unitValidator, // unit used in recipes and on the list
@@ -80,9 +111,12 @@ export default defineSchema({
     onlyChains: v.optional(v.array(chainValidator)), // sold only by these chains (julienne: Coop)
     imageId: v.optional(v.id("_storage")), // photo of the exact product to buy
     off: v.optional(offValidator), // photo, allergens and nutrition from Open Food Facts
-  }).index("by_name", ["name"]),
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_name", ["familyId", "name"]),
 
   recipes: defineTable({
+    familyId,
     name: v.string(),
     emoji: v.string(),
     description: v.optional(v.string()),
@@ -105,17 +139,20 @@ export default defineSchema({
     saved: v.boolean(),
     archived: v.boolean(),
     createdBy: v.optional(v.id("members")),
-  }),
+  }).index("by_family", ["familyId"]),
 
   /** One heart per member and recipe. */
   likes: defineTable({
+    familyId,
     recipeId: v.id("recipes"),
     memberId: v.id("members"),
   })
+    .index("by_family", ["familyId"])
     .index("by_recipe", ["recipeId"])
     .index("by_member", ["memberId"]),
 
   stores: defineTable({
+    familyId,
     chain: chainValidator,
     name: v.string(), // e.g. "Aldi Marly"
     aisleOrder: v.array(v.id("aisles")), // walking order through the store
@@ -125,13 +162,14 @@ export default defineSchema({
     ),
     priceFactor: v.number(), // 1 = average; 0.85 = cheaper chain
     archived: v.boolean(),
-  }),
+  }).index("by_family", ["familyId"]),
 
   /**
    * One planned dish. Cooking for tonight and tomorrow's lunch creates two
    * meals sharing the same `cookedOn` date: quantities add up on the list.
    */
   meals: defineTable({
+    familyId,
     date: v.string(), // YYYY-MM-DD, day it is eaten
     slot: slotValidator,
     recipeId: v.optional(v.id("recipes")),
@@ -149,11 +187,13 @@ export default defineSchema({
     // Portions left in the fridge after this meal (0 = nothing left)
     leftoverPortions: v.number(),
   })
-    .index("by_date", ["date"])
+    .index("by_family", ["familyId"])
+    .index("by_family_date", ["familyId", "date"])
     .index("by_recipe", ["recipeId"]),
 
   /** Usual weeks ("menus types"), applied onto a planning week. */
   templates: defineTable({
+    familyId,
     name: v.string(),
     entries: v.array(
       v.object({
@@ -165,19 +205,23 @@ export default defineSchema({
         cookedDayOffset: v.number(), // usually dayOffset, or dayOffset-1 for a lunch cooked the evening before
       }),
     ),
-  }),
+  }).index("by_family", ["familyId"]),
 
   /** Check state of a shopping list item, keyed by period + item key. */
   shoppingChecks: defineTable({
+    familyId,
     periodStart: v.string(),
     itemKey: v.string(), // "ing:<ingredientId>:<baseUnit>" or "extra:<extraId>"
     checked: v.boolean(),
     checkedBy: v.optional(v.id("members")),
     checkedAt: v.optional(v.number()),
-  }).index("by_period", ["periodStart"]),
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_period", ["familyId", "periodStart"]),
 
   /** Free items added to a shopping period (lessive, café…). */
   shoppingExtras: defineTable({
+    familyId,
     periodStart: v.string(),
     label: v.string(),
     qty: v.optional(v.number()),
@@ -185,10 +229,13 @@ export default defineSchema({
     aisleId: v.optional(v.id("aisles")),
     addedBy: v.optional(v.id("members")),
     stapleId: v.optional(v.id("staples")),
-  }).index("by_period", ["periodStart"]),
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_period", ["familyId", "periodStart"]),
 
   /** Usual non-recipe items (toilet paper, washing powder…), offered first when adding. */
   staples: defineTable({
+    familyId,
     name: v.string(),
     aisleId: v.optional(v.id("aisles")),
     useCount: v.number(),
@@ -199,25 +246,32 @@ export default defineSchema({
     priceChf: v.optional(v.number()), // price of one item
     onlyChains: v.optional(v.array(chainValidator)),
     imageId: v.optional(v.id("_storage")), // photo of the exact product to buy
-  }).index("by_name", ["name"]),
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_name", ["familyId", "name"]),
 
   /** Items already at home for a shopping week: kept out of the list. */
   stockSkips: defineTable({
+    familyId,
     periodStart: v.string(),
     itemKey: v.string(),
-  }).index("by_period", ["periodStart"]),
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_period", ["familyId", "periodStart"]),
 
   /** "Envies": dishes someone feels like eating soon. */
   wishes: defineTable({
+    familyId,
     memberId: v.id("members"),
     recipeId: v.optional(v.id("recipes")),
     text: v.optional(v.string()),
     done: v.boolean(),
     createdAt: v.number(),
-  }),
+  }).index("by_family", ["familyId"]),
 
   /** Last price seen on a receipt for one product at one chain. */
   chainPrices: defineTable({
+    familyId,
     chain: chainValidator,
     ingredientId: v.optional(v.id("ingredients")),
     stapleId: v.optional(v.id("staples")),
@@ -227,6 +281,7 @@ export default defineSchema({
     label: v.string(), // as printed on the receipt
     observedOn: v.string(), // YYYY-MM-DD, receipt date
   })
+    .index("by_family", ["familyId"])
     .index("by_ingredient", ["ingredientId"])
     .index("by_staple", ["stapleId"]),
 
@@ -235,32 +290,60 @@ export default defineSchema({
    * checked. No ingredient nor staple: the line is off the family list.
    */
   receiptAliases: defineTable({
+    familyId,
     chain: chainValidator,
     labelKey: v.string(),
     ingredientId: v.optional(v.id("ingredients")),
     stapleId: v.optional(v.id("staples")),
     packQty: v.optional(v.number()), // content of one pack, in the ingredient unit
-  }).index("by_chain_label", ["chain", "labelKey"]),
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_chain_label", ["familyId", "chain", "labelKey"]),
 
-  /** Single-row settings. */
+  /** Settings, one row per family. */
   settings: defineTable({
+    familyId,
     shoppingDay: v.number(), // 0 = Sunday … 6 = Saturday; planning weeks start that day
     defaultStoreId: v.optional(v.id("stores")),
     defaultPersons: v.number(),
-  }),
+    theme: v.optional(themeValidator),
+    font: v.optional(fontValidator),
+  }).index("by_family", ["familyId"]),
 
-  /** Device sessions opened with the family code (token kept in localStorage). */
+  /** Device sessions opened by a member (token kept in localStorage). */
   sessions: defineTable({
     token: v.string(), // SHA-256 of the device token, never the token itself
-    codeHash: v.optional(v.string()), // fingerprint of FAMILY_CODE at login
+    memberId: v.optional(v.id("members")), // optional only for sessions older than accounts
+    familyId,
+    codeHash: v.optional(v.string()), // sessions opened with the former family code, removed by the migration
     createdAt: v.number(),
     expiresAt: v.number(),
-  }).index("by_token", ["token"]),
+  })
+    .index("by_token", ["token"])
+    .index("by_member", ["memberId"]),
 
-  /** Brute-force guard on the family code (one row). */
+  /** Former brute-force guard on the family code, emptied by the migration. */
   accessGuard: defineTable({
     failures: v.number(),
     lastFailureAt: v.optional(v.number()),
     lockedUntil: v.number(),
   }),
+
+  /** Brute-force guard per sign-in name: « <familyId>:<username> ». */
+  loginGuards: defineTable({
+    key: v.string(),
+    failures: v.number(),
+    lastFailureAt: v.number(),
+    lockedUntil: v.number(),
+  }).index("by_key", ["key"]),
+
+  /** One-time link to choose one's password (first sign-in, or reset). */
+  invites: defineTable({
+    familyId: v.id("families"),
+    memberId: v.id("members"),
+    token: v.string(), // SHA-256 of the link token
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_member", ["memberId"]),
 });

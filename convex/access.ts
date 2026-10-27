@@ -1,81 +1,208 @@
-import { internalMutation, mutation, query } from "./_generated/server";
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
+import { internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import {
-  LOCK_MS,
-  MAX_FAILURES,
-  MIN_CODE_LENGTH,
+  readSession,
   SESSION_DAYS,
-  currentCodeHash,
-  normalizeCode,
-  safeEqual,
   sha256,
 } from "./lib";
-import { seedIfEmpty } from "./seed";
+import {
+  DECOY_HASH,
+  GLOBAL,
+  PER_NAME,
+  reserveAttempt,
+  type Limit,
+  hashPassword,
+  nameProblem,
+  normalizeName,
+  passwordProblem,
+  randomToken,
+  verifyPassword,
+} from "./domain/auth";
 
-/** Exchanges the family code for a long-lived device token. */
-export const login = mutation({
-  args: { code: v.string() },
-  handler: async (ctx, { code }) => {
-    const expected = process.env.FAMILY_CODE;
-    if (!expected || normalizeCode(expected).length < MIN_CODE_LENGTH) {
-      throw new ConvexError(
-        "L'accès n'est pas encore configuré sur le serveur.",
-      );
-    }
+const INVITE_DAYS = 14;
+const WRONG = "Pseudo ou mot de passe incorrect.";
 
-    const now = Date.now();
-    const guard = await ctx.db.query("accessGuard").first();
-    if (guard && guard.lockedUntil > now) {
-      const minutes = Math.ceil((guard.lockedUntil - now) / 60000);
-      throw new ConvexError(`Trop d'essais. Réessaie dans ${minutes} min.`);
-    }
+async function openSession(ctx: MutationCtx, member: Doc<"members">) {
+  const token = randomToken();
+  const now = Date.now();
+  await ctx.db.insert("sessions", {
+    token: await sha256(token),
+    memberId: member._id,
+    familyId: member.familyId,
+    createdAt: now,
+    expiresAt: now + SESSION_DAYS * 24 * 3600 * 1000,
+  });
+  return token;
+}
 
-    if (
-      code.length > 200 ||
-      !safeEqual(normalizeCode(code), normalizeCode(expected))
-    ) {
-      // Old typos are forgotten: only failures within the lock window count
-      const recent =
-        guard?.lastFailureAt && now - guard.lastFailureAt < LOCK_MS
-          ? guard.failures
-          : 0;
-      const failures = recent + 1;
-      const locked = failures >= MAX_FAILURES;
-      const next = {
-        failures: locked ? 0 : failures,
-        lockedUntil: locked ? now + LOCK_MS : 0,
-        lastFailureAt: now,
-      };
-      if (guard) await ctx.db.patch(guard._id, next);
-      else await ctx.db.insert("accessGuard", next);
-      // Return instead of throwing: a thrown error would roll back the failure count
-      return { ok: false as const, error: "Code incorrect." };
-    }
+async function revokeSessions(ctx: MutationCtx, memberId: Id<"members">) {
+  const sessions = await ctx.db
+    .query("sessions")
+    .withIndex("by_member", (q) => q.eq("memberId", memberId))
+    .collect();
+  for (const s of sessions) await ctx.db.delete(s._id);
+}
 
-    if (guard) await ctx.db.patch(guard._id, { failures: 0, lockedUntil: 0 });
-    await seedIfEmpty(ctx);
+/** One-time link token for a member to choose a password (first sign-in or reset). */
+export async function createInvite(ctx: MutationCtx, member: Doc<"members">) {
+  if (!member.familyId) throw new ConvexError("Profil sans famille.");
+  // A new link replaces any older one
+  const old = await ctx.db
+    .query("invites")
+    .withIndex("by_member", (q) => q.eq("memberId", member._id))
+    .collect();
+  for (const i of old) await ctx.db.delete(i._id);
+  // A reset link signs the member out everywhere (lost or compromised password)
+  await revokeSessions(ctx, member._id);
+  const token = randomToken();
+  await ctx.db.insert("invites", {
+    familyId: member.familyId,
+    memberId: member._id,
+    token: await sha256(token),
+    expiresAt: Date.now() + INVITE_DAYS * 24 * 3600 * 1000,
+  });
+  return token;
+}
 
-    const token = crypto.randomUUID() + crypto.randomUUID().replaceAll("-", "");
-    await ctx.db.insert("sessions", {
-      token: await sha256(token),
-      codeHash: (await currentCodeHash()) ?? undefined,
-      createdAt: now,
-      expiresAt: now + SESSION_DAYS * 24 * 3600 * 1000,
-    });
-    return { ok: true as const, token };
+/** Family shown on the sign-in screen of its link, or null. */
+export const family = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const family = await ctx.db
+      .query("families")
+      .withIndex("by_slug", (q) =>
+        q.eq("slug", normalizeName(slug).slice(0, 30)),
+      )
+      .unique();
+    return family && !family.suspended
+      ? { name: family.name, slug: family.slug }
+      : null;
   },
 });
 
+export const loginTarget = internalQuery({
+  args: { slug: v.string(), username: v.string() },
+  handler: async (ctx, { slug, username }) => {
+    const family = await ctx.db
+      .query("families")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .unique();
+    const member =
+      family && !family.suspended
+        ? await ctx.db
+            .query("members")
+            .withIndex("by_family_username", (q) =>
+              q.eq("familyId", family._id).eq("username", username),
+            )
+            .unique()
+        : null;
+    return {
+      memberId: member?.passwordHash ? member._id : null,
+      passwordHash: member?.passwordHash ?? null,
+    };
+  },
+});
+
+const GLOBAL_KEY = "*";
+
+async function reserve(ctx: MutationCtx, key: string, limit: Limit, now: number) {
+  const row = await ctx.db
+    .query("loginGuards")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+  const r = reserveAttempt(row, now, limit);
+  if (r.next !== row) {
+    if (row) await ctx.db.patch(row._id, r.next);
+    else await ctx.db.insert("loginGuards", { key, ...r.next });
+  }
+  return r;
+}
+
+/**
+ * Books a sign-in attempt before the costly password check: for the whole
+ * deployment, then for this pseudo (when `key` is given). Mutations run one at
+ * a time, so parallel requests cannot pass the limits.
+ */
+export const beginAttempt = internalMutation({
+  args: { key: v.optional(v.string()) },
+  handler: async (ctx, { key }): Promise<{ allowed: boolean; retryAt: number }> => {
+    const now = Date.now();
+    const global = await reserve(ctx, GLOBAL_KEY, GLOBAL, now);
+    if (!global.allowed) return { allowed: false, retryAt: global.retryAt };
+    const own = key ? await reserve(ctx, key, PER_NAME, now) : global;
+    return { allowed: own.allowed, retryAt: own.retryAt };
+  },
+});
+
+/** Right password: the pseudo's attempts are forgotten and a session opens. */
+export const finishLogin = internalMutation({
+  args: { key: v.string(), memberId: v.id("members") },
+  handler: async (ctx, { key, memberId }) => {
+    const guard = await ctx.db
+      .query("loginGuards")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
+    if (guard) await ctx.db.delete(guard._id);
+    const member = await ctx.db.get(memberId);
+    if (!member) return null;
+    return openSession(ctx, member);
+  },
+});
+
+function tooMany(retryAt: number) {
+  const minutes = Math.max(1, Math.ceil((retryAt - Date.now()) / 60000));
+  return `Trop d'essais. Réessaie dans ${minutes} min.`;
+}
+
+/** Pseudo and password, within the family of the sign-in link. */
+export const login = action({
+  args: { family: v.string(), username: v.string(), password: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ ok: true; token: string } | { ok: false; error: string }> => {
+    const slug = normalizeName(args.family).slice(0, 30);
+    const username = normalizeName(args.username).slice(0, 30);
+    if (!slug || !username || !args.password || args.password.length > 200)
+      return { ok: false, error: WRONG };
+    // The key does not reveal whether the family or the pseudo exists
+    const key = `${slug}:${username}`;
+    const slot = await ctx.runMutation(internal.access.beginAttempt, { key });
+    if (!slot.allowed) return { ok: false, error: tooMany(slot.retryAt) };
+    const target = await ctx.runQuery(internal.access.loginTarget, { slug, username });
+    // An unknown pseudo is checked against a decoy so that it takes as long
+    const ok = await verifyPassword(args.password, target.passwordHash ?? DECOY_HASH);
+    if (!ok || !target.memberId) return { ok: false, error: WRONG };
+    const token = await ctx.runMutation(internal.access.finishLogin, { key, memberId: target.memberId });
+    return token ? { ok: true, token } : { ok: false, error: WRONG };
+  },
+});
+
+/** Who is signed in with this token, or null (expired, revoked, suspended family). */
 export const check = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    if (!token || token.length > 200) return false;
-    const tokenHash = await sha256(token);
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", tokenHash))
-      .unique();
-    return !!session && session.expiresAt > Date.now() && session.codeHash === (await currentCodeHash());
+    const found = await readSession(ctx, token);
+    if (!found) return null;
+    const { member, family } = found;
+    return {
+      memberId: member._id,
+      name: member.name,
+      username: member.username ?? null,
+      role: member.role ?? "membre",
+      superadmin: member.superadmin === true,
+      family: { name: family.name, slug: family.slug },
+    };
   },
 });
 
@@ -92,6 +219,82 @@ export const logout = mutation({
   },
 });
 
+async function findInvite(db: QueryCtx["db"], link: string) {
+  if (!link || link.length > 200) return null;
+  const tokenHash = await sha256(link);
+  const invite = await db
+    .query("invites")
+    .withIndex("by_token", (q) => q.eq("token", tokenHash))
+    .unique();
+  if (!invite || invite.expiresAt < Date.now()) return null;
+  const [member, family] = await Promise.all([db.get(invite.memberId), db.get(invite.familyId)]);
+  if (!member || !family || member.familyId !== family._id || family.suspended) return null;
+  return { invite, member, family };
+}
+
+/** What an invitation link opens: family, profile and pseudo, or null when expired. */
+export const inviteInfo = query({
+  args: { link: v.string() },
+  handler: async (ctx, { link }) => {
+    const found = await findInvite(ctx.db, link);
+    if (!found) return null;
+    return {
+      family: found.family.name,
+      slug: found.family.slug,
+      name: found.member.name,
+      username: found.member.username ?? null,
+    };
+  },
+});
+
+/** Avoid words for the password of an invitation: pseudo and family names. */
+export const checkInvite = internalQuery({
+  args: { link: v.string() },
+  handler: async (ctx, { link }) => {
+    const found = await findInvite(ctx.db, link);
+    return found ? { family: [found.family.name, found.family.slug] } : null;
+  },
+});
+
+export const redeemInvite = internalMutation({
+  args: { link: v.string(), username: v.string(), passwordHash: v.string() },
+  handler: async (ctx, { link, username, passwordHash }) => {
+    const found = await findInvite(ctx.db, link);
+    if (!found) throw new ConvexError("Ce lien n'est plus valable. Demande-en un nouveau.");
+    const { invite, member } = found;
+    const taken = await ctx.db
+      .query("members")
+      .withIndex("by_family_username", (q) => q.eq("familyId", member.familyId).eq("username", username))
+      .unique();
+    if (taken && taken._id !== member._id) throw new ConvexError(`Le pseudo « ${username} » est déjà pris dans la famille.`);
+    await ctx.db.patch(member._id, { username, passwordHash, role: member.role ?? "membre" });
+    await ctx.db.delete(invite._id);
+    // A new password signs out the other devices of this member
+    await revokeSessions(ctx, member._id);
+    return openSession(ctx, { ...member, username, passwordHash });
+  },
+});
+
+/** Chooses pseudo and password from an invitation link, then signs in. */
+export const activate = action({
+  args: { link: v.string(), username: v.string(), password: v.string() },
+  handler: async (ctx, args): Promise<{ token: string }> => {
+    const username = normalizeName(args.username);
+    const nameIssue = nameProblem(username, "Le pseudo");
+    if (nameIssue) throw new ConvexError(nameIssue);
+    // The link is checked before the costly hashing, within the global limit
+    const slot = await ctx.runMutation(internal.access.beginAttempt, {});
+    if (!slot.allowed) throw new ConvexError(tooMany(slot.retryAt));
+    const invite = await ctx.runQuery(internal.access.checkInvite, { link: args.link });
+    if (!invite) throw new ConvexError("Ce lien n'est plus valable. Demande-en un nouveau.");
+    const problem = passwordProblem(args.password, [username, ...invite.family]);
+    if (problem) throw new ConvexError(problem);
+    const passwordHash = await hashPassword(args.password);
+    const token = await ctx.runMutation(internal.access.redeemInvite, { link: args.link, username, passwordHash });
+    return { token };
+  },
+});
+
 /** Emergency: `npx convex run access:revokeAll` signs every phone out. */
 export const revokeAll = internalMutation({
   args: {},
@@ -102,27 +305,32 @@ export const revokeAll = internalMutation({
   },
 });
 
-/** Emergency: `npx convex run access:resetGuard` lifts a brute-force lock. */
-export const resetGuard = internalMutation({
+/** Emergency: `npx convex run access:resetGuards` lifts every sign-in lock. */
+export const resetGuards = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const guard = await ctx.db.query("accessGuard").first();
-    if (guard) await ctx.db.patch(guard._id, { failures: 0, lockedUntil: 0 });
+    for (const g of await ctx.db.query("loginGuards").collect()) await ctx.db.delete(g._id);
   },
 });
 
-/** Daily cleanup of expired sessions (see crons.ts). */
+/** Daily cleanup of expired sessions and invitation links (see crons.ts). */
 export const purgeExpired = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
-    const sessions = await ctx.db.query("sessions").collect();
     let purged = 0;
-    for (const s of sessions) {
+    for (const s of await ctx.db.query("sessions").collect()) {
       if (s.expiresAt < now) {
         await ctx.db.delete(s._id);
         purged++;
       }
+    }
+    for (const i of await ctx.db.query("invites").collect()) {
+      if (i.expiresAt < now) await ctx.db.delete(i._id);
+    }
+    // Guards of names nobody tries any more
+    for (const g of await ctx.db.query("loginGuards").collect()) {
+      if (g.lockedUntil < now && now - g.lastFailureAt > 24 * 3600 * 1000) await ctx.db.delete(g._id);
     }
     return { purged };
   },

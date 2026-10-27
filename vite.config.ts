@@ -22,5 +22,7 @@ export default defineConfig(() => ({
   ],
   test: {
     include: ["src/**/*.test.ts", "convex/**/*.test.ts"],
+    // convex-test must be bundled with the functions it runs
+    server: { deps: { inline: ["convex-test"] } },
   },
 }));

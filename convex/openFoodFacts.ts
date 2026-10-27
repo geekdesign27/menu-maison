@@ -6,7 +6,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
-import { assertSession, cleanText } from "./lib";
+import { requireMember, requireMemberWriter, cleanText } from "./lib";
 import { offValidator } from "./schema";
 import { parseOffProduct, type OffHit } from "./domain/openFoodFacts";
 import type { Id } from "./_generated/dataModel";
@@ -64,7 +64,7 @@ async function searchHits(q: string, pageSize: number): Promise<OffHit[]> {
 export const checkSession = internalQuery({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
+    await requireMember(ctx, token);
   },
 });
 
@@ -87,11 +87,12 @@ export const search = action({
 });
 
 export const importTarget = internalQuery({
-  args: { id: v.id("ingredients"), code: v.string() },
-  handler: async (ctx, { id, code }) => {
-    const ingredient = await ctx.db.get(id);
+  args: { token: v.string(), id: v.id("ingredients"), code: v.string() },
+  handler: async (ctx, { token, id, code }) => {
+    const { db } = await requireMember(ctx, token);
+    const ingredient = await db.get(id);
     if (!ingredient) throw new ConvexError("Ingrédient introuvable.");
-    const all = await ctx.db.query("ingredients").collect();
+    const all = await db.query("ingredients").collect();
     const other = all.find((i) => i._id !== id && i.off?.code === code);
     return { hasImage: !!ingredient.imageId, linkedTo: other?.name ?? null };
   },
@@ -99,15 +100,17 @@ export const importTarget = internalQuery({
 
 export const attach = internalMutation({
   args: {
+    token: v.string(),
     id: v.id("ingredients"),
     off: offValidator,
     imageId: v.optional(v.id("_storage")),
   },
-  handler: async (ctx, { id, off, imageId }) => {
-    const ingredient = await ctx.db.get(id);
+  handler: async (ctx, { token, id, off, imageId }) => {
+    const { db } = await requireMemberWriter(ctx, token);
+    const ingredient = await db.get(id);
     if (!ingredient) throw new ConvexError("Ingrédient introuvable.");
     // A photo the family chose in the meantime wins over the product photo
-    await ctx.db.patch(id, {
+    await db.patch(id, {
       off,
       ...(imageId && !ingredient.imageId ? { imageId } : {}),
     });
@@ -156,6 +159,7 @@ export const importProduct = action({
     if (!/^\d{4,14}$/.test(code))
       throw new ConvexError("Code-barres invalide.");
     const target = await ctx.runQuery(internal.openFoodFacts.importTarget, {
+      token,
       id,
       code,
     });
@@ -171,6 +175,7 @@ export const importProduct = action({
       ? null
       : await storeImage((blob) => ctx.storage.store(blob), hit.imageUrl);
     await ctx.runMutation(internal.openFoodFacts.attach, {
+      token,
       id,
       off: {
         code: hit.code,
@@ -191,9 +196,9 @@ export const importProduct = action({
 export const detach = mutation({
   args: { token: v.string(), id: v.id("ingredients") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    if (!(await ctx.db.get(id)))
+    const { db } = await requireMemberWriter(ctx, token);
+    if (!(await db.get(id)))
       throw new ConvexError("Ingrédient introuvable.");
-    await ctx.db.patch(id, { off: undefined });
+    await db.patch(id, { off: undefined });
   },
 });

@@ -1,7 +1,7 @@
-import { mutation, query, type QueryCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertInt, assertSession, cleanText } from "./lib";
+import { assertDate, assertInt, requireMember, requireMemberWriter, cleanText, type FamilyDb } from "./lib";
 import { slotValidator } from "./schema";
 import { addDays, dayOfWeek, daysBetween } from "./domain/dates";
 import { leftoverStatus } from "./domain/leftovers";
@@ -10,27 +10,25 @@ function assertPersons(n: number) {
   assertInt(n, 1, 30, "Nombre de personnes");
 }
 
-async function mealsBetween(ctx: QueryCtx, from: string, to: string) {
-  return ctx.db
-    .query("meals")
-    .withIndex("by_date", (q) => q.gte("date", from).lte("date", to))
+async function mealsBetween(db: FamilyDb, from: string, to: string) {
+  return db.index("meals", "by_family_date", (q) => q.gte("date", from).lte("date", to))
     .collect();
 }
 
 /** Portions of this dish already put on other meals (planned leftovers). */
-async function placedFrom(ctx: QueryCtx, meal: Doc<"meals">) {
-  const later = await mealsBetween(ctx, meal.cookedOn, addDays(meal.cookedOn, 30));
+async function placedFrom(db: FamilyDb, meal: Doc<"meals">) {
+  const later = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 30));
   return later.filter((m) => m.fromLeftoverOf === meal._id).reduce((sum, m) => sum + m.persons, 0);
 }
 
-async function withRecipe(ctx: QueryCtx, meals: Doc<"meals">[]) {
+async function withRecipe(db: FamilyDb, meals: Doc<"meals">[]) {
   const cache = new Map<Id<"recipes">, Doc<"recipes"> | null>();
   const out = [];
   for (const m of meals) {
     let recipe: Doc<"recipes"> | null = null;
     if (m.recipeId) {
       if (!cache.has(m.recipeId))
-        cache.set(m.recipeId, await ctx.db.get(m.recipeId));
+        cache.set(m.recipeId, await db.get(m.recipeId));
       recipe = cache.get(m.recipeId) ?? null;
     }
     out.push({
@@ -54,9 +52,9 @@ async function withRecipe(ctx: QueryCtx, meals: Doc<"meals">[]) {
 export const week = query({
   args: { token: v.string(), start: v.string() },
   handler: async (ctx, { token, start }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     assertDate(start);
-    return withRecipe(ctx, await mealsBetween(ctx, start, addDays(start, 6)));
+    return withRecipe(db, await mealsBetween(db, start, addDays(start, 6)));
   },
 });
 
@@ -79,18 +77,19 @@ export const add = mutation({
     ctx,
     { token, tomorrowLunchPersons, cookedTheEveningBefore, extraPortions, ...m },
   ) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(m.date);
     assertPersons(m.persons);
     if (!m.recipeId && !m.title?.trim())
       throw new ConvexError("Choisis une recette ou écris un titre.");
+    if (m.recipeId) await db.own(m.recipeId, "Recette introuvable.");
     const cookedOn =
       m.slot !== "soir" && cookedTheEveningBefore
         ? addDays(m.date, -1)
         : m.date;
     if (extraPortions !== undefined) assertInt(extraPortions, 0, 30, "Portions en plus");
     const extra = m.recipeId && extraPortions ? extraPortions : undefined;
-    const id = await ctx.db.insert("meals", {
+    const id = await db.insert("meals", {
       ...m,
       title: m.title ? cleanText(m.title, 80, "Titre") || undefined : undefined,
       cookedOn,
@@ -101,7 +100,7 @@ export const add = mutation({
     });
     if (tomorrowLunchPersons && m.slot === "soir") {
       assertPersons(tomorrowLunchPersons);
-      await ctx.db.insert("meals", {
+      await db.insert("meals", {
         date: addDays(m.date, 1),
         slot: "midi",
         recipeId: m.recipeId,
@@ -128,14 +127,15 @@ export const update = mutation({
     extraPortions: v.optional(v.number()),
   },
   handler: async (ctx, { token, id, extraPortions, ...patch }) => {
-    await assertSession(ctx, token);
-    const meal = await ctx.db.get(id);
+    const { db } = await requireMemberWriter(ctx, token);
+    const meal = await db.get(id);
     if (!meal) throw new ConvexError("Repas introuvable.");
+    if (patch.recipeId) await db.own(patch.recipeId, "Recette introuvable.");
     if (extraPortions !== undefined) {
       assertInt(extraPortions, 0, 30, "Portions en plus");
       // Still planned: the fridge gets the new extra portions, minus those already placed
-      const placed = meal.status === "prévu" ? await placedFrom(ctx, meal) : 0;
-      await ctx.db.patch(id, {
+      const placed = meal.status === "prévu" ? await placedFrom(db, meal) : 0;
+      await db.patch(id, {
         extraPortions: extraPortions || undefined,
         ...(meal.status === "prévu" ? { leftoverPortions: Math.max(0, extraPortions - placed) } : {}),
       });
@@ -147,14 +147,12 @@ export const update = mutation({
     // A standalone dish moves with its cooking day. Leftovers and portions cooked
     // together with another meal (tonight + tomorrow's lunch) keep their cooking day.
     if (patch.date && patch.date !== meal.date && !meal.fromLeftoverOf) {
-      const sameDay = await ctx.db
-        .query("meals")
-        .withIndex("by_date", (q) => q.gte("date", addDays(meal.cookedOn, -1)).lte("date", addDays(meal.cookedOn, 2)))
+      const sameDay = await db.index("meals", "by_family_date", (q) => q.gte("date", addDays(meal.cookedOn, -1)).lte("date", addDays(meal.cookedOn, 2)))
         .collect();
       const cookedWithOther = sameDay.some((m) => m._id !== meal._id && m.recipeId === meal.recipeId && m.cookedOn === meal.cookedOn);
       if (!cookedWithOther) next.cookedOn = addDays(meal.cookedOn, daysBetween(meal.date, patch.date));
     }
-    await ctx.db.patch(id, next);
+    await db.patch(id, next);
   },
 });
 
@@ -170,36 +168,36 @@ export const setStatus = mutation({
     leftoverPortions: v.optional(v.number()),
   },
   handler: async (ctx, { token, id, status, leftoverPortions }) => {
-    await assertSession(ctx, token);
-    const meal = await ctx.db.get(id);
+    const { db } = await requireMemberWriter(ctx, token);
+    const meal = await db.get(id);
     if (!meal) throw new ConvexError("Repas introuvable.");
     if (leftoverPortions !== undefined) assertInt(leftoverPortions, 0, 60, "Portions restantes");
     // A dish not eaten goes to the fridge whole, with the extra portions cooked for later
     const extra = meal.extraPortions ?? 0;
-    const placed = leftoverPortions === undefined && status !== "mangé" ? await placedFrom(ctx, meal) : 0;
+    const placed = leftoverPortions === undefined && status !== "mangé" ? await placedFrom(db, meal) : 0;
     const portions =
       status === "pas mangé"
         ? (leftoverPortions ?? Math.max(0, meal.persons + extra - placed))
         : (leftoverPortions ?? (status === "prévu" ? Math.max(0, extra - placed) : meal.leftoverPortions));
-    await ctx.db.patch(id, { status, leftoverPortions: portions });
+    await db.patch(id, { status, leftoverPortions: portions });
   },
 });
 
 export const remove = mutation({
   args: { token: v.string(), id: v.id("meals") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    const meal = await ctx.db.get(id);
+    const { db } = await requireMemberWriter(ctx, token);
+    const meal = await db.get(id);
     if (!meal) return;
     // Give back the portions a planned leftover had taken, if not eaten yet
     if (meal.fromLeftoverOf && meal.status === "prévu") {
-      const source = await ctx.db.get(meal.fromLeftoverOf);
+      const source = await db.get(meal.fromLeftoverOf);
       if (source)
-        await ctx.db.patch(source._id, {
+        await db.patch(source._id, {
           leftoverPortions: source.leftoverPortions + meal.persons,
         });
     }
-    await ctx.db.delete(id);
+    await db.delete(id);
   },
 });
 
@@ -207,13 +205,13 @@ export const remove = mutation({
 export const fridge = query({
   args: { token: v.string(), today: v.string() },
   handler: async (ctx, { token, today }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     assertDate(today);
     // Nothing keeps more than a couple of weeks: only look back 21 days
-    const recent = await mealsBetween(ctx, addDays(today, -21), today);
+    const recent = await mealsBetween(db, addDays(today, -21), today);
     // Planned extra portions appear once the dish has been cooked
     const withLeftovers = recent.filter((m) => m.leftoverPortions > 0 && m.cookedOn <= today);
-    const rows = await withRecipe(ctx, withLeftovers);
+    const rows = await withRecipe(db, withLeftovers);
     return rows
       .map((m) => ({
         ...m,
@@ -233,19 +231,19 @@ export const planLeftover = mutation({
     persons: v.number(),
   },
   handler: async (ctx, { token, sourceId, date, slot, persons }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(date);
     assertPersons(persons);
-    const source = await ctx.db.get(sourceId);
+    const source = await db.get(sourceId);
     if (!source) throw new ConvexError("Restes introuvables.");
     if (source.leftoverPortions < 1)
       throw new ConvexError("Il n'y a plus de portions de ce plat.");
     if (date < source.cookedOn) throw new ConvexError("Les restes ne peuvent pas être mangés avant d'être cuisinés.");
     const taken = Math.min(persons, source.leftoverPortions);
-    await ctx.db.patch(sourceId, {
+    await db.patch(sourceId, {
       leftoverPortions: source.leftoverPortions - taken,
     });
-    return ctx.db.insert("meals", {
+    return db.insert("meals", {
       date,
       slot,
       recipeId: source.recipeId,
@@ -262,8 +260,8 @@ export const planLeftover = mutation({
 export const discardLeftover = mutation({
   args: { token: v.string(), id: v.id("meals") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    await ctx.db.patch(id, { leftoverPortions: 0 });
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.patch(id, { leftoverPortions: 0 });
   },
 });
 
@@ -284,7 +282,7 @@ export const addRecurring = mutation({
     weeks: v.number(),
   },
   handler: async (ctx, { token, date, slot, recipeId, title, persons, weekdays, weeks }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(date);
     assertPersons(persons);
     assertInt(weeks, 1, 12, "Nombre de semaines");
@@ -292,9 +290,10 @@ export const addRecurring = mutation({
       throw new ConvexError("Choisis au moins un jour.");
     }
     if (!recipeId && !title?.trim()) throw new ConvexError("Choisis une recette ou écris un titre.");
+    if (recipeId) await db.own(recipeId, "Recette introuvable.");
     const cleanTitle = title ? cleanText(title, 80, "Titre") || undefined : undefined;
     const end = addDays(date, weeks * 7 - 1);
-    const existing = await mealsBetween(ctx, date, end);
+    const existing = await mealsBetween(db, date, end);
     let added = 0;
     for (let day = date; day <= end; day = addDays(day, 1)) {
       if (!weekdays.includes(dayOfWeek(day))) continue;
@@ -302,7 +301,7 @@ export const addRecurring = mutation({
         (m) => m.date === day && m.slot === slot && (recipeId ? m.recipeId === recipeId : m.title === cleanTitle),
       );
       if (twin) continue;
-      await ctx.db.insert("meals", {
+      await db.insert("meals", {
         date: day,
         slot,
         recipeId,
@@ -325,11 +324,11 @@ export const addRecurring = mutation({
 export const leftoversFor = query({
   args: { token: v.string(), date: v.string() },
   handler: async (ctx, { token, date }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     assertDate(date);
-    const recent = await mealsBetween(ctx, addDays(date, -21), date);
+    const recent = await mealsBetween(db, addDays(date, -21), date);
     const rows = await withRecipe(
-      ctx,
+      db,
       recent.filter((m) => m.leftoverPortions > 0 && !m.fromLeftoverOf && m.cookedOn <= date),
     );
     return rows

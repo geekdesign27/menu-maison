@@ -1,8 +1,8 @@
-import { action, internalQuery, mutation, type MutationCtx } from "./_generated/server";
+import { action, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertPositive, assertSession, cleanText } from "./lib";
+import { assertDate, assertPositive, requireMember, requireMemberWriter, cleanText, type FamilyWriter } from "./lib";
 import { chainValidator } from "./schema";
 import { askClaude } from "./claude";
 import {
@@ -80,11 +80,11 @@ const SCHEMA = {
 export const catalog = internalQuery({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     const [ingredients, staples, aliases] = await Promise.all([
-      ctx.db.query("ingredients").collect(),
-      ctx.db.query("staples").collect(),
-      ctx.db.query("receiptAliases").collect(),
+      db.query("ingredients").collect(),
+      db.query("staples").collect(),
+      db.query("receiptAliases").collect(),
     ]);
     return {
       ingredients: ingredients.map((i) => ({
@@ -216,24 +216,16 @@ export const read = action({
 });
 
 async function upsertPrice(
-  ctx: MutationCtx,
-  row: Omit<Doc<"chainPrices">, "_id" | "_creationTime">,
+  db: FamilyWriter,
+  row: Omit<Doc<"chainPrices">, "_id" | "_creationTime" | "familyId">,
 ) {
-  const existing = row.ingredientId
-    ? await ctx.db
-        .query("chainPrices")
-        .withIndex("by_ingredient", (q) =>
-          q.eq("ingredientId", row.ingredientId),
-        )
-        .collect()
-    : await ctx.db
-        .query("chainPrices")
-        .withIndex("by_staple", (q) => q.eq("stapleId", row.stapleId))
-        .collect();
+  const existing = (await db.query("chainPrices").collect()).filter((p) =>
+    row.ingredientId ? p.ingredientId === row.ingredientId : p.stapleId === row.stapleId,
+  );
   const same = existing.find((p) => p.chain === row.chain);
-  if (!same) return ctx.db.insert("chainPrices", row);
+  if (!same) return db.insert("chainPrices", row);
   // An older receipt checked later must not overwrite a newer price
-  if (same.observedOn <= row.observedOn) await ctx.db.patch(same._id, row);
+  if (same.observedOn <= row.observedOn) await db.patch(same._id, row);
 }
 
 const targetValidator = v.union(
@@ -264,7 +256,7 @@ export const save = mutation({
     ),
   },
   handler: async (ctx, { token, chain, date, lines }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(date);
     if (lines.length > 200) throw new ConvexError("Ticket trop long.");
     let prices = 0;
@@ -285,13 +277,11 @@ export const save = mutation({
         const name = cleanText(line.newStapleName, 80, "Article");
         if (!name)
           throw new ConvexError("Le nom de l'article est obligatoire.");
-        const existing = await ctx.db
-          .query("staples")
-          .withIndex("by_name", (q) => q.eq("name", name))
+        const existing = await db.index("staples", "by_family_name", (q) => q.eq("name", name))
           .first();
         const id =
           existing?._id ??
-          (await ctx.db.insert("staples", {
+          (await db.insert("staples", {
             name,
             useCount: 0,
             priceChf: line.unitPrice || undefined,
@@ -300,14 +290,12 @@ export const save = mutation({
         target = { kind: "staple", id };
       }
 
-      if (target && !(await ctx.db.get(target.id)))
+      if (target && !(await db.get(target.id)))
         throw new ConvexError(`Produit introuvable pour « ${label} ».`);
 
       // Remember how this chain prints the product, even when it is off the list
       const key = labelKey(label);
-      const alias = await ctx.db
-        .query("receiptAliases")
-        .withIndex("by_chain_label", (q) =>
+      const alias = await db.index("receiptAliases", "by_family_chain_label", (q) =>
           q.eq("chain", chain).eq("labelKey", key),
         )
         .first();
@@ -318,11 +306,11 @@ export const save = mutation({
         stapleId: target?.kind === "staple" ? target.id : undefined,
         packQty: line.packQty ?? undefined,
       };
-      if (alias) await ctx.db.replace(alias._id, aliasRow);
-      else await ctx.db.insert("receiptAliases", aliasRow);
+      if (alias) await db.replace(alias._id, aliasRow);
+      else await db.insert("receiptAliases", aliasRow);
 
       if (target?.kind === "ingredient") {
-        const ingredient = await ctx.db.get(target.id);
+        const ingredient = await db.get(target.id);
         if (!ingredient)
           throw new ConvexError(`Ingrédient introuvable pour « ${label} ».`);
         const problem =
@@ -334,7 +322,7 @@ export const save = mutation({
           line.packQty ?? undefined,
         );
         if (price) {
-          await upsertPrice(ctx, {
+          await upsertPrice(db, {
             chain,
             ingredientId: target.id,
             ...price,
@@ -344,10 +332,10 @@ export const save = mutation({
           prices++;
         }
       } else if (target?.kind === "staple" && line.unitPrice > 0) {
-        const staple = await ctx.db.get(target.id);
+        const staple = await db.get(target.id);
         if (!staple)
           throw new ConvexError(`Article introuvable pour « ${label} ».`);
-        await upsertPrice(ctx, {
+        await upsertPrice(db, {
           chain,
           stapleId: target.id,
           priceChf: line.unitPrice,
@@ -356,7 +344,7 @@ export const save = mutation({
           observedOn: date,
         });
         if (staple.priceChf === undefined)
-          await ctx.db.patch(target.id, { priceChf: line.unitPrice });
+          await db.patch(target.id, { priceChf: line.unitPrice });
         prices++;
       }
     }

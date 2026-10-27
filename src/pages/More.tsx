@@ -44,7 +44,7 @@ const LINKS = [
 
 export function MorePage() {
   const me = useMe();
-  const { setMemberId } = useSession();
+  const { account } = useSession();
   return (
     <Page title="Plus">
       {me && (
@@ -53,16 +53,9 @@ export function MorePage() {
           <div className="min-w-0 flex-1">
             <div className="text-lg font-black">{me.name}</div>
             <div className="text-[15px] text-muted">
-              Profil utilisé sur ce téléphone
+              {account ? `${account.family.name}, pseudo ${account.username ?? ""}` : ""}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setMemberId(null)}
-            className="min-h-11 rounded-2xl px-3 font-extrabold text-carrot-dark active:bg-carrot-soft"
-          >
-            Changer
-          </button>
         </Card>
       )}
       <Link to="/gestion" className="mb-3 hidden md:block">

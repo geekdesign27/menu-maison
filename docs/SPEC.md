@@ -86,21 +86,34 @@ Identique à `~/dev/evacecole` : Vite + React 19 + TypeScript + Tailwind 4, Reac
 GitHub Actions (`npx convex deploy` avec `CONVEX_DEPLOY_KEY`, `base` = `/menu-maison/`).
 Serveurs de dev via Portly.
 
-## Accès
+## Accès (plusieurs familles, depuis le 2026-10-27)
 
-- Variable d'environnement Convex `FAMILY_CODE`. Écran d'accueil : saisir le code une fois
-  par appareil → mutation `access.login` → jeton de session (table `sessions`, 365 jours)
-  gardé en localStorage. Toutes les fonctions prennent `token` et appellent `assertSession`.
-- Garde anti-force brute (table `accessGuard`) : 5 échecs en 10 min, puis refus 10 min.
-  Garde globale : un inconnu peut bloquer les **nouvelles** connexions (les téléphones déjà
-  connectés ne sont pas touchés). Déblocage : `npx convex run access:resetGuard`.
-- `FAMILY_CODE` : 8 caractères au minimum (refusé sinon). Choix de PA le 2026-10-24 : code court, plus facile à taper, accepté malgré le risque de devinette.
-  Seule une empreinte SHA-256 du jeton est stockée, et chaque session retient l'empreinte du
-  code : **changer `FAMILY_CODE` déconnecte tous les téléphones**. Révocation d'urgence :
-  `npx convex run access:revokeAll`. Sessions expirées purgées chaque nuit (`crons.ts`).
+- Une seule app pour plusieurs familles (`families`). Chaque ligne des autres tables porte
+  `familyId`. Plan et décisions : [PLAN-familles.md](PLAN-familles.md).
+- **Isolation** : toute fonction publique appelle `requireMember` / `requireMemberWriter`
+  (`convex/lib.ts`) et n'utilise que la base filtrée qu'ils renvoient : lectures par index
+  commençant par `familyId`, document d'une autre famille traité comme inexistant,
+  identifiants reçus vérifiés par `db.own` / `db.ownAll`. `ctx.db` direct est réservé aux
+  tables sans famille (sessions, invitations, gardes) et aux tâches internes.
+  `convex/isolation.test.ts` met deux familles face à face et échoue si une fonction
+  publique n'est ni testée ni justifiée.
+- **Comptes** : pseudo et mot de passe par personne (`members.username`, unique dans la
+  famille, minuscules sans accent ; `members.passwordHash`, PBKDF2-SHA256 600 000
+  itérations, sel par compte). Rôles `admin` / `membre`, `superadmin` pour PA. Un profil sans
+  pseudo (petit enfant) ne se connecte pas.
+- **Connexion** : lien de la famille `menumaison.ch/#/f/<famille>` (mémorisé sur le
+  téléphone), pseudo, mot de passe → action `access.login` → jeton de session (365 jours,
+  empreinte SHA-256 seule en base). 5 échecs en 10 min sur un même pseudo : blocage 10 min
+  (`loginGuards`). Message identique pour pseudo inconnu et mauvais mot de passe.
+- **Invitation** : lien unique `#/activer/<jeton>` (14 jours, `invites`) pour choisir pseudo
+  et mot de passe ; il remplace l'ancien lien et déconnecte les autres appareils du membre.
+- Famille suspendue (`families.suspended`) : plus de connexion ni de session valide.
+- Création d'une famille (en attendant l'écran super-admin) :
+  `npx convex run families:create '{"name":"Famille Dupont","admin":"Marc"}'` renvoie le
+  jeton d'invitation de l'admin.
+- Urgences : `access:revokeAll` (déconnecte tout le monde), `access:resetGuards`.
+  Sessions et invitations expirées purgées chaque nuit (`crons.ts`).
 - Police Nunito hébergée dans l'app (pas d'appel à Google). CSP stricte dans le build de production.
-- Puis choix du profil en un tap (Pierre-Alain, Patricia, Clara), mémorisé sur l'appareil,
-  changeable à tout moment. Le profil sert aux cœurs, envies, cases cochées.
 
 ## Concepts
 
@@ -207,4 +220,4 @@ Serveurs de dev via Portly.
 - Commentaires de code en anglais, textes d'interface en français.
 - Mobile d'abord : cibles 44 px min, police 16 px min, une main.
 - Sauvegarde à chaque action, pas de bouton « Enregistrer » sauf formulaires de recette.
-- Secrets : `FAMILY_CODE` dans Convex, `CONVEX_DEPLOY_KEY` dans GitHub. `.env.local` jamais committé.
+- Secrets : `ANTHROPIC_API_KEY` et `GROQ_API_KEY` dans Convex, `CONVEX_DEPLOY_KEY` dans GitHub. `.env.local` jamais committé.

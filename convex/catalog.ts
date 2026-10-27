@@ -1,11 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import {
+  assertAdmin,
   assertColor,
   assertEmoji,
   assertInt,
   assertPositive,
-  assertSession,
+  requireMember, requireMemberWriter,
   cleanText,
   getSettings,
   loadChainPrices,
@@ -24,20 +25,25 @@ import { removeReceiptData } from "./lib";
 export const base = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
-    const chainPrices = await loadChainPrices(ctx);
+    const { db } = await requireMember(ctx, token);
+    const chainPrices = await loadChainPrices(db);
     const [members, aisles, ingredients, stores, settings] = await Promise.all([
-      ctx.db.query("members").collect(),
-      ctx.db.query("aisles").collect(),
-      ctx.db.query("ingredients").collect(),
-      ctx.db.query("stores").collect(),
-      getSettings(ctx),
+      db.query("members").collect(),
+      db.query("aisles").collect(),
+      db.query("ingredients").collect(),
+      db.query("stores").collect(),
+      getSettings(db),
     ]);
     return {
       members: await Promise.all(
         members
           .sort((a, b) => a.order - b.order)
-          .map(async (m) => ({ ...m, imageUrl: m.imageId ? await ctx.storage.getUrl(m.imageId) : null })),
+          // The password hash never leaves the server
+          .map(async ({ passwordHash, ...m }) => ({
+            ...m,
+            hasPassword: !!passwordHash,
+            imageUrl: m.imageId ? await ctx.storage.getUrl(m.imageId) : null,
+          })),
       ),
       aisles: aisles.sort((a, b) => a.order - b.order),
       ingredients: await Promise.all(
@@ -65,15 +71,16 @@ export const updateSettings = mutation({
     defaultStoreId: v.optional(v.id("stores")),
   },
   handler: async (ctx, { token, ...patch }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     if (patch.shoppingDay !== undefined)
       assertInt(patch.shoppingDay, 0, 6, "Jour des courses");
     if (patch.defaultPersons !== undefined)
       assertInt(patch.defaultPersons, 1, 30, "Nombre de personnes");
-    const row = await ctx.db.query("settings").first();
-    if (row) await ctx.db.patch(row._id, patch);
+    if (patch.defaultStoreId) await db.own(patch.defaultStoreId, "Magasin introuvable.");
+    const row = await db.query("settings").first();
+    if (row) await db.patch(row._id, patch);
     else
-      await ctx.db.insert("settings", {
+      await db.insert("settings", {
         shoppingDay: 6,
         defaultPersons: 3,
         ...patch,
@@ -90,10 +97,13 @@ export const updateMember = mutation({
     color: v.string(),
   },
   handler: async (ctx, { token, id, ...patch }) => {
-    await assertSession(ctx, token);
+    const me = await requireMemberWriter(ctx, token);
+    const { db } = me;
+    // Each one edits their own profile; the family admins edit all of them
+    if (me.member._id !== id) assertAdmin(me);
     assertColor(patch.color);
     assertEmoji(patch.emoji);
-    await ctx.db.patch(id, { ...patch, name: memberName(patch.name) });
+    await db.patch(id, { ...patch, name: memberName(patch.name) });
   },
 });
 
@@ -105,12 +115,14 @@ export const addMember = mutation({
     color: v.string(),
   },
   handler: async (ctx, { token, ...m }) => {
-    await assertSession(ctx, token);
+    const me = await requireMemberWriter(ctx, token);
+    const { db } = me;
+    assertAdmin(me);
     assertColor(m.color);
     assertEmoji(m.emoji);
-    const count = (await ctx.db.query("members").collect()).length;
+    const count = (await db.query("members").collect()).length;
     if (count >= 12) throw new ConvexError("12 profils au maximum.");
-    return ctx.db.insert("members", {
+    return db.insert("members", {
       ...m,
       name: memberName(m.name),
       order: count,
@@ -133,7 +145,7 @@ export const upsertIngredient = mutation({
     imageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, { token, id, ...data }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     const name = cleanText(data.name, 80, "Nom de l'ingrédient");
     if (!name) throw new ConvexError("Le nom de l'ingrédient est obligatoire.");
     if (data.priceChf !== undefined)
@@ -141,18 +153,17 @@ export const upsertIngredient = mutation({
     if (data.priceQty !== undefined)
       assertPositive(data.priceQty, 100000, "Quantité de référence du prix");
     if (data.packSize !== undefined) assertPositive(data.packSize, 100000, "Contenu d'un paquet");
-    const duplicate = await ctx.db
-      .query("ingredients")
-      .withIndex("by_name", (q) => q.eq("name", name))
+    await db.own(data.aisleId, "Rayon introuvable.");
+    const duplicate = await db.index("ingredients", "by_family_name", (q) => q.eq("name", name))
       .first();
     if (duplicate && duplicate._id !== id)
       throw new ConvexError(`« ${name} » existe déjà.`);
     if (id) {
       // Explicit undefined so that clearing a price removes it
-      await ctx.db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty, packSize: data.packSize, onlyChains: data.onlyChains?.length ? data.onlyChains : undefined, imageId: data.imageId });
+      await db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty, packSize: data.packSize, onlyChains: data.onlyChains?.length ? data.onlyChains : undefined, imageId: data.imageId });
       return id;
     }
-    return ctx.db.insert("ingredients", { ...data, name });
+    return db.insert("ingredients", { ...data, name });
   },
 });
 
@@ -160,14 +171,14 @@ export const upsertIngredient = mutation({
 export const removeIngredient = mutation({
   args: { token: v.string(), id: v.id("ingredients") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    if (!(await ctx.db.get(id))) throw new ConvexError("Ingrédient introuvable.");
-    const recipes = await ctx.db.query("recipes").collect();
+    const { db } = await requireMemberWriter(ctx, token);
+    if (!(await db.get(id))) throw new ConvexError("Ingrédient introuvable.");
+    const recipes = await db.query("recipes").collect();
     const users = recipes.filter((r) => r.items.some((it) => it.ingredientId === id));
     const blocker = deletionBlocker(users);
     if (blocker) throw new ConvexError(blocker);
-    await removeReceiptData(ctx, { ingredientId: id });
-    await ctx.db.delete(id);
+    await removeReceiptData(db, { ingredientId: id });
+    await db.delete(id);
   },
 });
 
@@ -176,19 +187,19 @@ export const removeIngredient = mutation({
 export const addAisle = mutation({
   args: { token: v.string(), name: v.string(), emoji: v.string() },
   handler: async (ctx, { token, name, emoji }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     const clean = cleanText(name, 60, "Nom du rayon");
     if (!clean) throw new ConvexError("Le nom du rayon est obligatoire.");
     if (emoji) assertEmoji(emoji);
-    const order = (await ctx.db.query("aisles").collect()).length;
-    const id = await ctx.db.insert("aisles", {
+    const order = (await db.query("aisles").collect()).length;
+    const id = await db.insert("aisles", {
       name: clean,
       emoji: emoji || "🛒",
       order,
     });
     // New aisle goes at the end of every store walk
-    for (const store of await ctx.db.query("stores").collect()) {
-      await ctx.db.patch(store._id, { aisleOrder: [...store.aisleOrder, id] });
+    for (const store of await db.query("stores").collect()) {
+      await db.patch(store._id, { aisleOrder: [...store.aisleOrder, id] });
     }
     return id;
   },
@@ -202,11 +213,11 @@ export const renameAisle = mutation({
     emoji: v.string(),
   },
   handler: async (ctx, { token, id, name, emoji }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     const clean = cleanText(name, 60, "Nom du rayon");
     if (!clean) throw new ConvexError("Le nom du rayon est obligatoire.");
     assertEmoji(emoji);
-    await ctx.db.patch(id, { name: clean, emoji });
+    await db.patch(id, { name: clean, emoji });
   },
 });
 
@@ -229,14 +240,14 @@ export const createStore = mutation({
     copyFrom: v.optional(v.id("stores")),
   },
   handler: async (ctx, { token, chain, name, copyFrom }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     const clean = cleanText(name, 60, "Nom du magasin");
     if (!clean) throw new ConvexError("Le nom du magasin est obligatoire.");
-    const source = copyFrom ? await ctx.db.get(copyFrom) : null;
-    const aisles = (await ctx.db.query("aisles").collect()).sort(
+    const source = copyFrom ? await db.get(copyFrom) : null;
+    const aisles = (await db.query("aisles").collect()).sort(
       (a, b) => a.order - b.order,
     );
-    return ctx.db.insert("stores", {
+    return db.insert("stores", {
       chain,
       name: clean,
       aisleOrder: source?.aisleOrder ?? aisles.map((a) => a._id),
@@ -258,7 +269,7 @@ export const updateStore = mutation({
     archived: v.optional(v.boolean()),
   },
   handler: async (ctx, { token, id, ...patch }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     if (patch.name !== undefined) {
       patch.name = cleanText(patch.name, 60, "Nom du magasin");
       if (!patch.name)
@@ -276,7 +287,8 @@ export const updateStore = mutation({
     }
     if (patch.aisleOrder && patch.aisleOrder.length > 100)
       throw new ConvexError("Trop de rayons.");
-    await ctx.db.patch(id, patch);
+    if (patch.aisleOrder) await db.ownAll(patch.aisleOrder, "Rayon introuvable.");
+    await db.patch(id, patch);
   },
 });
 
@@ -289,14 +301,16 @@ export const setOverride = mutation({
     aisleId: v.union(v.id("aisles"), v.null()),
   },
   handler: async (ctx, { token, storeId, ingredientId, aisleId }) => {
-    await assertSession(ctx, token);
-    const store = await ctx.db.get(storeId);
+    const { db } = await requireMemberWriter(ctx, token);
+    const store = await db.get(storeId);
     if (!store) throw new ConvexError("Magasin introuvable.");
+    await db.own(ingredientId, "Ingrédient introuvable.");
+    if (aisleId) await db.own(aisleId, "Rayon introuvable.");
     const overrides = store.overrides.filter(
       (o) => o.ingredientId !== ingredientId,
     );
     if (aisleId) overrides.push({ ingredientId, aisleId });
-    await ctx.db.patch(storeId, { overrides });
+    await db.patch(storeId, { overrides });
   },
 });
 
@@ -304,8 +318,10 @@ export const setOverride = mutation({
 export const setMemberPhoto = mutation({
   args: { token: v.string(), id: v.id("members"), imageId: v.union(v.id("_storage"), v.null()) },
   handler: async (ctx, { token, id, imageId }) => {
-    await assertSession(ctx, token);
-    if (!(await ctx.db.get(id))) throw new ConvexError("Profil introuvable.");
-    await ctx.db.patch(id, { imageId: imageId ?? undefined });
+    const me = await requireMemberWriter(ctx, token);
+    const { db } = me;
+    if (me.member._id !== id) assertAdmin(me);
+    if (!(await db.get(id))) throw new ConvexError("Profil introuvable.");
+    await db.patch(id, { imageId: imageId ?? undefined });
   },
 });

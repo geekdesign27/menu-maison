@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "convex/react";
-import { ChevronRight, LogOut, Plus, UserRound } from "lucide-react";
+import { ChevronRight, LogOut, Plus } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { DAY_NAMES } from "../../convex/domain/dates";
@@ -48,7 +48,7 @@ export function SettingsPage() {
 }
 
 function SettingsContent({ base }: { base: Base }) {
-  const { token, setToken, setMemberId } = useSession();
+  const { token, setToken } = useSession();
   const run = useRun();
   const updateSettings = useMutation(api.catalog.updateSettings);
   const logout = useMutation(api.access.logout);
@@ -205,9 +205,6 @@ function SettingsContent({ base }: { base: Base }) {
 
       <SectionTitle>Ce téléphone</SectionTitle>
       <div className="grid gap-2">
-        <Button variant="secondary" size="lg" onClick={() => setMemberId(null)}>
-          <UserRound size={20} /> Changer de profil
-        </Button>
         <Button
           variant="danger"
           size="lg"

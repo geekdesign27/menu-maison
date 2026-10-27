@@ -1,18 +1,18 @@
-import { mutation, query, type QueryCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertSession, cleanText } from "./lib";
+import { assertDate, requireMember, requireMemberWriter, cleanText, type FamilyDb } from "./lib";
 import { addDays, daysBetween } from "./domain/dates";
 
 export const list = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
-    const templates = await ctx.db.query("templates").collect();
+    const { db } = await requireMember(ctx, token);
+    const templates = await db.query("templates").collect();
     const out = [];
     for (const t of templates) {
       const entries = [];
       for (const e of t.entries) {
-        const recipe = await ctx.db.get(e.recipeId);
+        const recipe = await db.get(e.recipeId);
         entries.push({
           ...e,
           recipeName: recipe?.name ?? "Recette supprimée",
@@ -26,12 +26,10 @@ export const list = query({
 });
 
 async function entriesFromWeek(
-  ctx: QueryCtx,
+  db: FamilyDb,
   start: string,
 ) {
-  const meals = await ctx.db
-    .query("meals")
-    .withIndex("by_date", (q) =>
+  const meals = await db.index("meals", "by_family_date", (q) =>
       q.gte("date", start).lte("date", addDays(start, 6)),
     )
     .collect();
@@ -56,18 +54,18 @@ export const saveWeek = mutation({
     replaceId: v.optional(v.id("templates")),
   },
   handler: async (ctx, { token, name, start, replaceId }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(start);
     name = cleanText(name, 60, "Nom du menu type");
     if (!name.trim()) throw new ConvexError("Donne un nom à ce menu type.");
-    const entries = await entriesFromWeek(ctx, start);
+    const entries = await entriesFromWeek(db, start);
     if (entries.length === 0)
       throw new ConvexError("La semaine ne contient aucun plat avec recette.");
     if (replaceId) {
-      await ctx.db.patch(replaceId, { name: name.trim(), entries });
+      await db.patch(replaceId, { name: name.trim(), entries });
       return replaceId;
     }
-    return ctx.db.insert("templates", { name: name.trim(), entries });
+    return db.insert("templates", { name: name.trim(), entries });
   },
 });
 
@@ -80,27 +78,25 @@ export const apply = mutation({
     replace: v.boolean(),
   },
   handler: async (ctx, { token, id, start, replace }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(start);
-    const template = await ctx.db.get(id);
+    const template = await db.get(id);
     if (!template) throw new ConvexError("Menu type introuvable.");
     if (replace) {
-      const existing = await ctx.db
-        .query("meals")
-        .withIndex("by_date", (q) =>
+      const existing = await db.index("meals", "by_family_date", (q) =>
           q.gte("date", start).lte("date", addDays(start, 6)),
         )
         .collect();
       for (const m of existing)
         if (m.status === "prévu" && !m.fromLeftoverOf)
-          await ctx.db.delete(m._id);
+          await db.delete(m._id);
     }
     let added = 0;
     for (const e of template.entries) {
-      const recipe = await ctx.db.get(e.recipeId);
+      const recipe = await db.get(e.recipeId);
       if (!recipe || recipe.archived) continue;
       added++;
-      await ctx.db.insert("meals", {
+      await db.insert("meals", {
         date: addDays(start, e.dayOffset),
         slot: e.slot,
         recipeId: e.recipeId,
@@ -119,7 +115,7 @@ export const apply = mutation({
 export const remove = mutation({
   args: { token: v.string(), id: v.id("templates") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    await ctx.db.delete(id);
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.delete(id);
   },
 });

@@ -1,15 +1,15 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertSession, cleanText } from "./lib";
+import { requireMember, requireMemberWriter, cleanText } from "./lib";
 
 export const list = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
-    const wishes = await ctx.db.query("wishes").collect();
+    const { db } = await requireMember(ctx, token);
+    const wishes = await db.query("wishes").collect();
     const out = [];
     for (const w of wishes) {
-      const recipe = w.recipeId ? await ctx.db.get(w.recipeId) : null;
+      const recipe = w.recipeId ? await db.get(w.recipeId) : null;
       out.push({
         ...w,
         recipe: recipe && {
@@ -34,11 +34,13 @@ export const add = mutation({
     text: v.optional(v.string()),
   },
   handler: async (ctx, { token, memberId, recipeId, text }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     if (text) text = cleanText(text, 200, "Envie");
     if (!recipeId && !text?.trim())
       throw new ConvexError("Écris ton envie ou choisis une recette.");
-    return ctx.db.insert("wishes", {
+    await db.own(memberId, "Profil introuvable.");
+    if (recipeId) await db.own(recipeId, "Recette introuvable.");
+    return db.insert("wishes", {
       memberId,
       recipeId,
       text: text?.trim() || undefined,
@@ -51,15 +53,15 @@ export const add = mutation({
 export const setDone = mutation({
   args: { token: v.string(), id: v.id("wishes"), done: v.boolean() },
   handler: async (ctx, { token, id, done }) => {
-    await assertSession(ctx, token);
-    await ctx.db.patch(id, { done });
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.patch(id, { done });
   },
 });
 
 export const remove = mutation({
   args: { token: v.string(), id: v.id("wishes") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    await ctx.db.delete(id);
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.delete(id);
   },
 });

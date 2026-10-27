@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { assertSession } from "./lib";
+import { requireMember } from "./lib";
 
 /**
  * Raw material of the « Produits » list: every ingredient and usual item with its
@@ -9,12 +9,12 @@ import { assertSession } from "./lib";
 export const list = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     const [ingredients, staples, recipes, prices] = await Promise.all([
-      ctx.db.query("ingredients").collect(),
-      ctx.db.query("staples").collect(),
-      ctx.db.query("recipes").collect(),
-      ctx.db.query("chainPrices").collect(),
+      db.query("ingredients").collect(),
+      db.query("staples").collect(),
+      db.query("recipes").collect(),
+      db.query("chainPrices").collect(),
     ]);
     const withUrl = async <T extends { _id: string; imageId?: string }>(doc: T) => ({
       ...doc,

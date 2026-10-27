@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertPositive, assertSession, cleanText, loadChainPrices } from "./lib";
+import { assertDate, assertPositive, requireMember, requireMemberWriter, cleanText, loadChainPrices } from "./lib";
 import { unitValidator } from "./schema";
 import { addDays } from "./domain/dates";
 import { buildShoppingList } from "./domain/shopping";
@@ -13,39 +13,31 @@ export const list = query({
     storeId: v.optional(v.id("stores")),
   },
   handler: async (ctx, { token, start, storeId }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     assertDate(start);
     const end = addDays(start, 6);
     const [eaten, ingredients, aisles, extras, checks, skips] = await Promise.all([
       // One extra day: next week's first lunch may be cooked on this week's last evening
-      ctx.db
-        .query("meals")
-        .withIndex("by_date", (q) => q.gte("date", start).lte("date", addDays(start, 7)))
+      db.index("meals", "by_family_date", (q) => q.gte("date", start).lte("date", addDays(start, 7)))
         .collect(),
-      ctx.db.query("ingredients").collect(),
-      ctx.db.query("aisles").collect(),
-      ctx.db
-        .query("shoppingExtras")
-        .withIndex("by_period", (q) => q.eq("periodStart", start))
+      db.query("ingredients").collect(),
+      db.query("aisles").collect(),
+      db.index("shoppingExtras", "by_family_period", (q) => q.eq("periodStart", start))
         .collect(),
-      ctx.db
-        .query("shoppingChecks")
-        .withIndex("by_period", (q) => q.eq("periodStart", start))
+      db.index("shoppingChecks", "by_family_period", (q) => q.eq("periodStart", start))
         .collect(),
-      ctx.db
-        .query("stockSkips")
-        .withIndex("by_period", (q) => q.eq("periodStart", start))
+      db.index("stockSkips", "by_family_period", (q) => q.eq("periodStart", start))
         .collect(),
     ]);
     const meals = eaten.filter((m) => m.cookedOn >= start && m.cookedOn <= end);
-    const chainPrices = await loadChainPrices(ctx);
-    const store = storeId ? await ctx.db.get(storeId) : null;
+    const chainPrices = await loadChainPrices(db);
+    const store = storeId ? await db.get(storeId) : null;
 
     const recipes: Parameters<typeof buildShoppingList>[0]["recipes"] = {};
     for (const id of new Set(
       meals.map((m) => m.recipeId).filter((x) => x !== undefined),
     )) {
-      const r = await ctx.db.get(id);
+      const r = await db.get(id);
       if (r) recipes[r._id] = { name: r.name, items: r.items };
     }
 
@@ -85,7 +77,7 @@ export const list = query({
       // Usual items bring their current price and chains (edits apply right away)
       extras: await Promise.all(
         extras.map(async (e) => {
-          const staple = e.stapleId ? await ctx.db.get(e.stapleId) : null;
+          const staple = e.stapleId ? await db.get(e.stapleId) : null;
           return staple
             ? {
                 ...e,
@@ -122,13 +114,12 @@ export const toggle = mutation({
     memberId: v.optional(v.id("members")),
   },
   handler: async (ctx, { token, start, itemKey, checked, memberId }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
+    if (memberId) await db.own(memberId, "Profil introuvable.");
     assertDate(start);
     if (itemKey.length > 120) throw new ConvexError("Article invalide.");
     const existing = (
-      await ctx.db
-        .query("shoppingChecks")
-        .withIndex("by_period", (q) => q.eq("periodStart", start))
+      await db.index("shoppingChecks", "by_family_period", (q) => q.eq("periodStart", start))
         .collect()
     ).find((c) => c.itemKey === itemKey);
     const data = {
@@ -136,9 +127,9 @@ export const toggle = mutation({
       checkedBy: checked ? memberId : undefined,
       checkedAt: checked ? Date.now() : undefined,
     };
-    if (existing) await ctx.db.patch(existing._id, data);
+    if (existing) await db.patch(existing._id, data);
     else
-      await ctx.db.insert("shoppingChecks", {
+      await db.insert("shoppingChecks", {
         periodStart: start,
         itemKey,
         ...data,
@@ -149,13 +140,11 @@ export const toggle = mutation({
 export const resetChecks = mutation({
   args: { token: v.string(), start: v.string() },
   handler: async (ctx, { token, start }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(start);
-    const checks = await ctx.db
-      .query("shoppingChecks")
-      .withIndex("by_period", (q) => q.eq("periodStart", start))
+    const checks = await db.index("shoppingChecks", "by_family_period", (q) => q.eq("periodStart", start))
       .collect();
-    for (const c of checks) await ctx.db.delete(c._id);
+    for (const c of checks) await db.delete(c._id);
   },
 });
 
@@ -175,41 +164,41 @@ export const addExtra = mutation({
     stapleId: v.optional(v.id("staples")),
   },
   handler: async (ctx, { token, start, label, memberId, stapleId, ...rest }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
+    if (memberId) await db.own(memberId, "Profil introuvable.");
+    if (rest.aisleId) await db.own(rest.aisleId, "Rayon introuvable.");
     assertDate(start);
     label = cleanText(label, 80, "Article");
     if (rest.qty !== undefined) assertPositive(rest.qty, 100000, "Quantité");
 
-    let staple = stapleId ? await ctx.db.get(stapleId) : null;
+    let staple = stapleId ? await db.get(stapleId) : null;
     if (!staple) {
       if (!label) throw new ConvexError("Écris ce qu'il faut acheter.");
       // Same name typed again: reuse the usual item instead of creating a twin
-      const all = await ctx.db.query("staples").collect();
+      const all = await db.query("staples").collect();
       const key = label.toLocaleLowerCase("fr");
       staple = all.find((s) => s.name.toLocaleLowerCase("fr") === key) ?? null;
       if (!staple) {
-        const id = await ctx.db.insert("staples", { name: label, aisleId: rest.aisleId, useCount: 0 });
-        staple = await ctx.db.get(id);
+        const id = await db.insert("staples", { name: label, aisleId: rest.aisleId, useCount: 0 });
+        staple = await db.get(id);
       }
     }
     if (!staple) throw new ConvexError("Article introuvable.");
 
     // Already on this week's list: tapping it twice must not add a duplicate
     const existing = (
-      await ctx.db
-        .query("shoppingExtras")
-        .withIndex("by_period", (q) => q.eq("periodStart", start))
+      await db.index("shoppingExtras", "by_family_period", (q) => q.eq("periodStart", start))
         .collect()
     ).find((e) => e.stapleId === staple._id);
     if (existing) return existing._id;
 
-    await ctx.db.patch(staple._id, {
+    await db.patch(staple._id, {
       useCount: staple.useCount + 1,
       lastUsedAt: Date.now(),
       // A chosen aisle teaches the usual item where it belongs
       ...(rest.aisleId && !staple.aisleId ? { aisleId: rest.aisleId } : {}),
     });
-    return ctx.db.insert("shoppingExtras", {
+    return db.insert("shoppingExtras", {
       periodStart: start,
       label: staple.name,
       addedBy: memberId,
@@ -225,8 +214,8 @@ export const addExtra = mutation({
 export const removeExtra = mutation({
   args: { token: v.string(), id: v.id("shoppingExtras") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    await ctx.db.delete(id);
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.delete(id);
   },
 });
 
@@ -234,15 +223,13 @@ export const removeExtra = mutation({
 export const setAtHome = mutation({
   args: { token: v.string(), start: v.string(), itemKeys: v.array(v.string()) },
   handler: async (ctx, { token, start, itemKeys }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(start);
     if (itemKeys.length > 500 || itemKeys.some((k) => k.length > 120)) throw new ConvexError("Liste invalide.");
-    const existing = await ctx.db
-      .query("stockSkips")
-      .withIndex("by_period", (q) => q.eq("periodStart", start))
+    const existing = await db.index("stockSkips", "by_family_period", (q) => q.eq("periodStart", start))
       .collect();
-    for (const s of existing) await ctx.db.delete(s._id);
-    for (const itemKey of new Set(itemKeys)) await ctx.db.insert("stockSkips", { periodStart: start, itemKey });
+    for (const s of existing) await db.delete(s._id);
+    for (const itemKey of new Set(itemKeys)) await db.insert("stockSkips", { periodStart: start, itemKey });
   },
 });
 
@@ -250,17 +237,15 @@ export const setAtHome = mutation({
 export const setOneAtHome = mutation({
   args: { token: v.string(), start: v.string(), itemKey: v.string(), atHome: v.boolean() },
   handler: async (ctx, { token, start, itemKey, atHome }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     assertDate(start);
     if (itemKey.length > 120) throw new ConvexError("Article invalide.");
     const existing = (
-      await ctx.db
-        .query("stockSkips")
-        .withIndex("by_period", (q) => q.eq("periodStart", start))
+      await db.index("stockSkips", "by_family_period", (q) => q.eq("periodStart", start))
         .collect()
     ).filter((s) => s.itemKey === itemKey);
-    for (const s of existing) await ctx.db.delete(s._id);
-    if (atHome) await ctx.db.insert("stockSkips", { periodStart: start, itemKey });
+    for (const s of existing) await db.delete(s._id);
+    if (atHome) await db.insert("stockSkips", { periodStart: start, itemKey });
   },
 });
 
@@ -268,12 +253,12 @@ export const setOneAtHome = mutation({
 export const setExtraQty = mutation({
   args: { token: v.string(), id: v.id("shoppingExtras"), qty: v.union(v.number(), v.null()), unit: v.optional(unitValidator) },
   handler: async (ctx, { token, id, qty, unit }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     if (qty !== null) assertPositive(qty, 100000, "Quantité");
-    const extra = await ctx.db.get(id);
+    const extra = await db.get(id);
     if (!extra) throw new ConvexError("Article introuvable.");
     const patch = { qty: qty ?? undefined, unit: qty === null ? undefined : (unit ?? "pc") };
-    await ctx.db.patch(id, patch);
-    if (extra.stapleId && (await ctx.db.get(extra.stapleId))) await ctx.db.patch(extra.stapleId, patch);
+    await db.patch(id, patch);
+    if (extra.stapleId && (await db.get(extra.stapleId))) await db.patch(extra.stapleId, patch);
   },
 });

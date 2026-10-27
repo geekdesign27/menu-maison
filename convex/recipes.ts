@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { assertEmoji, assertInt, assertPositive, assertSession, cleanText } from "./lib";
+import { assertEmoji, assertInt, assertPositive, requireMember, requireMemberWriter, cleanText } from "./lib";
 import { unitValidator } from "./schema";
 import { checkPublicUrl } from "./domain/recipeImport";
 import { searchKey } from "./domain/text";
@@ -23,10 +23,10 @@ const newItemValidator = v.object({
 export const list = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMember(ctx, token);
     const [recipes, likes] = await Promise.all([
-      ctx.db.query("recipes").collect(),
-      ctx.db.query("likes").collect(),
+      db.query("recipes").collect(),
+      db.query("likes").collect(),
     ]);
     const visible = recipes.filter((r) => !r.archived).sort((a, b) => a.name.localeCompare(b.name, "fr"));
     return Promise.all(
@@ -42,13 +42,10 @@ export const list = query({
 export const get = query({
   args: { token: v.string(), id: v.id("recipes") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    const recipe = await ctx.db.get(id);
+    const { db } = await requireMember(ctx, token);
+    const recipe = await db.get(id);
     if (!recipe) return null;
-    const likes = await ctx.db
-      .query("likes")
-      .withIndex("by_recipe", (q) => q.eq("recipeId", id))
-      .collect();
+    const likes = (await db.query("likes").collect()).filter((l) => l.recipeId === id);
     const imageUrl = recipe.imageId ? await ctx.storage.getUrl(recipe.imageId) : null;
     return { ...recipe, imageUrl, likedBy: likes.map((l) => l.memberId) };
   },
@@ -109,17 +106,18 @@ export const create = mutation({
     items: v.array(v.union(itemValidator, newItemValidator)),
   },
   handler: async (ctx, { token, memberId, ...data }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     validate(data);
+    if (memberId) await db.own(memberId, "Profil introuvable.");
     // Missing ingredients are created once, or matched to one that exists by now
     const known = new Map(
-      (await ctx.db.query("ingredients").collect()).map((i) => [searchKey(i.name), i._id]),
+      (await db.query("ingredients").collect()).map((i) => [searchKey(i.name), i._id]),
     );
     const items: { ingredientId: Id<"ingredients">; qtyPerPerson: number; unit: typeof data.items[number]["unit"] }[] = [];
     for (const item of data.items) {
       if ("ingredientId" in item) {
         // Deleted meanwhile by someone else (the draft can stay open a while)
-        if (!(await ctx.db.get(item.ingredientId))) throw new ConvexError("Un ingrédient de la recette n'existe plus.");
+        await db.own(item.ingredientId, "Un ingrédient de la recette n'existe plus.");
         items.push(item);
         continue;
       }
@@ -128,8 +126,8 @@ export const create = mutation({
         throw new ConvexError("Un nouvel ingrédient n'a pas de nom.");
       let ingredientId = known.get(searchKey(name));
       if (!ingredientId) {
-        if (!(await ctx.db.get(item.newIngredient.aisleId))) throw new ConvexError("Rayon introuvable.");
-        ingredientId = await ctx.db.insert("ingredients", {
+        if (!(await db.get(item.newIngredient.aisleId))) throw new ConvexError("Rayon introuvable.");
+        ingredientId = await db.insert("ingredients", {
           name,
           aisleId: item.newIngredient.aisleId,
           unit: item.newIngredient.unit,
@@ -138,7 +136,7 @@ export const create = mutation({
       }
       items.push({ ingredientId, qtyPerPerson: item.qtyPerPerson, unit: item.unit });
     }
-    return ctx.db.insert("recipes", {
+    return db.insert("recipes", {
       ...data,
       items,
       name: data.name.trim(),
@@ -153,9 +151,10 @@ export const create = mutation({
 export const update = mutation({
   args: { token: v.string(), id: v.id("recipes"), ...recipeFields },
   handler: async (ctx, { token, id, ...data }) => {
-    await assertSession(ctx, token);
+    const { db } = await requireMemberWriter(ctx, token);
     validate(data);
-    await ctx.db.patch(id, {
+    await db.ownAll(data.items.map((i) => i.ingredientId), "Un ingrédient de la recette n'existe plus.");
+    await db.patch(id, {
       ...data,
       name: data.name.trim(),
       steps: data.steps.map((s) => s.trim()).filter(Boolean),
@@ -170,16 +169,16 @@ export const update = mutation({
 export const archive = mutation({
   args: { token: v.string(), id: v.id("recipes") },
   handler: async (ctx, { token, id }) => {
-    await assertSession(ctx, token);
-    await ctx.db.patch(id, { archived: true });
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.patch(id, { archived: true });
   },
 });
 
 export const setSaved = mutation({
   args: { token: v.string(), id: v.id("recipes"), saved: v.boolean() },
   handler: async (ctx, { token, id, saved }) => {
-    await assertSession(ctx, token);
-    await ctx.db.patch(id, { saved });
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.patch(id, { saved });
   },
 });
 
@@ -191,18 +190,17 @@ export const toggleLike = mutation({
     memberId: v.id("members"),
   },
   handler: async (ctx, { token, recipeId, memberId }) => {
-    await assertSession(ctx, token);
-    const likes = await ctx.db
-      .query("likes")
-      .withIndex("by_recipe", (q) => q.eq("recipeId", recipeId))
-      .collect();
+    const { db } = await requireMemberWriter(ctx, token);
+    await db.own(recipeId, "Recette introuvable.");
+    await db.own(memberId, "Profil introuvable.");
+    const likes = (await db.query("likes").collect()).filter((l) => l.recipeId === recipeId);
     const mine = likes.find((l) => l.memberId === memberId);
     if (mine) {
-      await ctx.db.delete(mine._id);
+      await db.delete(mine._id);
       return false;
     }
-    await ctx.db.insert("likes", { recipeId, memberId });
-    await ctx.db.patch(recipeId, { saved: true });
+    await db.insert("likes", { recipeId, memberId });
+    await db.patch(recipeId, { saved: true });
     return true;
   },
 });
@@ -211,7 +209,7 @@ export const toggleLike = mutation({
 export const generateUploadUrl = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await assertSession(ctx, token);
+    await requireMemberWriter(ctx, token);
     return ctx.storage.generateUploadUrl();
   },
 });
@@ -220,13 +218,14 @@ export const generateUploadUrl = mutation({
 export const duplicate = mutation({
   args: { token: v.string(), id: v.id("recipes"), memberId: v.optional(v.id("members")) },
   handler: async (ctx, { token, id, memberId }) => {
-    await assertSession(ctx, token);
-    const source = await ctx.db.get(id);
+    const { db } = await requireMemberWriter(ctx, token);
+    if (memberId) await db.own(memberId, "Profil introuvable.");
+    const source = await db.get(id);
     if (!source) throw new ConvexError("Recette introuvable.");
     const { _id, _creationTime, ...fields } = source;
     void _id;
     void _creationTime;
-    return ctx.db.insert("recipes", {
+    return db.insert("recipes", {
       ...fields,
       name: `${source.name} (copie)`.slice(0, 100),
       saved: true,

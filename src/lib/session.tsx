@@ -8,11 +8,18 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
 const TOKEN_KEY = "mm.token";
-const MEMBER_KEY = "mm.member";
+const FAMILY_KEY = "mm.family";
+
+/** Family link name remembered on this phone, so the sign-in screen knows the family. */
+export const rememberedFamily = {
+  get: () => read(FAMILY_KEY),
+  set: (slug: string) => write(FAMILY_KEY, slug),
+};
 
 function read(key: string) {
   try {
@@ -43,16 +50,19 @@ function askPersistentStorage() {
   }
 }
 
+/** The signed-in member, as checked by the server. */
+export type Account = NonNullable<FunctionReturnType<typeof api.access.check>>;
+
 interface SessionValue {
   /** Device token, only exposed once the server confirmed it: queries skip until then. */
   token: string;
   /** True while the stored token is being checked. */
   checking: boolean;
-  /** True when the stored token was refused (expired, revoked, code changed). */
+  /** True when the stored token was refused (expired, revoked, password changed). */
   expired: boolean;
   setToken: (t: string) => void;
+  account: Account | null;
   memberId: Id<"members"> | null;
-  setMemberId: (id: Id<"members"> | null) => void;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -60,8 +70,7 @@ const SessionContext = createContext<SessionValue | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [stored, setStored] = useState(() => read(TOKEN_KEY));
   const [expired, setExpired] = useState(false);
-  const [memberId, setMemberState] = useState(() => (read(MEMBER_KEY) || null) as Id<"members"> | null);
-  const valid = useQuery(api.access.check, stored ? { token: stored } : "skip");
+  const account = useQuery(api.access.check, stored ? { token: stored } : "skip");
 
   // Phones already signed in before this existed ask too, once per launch
   useEffect(() => {
@@ -70,12 +79,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // A refused token is dropped, so that no screen keeps querying with it
   useEffect(() => {
-    if (stored && valid === false) {
+    if (stored && account === null) {
       write(TOKEN_KEY, "");
       setStored("");
       setExpired(true);
     }
-  }, [stored, valid]);
+  }, [stored, account]);
 
   const setToken = useCallback((t: string) => {
     write(TOKEN_KEY, t);
@@ -83,14 +92,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setStored(t);
     if (t) setExpired(false);
   }, []);
-  const setMemberId = useCallback((id: Id<"members"> | null) => {
-    write(MEMBER_KEY, id ?? "");
-    setMemberState(id);
-  }, []);
-  const ready = !!stored && valid === true;
+  // The family of a signed-in phone is remembered for its next sign-in
+  useEffect(() => {
+    if (account) write(FAMILY_KEY, account.family.slug);
+  }, [account]);
+
+  const ready = !!stored && !!account;
   const value = useMemo(
-    () => ({ token: ready ? stored : "", checking: !!stored && valid === undefined, expired, setToken, memberId, setMemberId }),
-    [ready, stored, valid, expired, setToken, memberId, setMemberId],
+    () => ({
+      token: ready ? stored : "",
+      checking: !!stored && account === undefined,
+      expired,
+      setToken,
+      account: ready ? account : null,
+      memberId: ready ? account.memberId : null,
+    }),
+    [ready, stored, account, expired, setToken],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
