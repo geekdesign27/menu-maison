@@ -160,7 +160,7 @@ complété pour une famille qui arrive seule, sans P-A pour l'aider :
 | Lot | Contenu | Fichiers principaux |
 |---|---|---|
 | 0 | Fenêtre « Ajouter à l'écran d'accueil » au premier lancement sur téléphone | nouveau composant, `Layout`, i18n |
-| S1 | Stripe côté serveur : clés, produit et prix, Checkout, webhook, statut sur la famille | `schema`, `http.ts`, `billing.ts`, `stripeNode.ts` |
+| S1 | **Fait le 2026-10-28** (sans UI, inactif tant que les clés manquent). Stripe côté serveur : produit et prix, Checkout, page de retour, webhook signé, statut sur la famille | `schema`, `http.ts`, `billing.ts`, `stripeNode.ts` |
 | S2 | Accès selon le statut, familles existantes « offertes » | `lib.ts`, migration, tests d'isolation |
 | S3 | Parcours client : formulaire, `#/bienvenue`, onglet Abonnement, portail | `Gate`, `gestion/` |
 | S3b | E-mails HTML de marque (clients et alertes à PA), aperçus dans Super admin | `convex/emails/` |

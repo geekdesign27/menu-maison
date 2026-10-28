@@ -126,7 +126,8 @@ export const loginTarget = internalQuery({
 
 const GLOBAL_KEY = "*";
 
-async function reserve(ctx: MutationCtx, key: string, limit: Limit, now: number) {
+/** Books one attempt under `limit` for `key` (sign-in, sign-up…); refused once over it. */
+export async function reserve(ctx: MutationCtx, key: string, limit: Limit, now: number) {
   const row = await ctx.db
     .query("loginGuards")
     .withIndex("by_key", (q) => q.eq("key", key))

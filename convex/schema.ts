@@ -95,11 +95,55 @@ export default defineSchema({
     suspended: v.boolean(),
     aiCapUsd: v.optional(v.number()), // monthly Claude budget set by the super-admin (default 2 USD)
     dictationCap: v.optional(v.number()), // monthly dictations set by the super-admin (default 60)
+    // Subscription (convex/billing.ts); absent: created before it, counted as offered
+    billing: v.optional(
+      v.object({
+        status: v.union(
+          v.literal("comped"),
+          v.literal("trialing"),
+          v.literal("active"),
+          v.literal("past_due"),
+          v.literal("canceled"),
+          v.literal("unpaid"),
+        ),
+        customerId: v.optional(v.string()),
+        subscriptionId: v.optional(v.string()),
+        email: v.optional(v.string()),
+        periodEnd: v.optional(v.number()),
+        cancelAtPeriodEnd: v.optional(v.boolean()),
+        pastDueSince: v.optional(v.number()),
+      }),
+    ),
     // Background translation of the catalogue: one run at a time, and the ids
     // Claude left untranslated, not sent again automatically (catalogTranslate.ts)
     germanNames: v.optional(v.object({ queuedAt: v.optional(v.number()), skipped: v.array(v.string()) })),
     createdAt: v.number(),
-  }).index("by_slug", ["slug"]),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_subscription", ["billing.subscriptionId"]),
+
+  /**
+   * A sign-up on its way through Stripe Checkout (convex/billing.ts): the family
+   * is created once Stripe confirms, by the webhook or the return page,
+   * whichever comes first, never twice.
+   */
+  signups: defineTable({
+    sessionId: v.string(), // Stripe Checkout Session
+    familyName: v.string(),
+    adminName: v.string(),
+    lang: v.union(v.literal("fr"), v.literal("de")),
+    // SHA-256 of a secret kept by the browser that signed up: only it gets the admin's first link
+    claimHash: v.string(),
+    createdAt: v.number(),
+    familyId: v.optional(v.id("families")),
+  }).index("by_session", ["sessionId"]),
+
+  /** Stripe events already handled: Stripe may send one twice. */
+  stripeEvents: defineTable({
+    eventId: v.string(),
+    type: v.string(),
+    at: v.number(),
+  }).index("by_event", ["eventId"]),
 
   /** Family members (profiles picked on the home screen). */
   members: defineTable({

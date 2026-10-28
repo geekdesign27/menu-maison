@@ -23,6 +23,20 @@ même méthode : `pbpaste | CONVEX_AGENT_MODE=anonymous npx convex env set GROQ_
 En place depuis le 2026-10-24.
 Sans clé, l'écran de scan l'indique clairement. Les tokens de chaque lecture sont journalisés.
 
+Abonnement (Stripe, plan dans `docs/PLAN-abonnement.md`) : clés `STRIPE_SECRET_KEY` et
+`STRIPE_WEBHOOK_SECRET`, plus `SITE_URL` (adresse de l'app, `https://menumaison.ch` par
+défaut). En local, uniquement des clés de **test** (`sk_test_…`), même méthode :
+`pbpaste | CONVEX_AGENT_MODE=anonymous npx convex env set STRIPE_SECRET_KEY`, puis
+`CONVEX_AGENT_MODE=anonymous npx convex env set SITE_URL http://localhost:5190`.
+Le produit « Menu Maison » et son prix de 20 CHF par an se créent seuls au premier paiement,
+ou d'avance avec `npx convex run stripeNode:ensurePrice`. Webhook en local : Stripe CLI
+`stripe listen --forward-to http://127.0.0.1:3211/stripe/webhook` (3211 : port par défaut
+du site Convex local, à vérifier dans `.env.local`, `CONVEX_SITE_URL` ; le secret `whsec_…`
+affiché va dans `STRIPE_WEBHOOK_SECRET`). En production, l'adresse du webhook est
+`https://<déploiement>.convex.site/stripe/webhook`, événements `checkout.session.completed`
+et `customer.subscription.*`. Sans clé, l'inscription répond « Le paiement n'est pas encore
+configuré. » : rien n'est créé.
+
 Chaque nouvelle famille reçoit le catalogue de départ (`seedFamily`) : rayons, ingrédients
 avec prix estimés, recettes à découvrir, 5 magasins autour de Fribourg, articles habituels.
 

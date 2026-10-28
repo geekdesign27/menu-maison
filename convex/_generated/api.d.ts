@@ -10,12 +10,14 @@
 
 import type * as access from "../access.js";
 import type * as aiBudget from "../aiBudget.js";
+import type * as billing from "../billing.js";
 import type * as catalog from "../catalog.js";
 import type * as catalogTranslate from "../catalogTranslate.js";
 import type * as claude from "../claude.js";
 import type * as crons from "../crons.js";
 import type * as domain_aiBudget from "../domain/aiBudget.js";
 import type * as domain_auth from "../domain/auth.js";
+import type * as domain_billing from "../domain/billing.js";
 import type * as domain_dates from "../domain/dates.js";
 import type * as domain_lang from "../domain/lang.js";
 import type * as domain_leftovers from "../domain/leftovers.js";
@@ -32,6 +34,7 @@ import type * as domain_tags from "../domain/tags.js";
 import type * as domain_text from "../domain/text.js";
 import type * as families from "../families.js";
 import type * as homeStock from "../homeStock.js";
+import type * as http from "../http.js";
 import type * as lib from "../lib.js";
 import type * as meals from "../meals.js";
 import type * as onboarding from "../onboarding.js";
@@ -46,6 +49,7 @@ import type * as seedNamesDe from "../seedNamesDe.js";
 import type * as shopping from "../shopping.js";
 import type * as staples from "../staples.js";
 import type * as stats from "../stats.js";
+import type * as stripeNode from "../stripeNode.js";
 import type * as superadmin from "../superadmin.js";
 import type * as templates from "../templates.js";
 import type * as wishes from "../wishes.js";
@@ -59,12 +63,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   aiBudget: typeof aiBudget;
+  billing: typeof billing;
   catalog: typeof catalog;
   catalogTranslate: typeof catalogTranslate;
   claude: typeof claude;
   crons: typeof crons;
   "domain/aiBudget": typeof domain_aiBudget;
   "domain/auth": typeof domain_auth;
+  "domain/billing": typeof domain_billing;
   "domain/dates": typeof domain_dates;
   "domain/lang": typeof domain_lang;
   "domain/leftovers": typeof domain_leftovers;
@@ -81,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "domain/text": typeof domain_text;
   families: typeof families;
   homeStock: typeof homeStock;
+  http: typeof http;
   lib: typeof lib;
   meals: typeof meals;
   onboarding: typeof onboarding;
@@ -95,6 +102,7 @@ declare const fullApi: ApiFromModules<{
   shopping: typeof shopping;
   staples: typeof staples;
   stats: typeof stats;
+  stripeNode: typeof stripeNode;
   superadmin: typeof superadmin;
   templates: typeof templates;
   wishes: typeof wishes;

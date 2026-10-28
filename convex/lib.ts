@@ -22,7 +22,10 @@ export async function sha256(text: string) {
 
 /** Tables whose rows belong to one family. */
 // aiUsage: written by convex/aiBudget.ts only, never through a family writer
-export type FamilyTable = Exclude<TableNames, "families" | "sessions" | "loginGuards" | "invites" | "aiUsage">;
+export type FamilyTable = Exclude<
+  TableNames,
+  "families" | "sessions" | "loginGuards" | "invites" | "aiUsage" | "signups" | "stripeEvents"
+>;
 
 /**
  * The database seen by one family. Every read is limited to the family, every

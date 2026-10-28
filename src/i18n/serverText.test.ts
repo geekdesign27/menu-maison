@@ -33,6 +33,8 @@ const NOT_SHOWN = [
   /^(À acheter chez|Bei )/, // domain/shopping.ts, in the member's language
   /^\$\{source\.name\} \(/, // recipe copy, in the member's language
   /^Le contenu se donne en/, // domain/receipts.ts, checked below
+  /^\$\{base\} \$\{n\}$/, // domain/billing.ts, « Dupont 2 »: a family name
+  /^Menus de la semaine, recettes et courses/, // stripeNode.ts, product description in Stripe
   /^«\$\{NBSP\}/, // domain/products.ts, checked below
   /^Utilisé dans/,
 ];

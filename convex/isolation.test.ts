@@ -935,6 +935,10 @@ describe("writes on another family's ids are refused", () => {
     "onboarding.finish": "patches the caller only (covered: own family test)",
     "onboarding.setEnabled": "settings and members of the caller's family only (covered: own family test)",
     "catalogTranslate.missingCount": "counts the caller's family only, admins (catalogTranslate.test.ts)",
+    "billing.nameAvailable": "public sign-up form: says whether a family name is free, nothing else",
+    "stripeNode.startCheckout": "public sign-up: opens a Stripe Checkout page, creates no family (billing.test.ts)",
+    "stripeNode.claim":
+      "return page: Stripe confirms the session, the link is given only within 48 hours and before the admin's first sign-in (billing.test.ts)",
     "catalogTranslate.translateNow":
       "fills the caller's family only: internal apply checks the family of each id (catalogTranslate.test.ts)",
   };

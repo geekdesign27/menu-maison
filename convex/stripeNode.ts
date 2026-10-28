@@ -1,0 +1,266 @@
+"use node";
+// Every call to Stripe: the price, Checkout, the return page and the webhook.
+// Keys only from Convex's environment (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+// SITE_URL, optional STRIPE_PRICE_ID), never in the code. Billing state is
+// written by convex/billing.ts. The Stripe account also sells other products:
+// only sessions and subscriptions marked « menu-maison » are ours.
+import { createHash, randomBytes } from "node:crypto";
+import Stripe from "stripe";
+import { action, internalAction, type ActionCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { ConvexError, v } from "convex/values";
+import {
+  APP_METADATA,
+  PRICE_CHF,
+  PRICE_LOOKUP_KEY,
+  signupProblem,
+  TRIAL_DAYS,
+} from "./domain/billing";
+
+const NOT_CONFIGURED = "Le paiement n'est pas encore configuré.";
+const BUSY =
+  "Trop d'inscriptions en même temps. Réessaie dans quelques minutes.";
+const INVALID_LINK = "Lien invalide.";
+// A Checkout page left open longer is closed by Stripe (30 minutes is its minimum)
+const CHECKOUT_MINUTES = 30;
+
+function stripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new ConvexError(NOT_CONFIGURED);
+  return new Stripe(key);
+}
+
+/** The app's address for Stripe's return links; required, so a test deployment never sends to production. */
+function siteUrl() {
+  const url = process.env.SITE_URL;
+  if (!url) throw new ConvexError(NOT_CONFIGURED);
+  return url.replace(/\/+$/, "");
+}
+
+const isOurs = (metadata: Stripe.Metadata | null | undefined) =>
+  metadata?.app === APP_METADATA.app;
+
+/** The yearly price: STRIPE_PRICE_ID once set, else found (or created) by its lookup key. */
+async function priceId(client: Stripe): Promise<string> {
+  if (process.env.STRIPE_PRICE_ID) return process.env.STRIPE_PRICE_ID;
+  const found = await client.prices.list({
+    lookup_keys: [PRICE_LOOKUP_KEY],
+    active: true,
+    limit: 1,
+  });
+  if (found.data[0]) return found.data[0].id;
+  const product = await client.products.create({
+    name: "Menu Maison",
+    description:
+      "Menus de la semaine, recettes et courses en famille. Abonnement annuel par famille.",
+    // Shown on the card statement, apart from the account's other products
+    statement_descriptor: "MENU MAISON",
+    metadata: APP_METADATA,
+  });
+  const price = await client.prices.create({
+    product: product.id,
+    currency: "chf",
+    unit_amount: PRICE_CHF * 100,
+    recurring: { interval: "year" },
+    lookup_key: PRICE_LOOKUP_KEY,
+    metadata: APP_METADATA,
+  });
+  return price.id;
+}
+
+/** Setup: creates the product and price if needed; the id returned goes in STRIPE_PRICE_ID. */
+export const ensurePrice = internalAction({
+  args: {},
+  handler: async () => priceId(stripe()),
+});
+
+/**
+ * Sign-up form: the Stripe Checkout page to start the trial, with the family's
+ * details. `claimSecret` stays in this browser: only it gets the admin's first link.
+ */
+export const startCheckout = action({
+  args: {
+    familyName: v.string(),
+    adminName: v.string(),
+    lang: v.union(v.literal("fr"), v.literal("de")),
+  },
+  handler: async (ctx, args): Promise<{ url: string; claimSecret: string }> => {
+    const problem = signupProblem(args);
+    if (problem) throw new ConvexError(problem);
+    const client = stripe();
+    const site = siteUrl();
+    if (
+      !(await ctx.runMutation(internal.billing.allowAttempt, {
+        kind: "checkout",
+      }))
+    )
+      throw new ConvexError(BUSY);
+    const session = await client.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: await priceId(client), quantity: 1 }],
+      subscription_data: {
+        trial_period_days: TRIAL_DAYS,
+        metadata: APP_METADATA,
+      },
+      metadata: APP_METADATA,
+      payment_method_collection: "always",
+      locale: args.lang,
+      expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_MINUTES * 60,
+      success_url: `${site}/#/bienvenue?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${site}/#/decouvrir`,
+    });
+    if (!session.url)
+      throw new ConvexError(
+        "La page de paiement n'a pas pu s'ouvrir. Réessaie dans un moment.",
+      );
+    const claimSecret = randomBytes(32).toString("hex");
+    await ctx.runMutation(internal.billing.recordSignup, {
+      sessionId: session.id,
+      ...args,
+      claimHash: createHash("sha256").update(claimSecret).digest("hex"),
+    });
+    return { url: session.url, claimSecret };
+  },
+});
+
+/** The subscription's details as stored on the family. */
+function subscriptionFields(sub: Stripe.Subscription, email?: string | null) {
+  // From this API version, the period lives on the subscription's items
+  const itemEnd = sub.items.data[0]?.current_period_end;
+  const end =
+    sub.status === "trialing" && sub.trial_end ? sub.trial_end : itemEnd;
+  return {
+    customerId:
+      typeof sub.customer === "string" ? sub.customer : sub.customer.id,
+    subscriptionId: sub.id,
+    email: email ?? undefined,
+    stripeStatus: sub.status,
+    periodEnd: end ? end * 1000 : undefined,
+    cancelAtPeriodEnd: sub.cancel_at_period_end,
+  };
+}
+
+async function completeFromSession(
+  ctx: ActionCtx,
+  client: Stripe,
+  session: Stripe.Checkout.Session,
+) {
+  if (!isOurs(session.metadata)) return null;
+  if (
+    session.mode !== "subscription" ||
+    session.status !== "complete" ||
+    !session.subscription
+  )
+    return null;
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription.id;
+  const sub = await client.subscriptions.retrieve(subscriptionId);
+  return ctx.runMutation(internal.billing.completeSignup, {
+    sessionId: session.id,
+    ...subscriptionFields(sub, session.customer_details?.email),
+  });
+}
+
+/**
+ * Return page after Checkout: checks with Stripe that the session is paid for,
+ * creates the family if the webhook has not yet, and gives the admin's first link.
+ */
+export const claim = action({
+  args: { sessionId: v.string(), claimSecret: v.string() },
+  handler: async (
+    ctx,
+    { sessionId, claimSecret },
+  ): Promise<{
+    state: "pending" | "ready";
+    slug: string | null;
+    invite: string | null;
+  }> => {
+    if (
+      !/^cs_(test|live)_[A-Za-z0-9]{10,200}$/.test(sessionId) ||
+      !/^[0-9a-f]{64}$/.test(claimSecret)
+    )
+      throw new ConvexError(INVALID_LINK);
+    if (
+      !(await ctx.runMutation(internal.billing.allowAttempt, { kind: "claim" }))
+    )
+      throw new ConvexError(BUSY);
+    const client = stripe();
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await client.checkout.sessions.retrieve(sessionId);
+    } catch {
+      // Stripe's own message would name its objects: a plain one instead
+      throw new ConvexError(INVALID_LINK);
+    }
+    const familyId = await completeFromSession(ctx, client, session);
+    if (!familyId) return { state: "pending", slug: null, invite: null };
+    const link = await ctx.runMutation(internal.billing.firstLink, {
+      sessionId,
+      claimSecret,
+    });
+    return {
+      state: "ready",
+      slug: link?.slug ?? null,
+      invite: link?.invite ?? null,
+    };
+  },
+});
+
+/**
+ * Stripe's webhook, after convex/http.ts: signature checked, events of other
+ * products ignored, each event recorded only once handled (a failure answers
+ * 500 and Stripe sends it again). The subscription is read again from Stripe:
+ * events may arrive out of order.
+ */
+export const handleWebhook = internalAction({
+  args: { payload: v.string(), signature: v.string() },
+  handler: async (
+    ctx,
+    { payload, signature },
+  ): Promise<{ ok: boolean; status: number }> => {
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!secret) return { ok: false, status: 500 };
+    const client = stripe();
+    let event: Stripe.Event;
+    try {
+      event = await client.webhooks.constructEventAsync(
+        payload,
+        signature,
+        secret,
+      );
+    } catch {
+      return { ok: false, status: 400 };
+    }
+    if (await ctx.runQuery(internal.billing.seenEvent, { eventId: event.id }))
+      return { ok: true, status: 200 };
+    switch (event.type) {
+      case "checkout.session.completed":
+        if (!isOurs(event.data.object.metadata))
+          return { ok: true, status: 200 };
+        await completeFromSession(ctx, client, event.data.object);
+        break;
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        if (!isOurs(event.data.object.metadata))
+          return { ok: true, status: 200 };
+        const fresh = await client.subscriptions.retrieve(event.data.object.id);
+        await ctx.runMutation(
+          internal.billing.updateSubscription,
+          subscriptionFields(fresh),
+        );
+        break;
+      }
+      default:
+        // Not used: receipts and invoices stay with Stripe
+        return { ok: true, status: 200 };
+    }
+    await ctx.runMutation(internal.billing.markEvent, {
+      eventId: event.id,
+      type: event.type,
+    });
+    return { ok: true, status: 200 };
+  },
+});

@@ -212,6 +212,15 @@ const DE: Record<string, string> = {
   "Le contenu se donne en millilitres : 1000 pour une bouteille d'un litre.":
     "Den Inhalt in Milliliter angeben: 1000 für eine Literflasche.",
 
+  // ---------- Subscription
+  "Le paiement n'est pas encore configuré.": "Die Zahlung ist noch nicht eingerichtet.",
+  "La page de paiement n'a pas pu s'ouvrir. Réessaie dans un moment.":
+    "Die Zahlungsseite konnte nicht geöffnet werden. Versuch es gleich nochmals.",
+  "Lien invalide.": "Ungültiger Link.",
+  "Nom trop long.": "Name zu lang.",
+  "Trop d'inscriptions en même temps. Réessaie dans quelques minutes.":
+    "Zu viele Anmeldungen gleichzeitig. Versuch es in ein paar Minuten nochmals.",
+
   // ---------- Monthly AI budget
   "Le budget IA de ta famille pour ce mois est atteint. Il repart le 1er du mois prochain.":
     "Das KI-Budget deiner Familie für diesen Monat ist aufgebraucht. Am 1. des nächsten Monats geht es wieder los.",
