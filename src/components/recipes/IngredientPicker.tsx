@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { ChevronRight, Package, Pencil, Plus } from "lucide-react";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
-import { NBSP, type Unit } from "../../../convex/domain/quantities";
+import type { Unit } from "../../../convex/domain/quantities";
+import { useT } from "../../i18n/useT";
 import { searchKey } from "../../lib/text";
 import { unitChoiceLabel } from "../../lib/units";
 import { Card, IconButton, SearchInput, Sheet } from "../ui";
@@ -44,9 +45,13 @@ export function IngredientPicker({
   const [editing, setEditing] = useState<Doc<"ingredients"> | null>(null);
   // Open Food Facts product to create as a new ingredient, or to complete an existing one with
   const [fromOff, setFromOff] = useState<OffHit | null>(null);
-  const [completing, setCompleting] = useState<{ ingredient: Doc<"ingredients">; hit: OffHit } | null>(null);
+  const [completing, setCompleting] = useState<{
+    ingredient: Doc<"ingredients">;
+    hit: OffHit;
+  } | null>(null);
   const { token } = useSession();
   const run = useRun();
+  const { t, lang } = useT();
   const importProduct = useAction(api.openFoodFacts.importProduct);
 
   const close = () => {
@@ -59,14 +64,20 @@ export function IngredientPicker({
 
   /** Same barcode: reuse it; same name: offer to complete it; else create it. */
   const chooseOff = (hit: OffHit) => {
-    const found = findExisting(base.ingredients, hit.code, shortName(hit.productName, hit.brands, query));
+    const found = findExisting(
+      base.ingredients,
+      hit.code,
+      shortName(hit.productName, hit.brands, query),
+    );
     if (found?.by === "code") pick(found.ingredient);
     else if (found) setCompleting({ ingredient: found.ingredient, hit });
     else setFromOff(hit);
   };
   const aisleFor = (hit: OffHit) => {
     const name = suggestAisleName(hit.categories);
-    return name ? base.aisles.find((a) => searchKey(a.name) === searchKey(name))?._id : undefined;
+    return name
+      ? base.aisles.find((a) => searchKey(a.name) === searchKey(name))?._id
+      : undefined;
   };
   const pick = (ingredient: PickedIngredient) => {
     onPick(ingredient);
@@ -89,12 +100,12 @@ export function IngredientPicker({
 
   return (
     <>
-      <Sheet open={open} onClose={close} title="Choisir un ingrédient">
+      <Sheet open={open} onClose={close} title={t("recipes.pickIngredient")}>
         <div className="space-y-3">
           <SearchInput
             value={query}
             onChange={setQuery}
-            placeholder="Chercher un ingrédient"
+            placeholder={t("recipes.searchIngredient")}
           />
           {q && !exact && (
             <Card
@@ -105,16 +116,14 @@ export function IngredientPicker({
                 <Plus size={22} strokeWidth={3} />
               </span>
               <span className="min-w-0 flex-1 font-extrabold">
-                Créer «{NBSP}
-                {query.trim()}
-                {NBSP}»
+                {t("recipes.createNamed", { name: query.trim() })}
               </span>
               <ChevronRight className="text-muted" />
             </Card>
           )}
           {matches.length === 0 && !q && (
             <p className="py-6 text-center text-muted">
-              Aucun ingrédient pour l'instant.
+              {t("recipes.noIngredients")}
             </p>
           )}
           <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-paper">
@@ -134,16 +143,17 @@ export function IngredientPicker({
                       <span className="block font-bold">{i.name}</span>
                       {i.pantry && (
                         <span className="flex items-center gap-1 text-[13px] font-bold text-herb">
-                          <Package size={13} aria-hidden /> Souvent en stock
+                          <Package size={13} aria-hidden />{" "}
+                          {t("recipes.oftenInStock")}
                         </span>
                       )}
                     </span>
                     <span className="text-[15px] text-muted">
-                      {unitChoiceLabel(i.unit)}
+                      {unitChoiceLabel(i.unit, lang)}
                     </span>
                   </button>
                   <IconButton
-                    label={`Modifier l'ingrédient${NBSP}: ${i.name}`}
+                    label={t("recipes.editIngredientNamed", { name: i.name })}
                     onClick={() => setEditing(i)}
                     className="mr-1 text-muted"
                   >
@@ -179,15 +189,17 @@ export function IngredientPicker({
       <ConfirmSheet
         open={open && completing !== null}
         onClose={() => setCompleting(null)}
-        title={`Compléter «${NBSP}${completing?.ingredient.name ?? ""}${NBSP}» ?`}
-        text={`L'ingrédient existe déjà. Il reçoit les allergènes, la nutrition et la photo de ce produit s'il n'en a pas, puis il est ajouté à la recette.`}
-        confirmLabel="Compléter et ajouter"
+        title={t("recipes.completeTitle", {
+          name: completing?.ingredient.name ?? "",
+        })}
+        text={t("recipes.completeText")}
+        confirmLabel={t("recipes.completeConfirm")}
         onConfirm={async () => {
           if (!completing) return;
           const { ingredient, hit } = completing;
           const done = await run(
             () => importProduct({ token, id: ingredient._id, code: hit.code }),
-            "Allergènes et nutrition ajoutés.",
+            t("recipes.offImported"),
           );
           if (done) pick(ingredient);
         }}

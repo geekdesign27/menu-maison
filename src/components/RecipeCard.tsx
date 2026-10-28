@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Clock, Heart } from "lucide-react";
 import type { Member } from "../lib/session";
 import { minutes } from "../lib/format";
+import { useT } from "../i18n/useT";
 import { Avatar, Card, cx } from "./ui";
 import { pastelFor } from "./recipes/data";
 import type { RecipeRow } from "../lib/queries";
@@ -48,11 +49,12 @@ export function HeartButton({
   className?: string;
 }) {
   const [taps, setTaps] = useState(0);
+  const { t } = useT();
   return (
     <button
       type="button"
       aria-pressed={liked}
-      aria-label={liked ? "Je n'aime plus" : "J'aime"}
+      aria-label={t(liked ? "recipes.unlike" : "recipes.like")}
       disabled={disabled}
       onClick={() => {
         setTaps((n) => n + 1);
@@ -89,6 +91,7 @@ export function RecipeCard({
   onToggleLike?: () => void;
 }) {
   const fans = members.filter((m) => recipe.likedBy.includes(m._id));
+  const { t } = useT();
   return (
     <div className="relative">
       <Link to={`/recette/${recipe._id}`} className="block h-full">
@@ -98,7 +101,12 @@ export function RecipeCard({
             style={{ background: pastelFor(recipe.name) }}
           >
             {recipe.imageUrl ? (
-              <img src={recipe.imageUrl} alt="" loading="lazy" className="size-full object-cover" />
+              <img
+                src={recipe.imageUrl}
+                alt=""
+                loading="lazy"
+                className="size-full object-cover"
+              />
             ) : (
               <span aria-hidden className="drop-shadow-sm">
                 {recipe.emoji}
@@ -116,7 +124,9 @@ export function RecipeCard({
             {cost && (
               <div className="text-[15px] font-extrabold text-herb">
                 {cost}
-                <span className="font-bold text-muted"> / pers.</span>
+                <span className="font-bold text-muted">
+                  {t("recipes.perPerson")}
+                </span>
               </div>
             )}
             <div className="mt-auto flex min-h-8 items-center pt-1">

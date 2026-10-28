@@ -6,6 +6,7 @@ import { useSession } from "../../lib/session";
 import { errorMessage } from "../../lib/format";
 import { searchKey } from "../../lib/text";
 import { cx, SearchInput, Sheet } from "../ui";
+import { useT } from "../../i18n/useT";
 
 // Open Food Facts allows about ten searches a minute: wait for a pause in
 // typing, need a few letters and never ask twice for the same words.
@@ -22,6 +23,7 @@ type SearchState =
 export function useOffSearch(query: string): SearchState {
   const { token } = useSession();
   const search = useAction(api.openFoodFacts.search);
+  const { lang } = useT();
   const key = searchKey(query);
   const [state, setState] = useState<SearchState>({ status: "idle" });
 
@@ -45,14 +47,15 @@ export function useOffSearch(query: string): SearchState {
         })
         .catch(
           (e) =>
-            !stale && setState({ status: "error", message: errorMessage(e) }),
+            !stale &&
+            setState({ status: "error", message: errorMessage(e, lang) }),
         );
     }, DEBOUNCE_MS);
     return () => {
       stale = true;
       clearTimeout(timer);
     };
-  }, [key, search, token]);
+  }, [key, search, token, lang]);
 
   return state;
 }
@@ -102,18 +105,19 @@ export function OffResults({
   busyCode?: string | null;
 }) {
   const state = useOffSearch(query);
+  const { t } = useT();
   if (state.status === "idle") return null;
   return (
     <section
-      aria-label="Produits Open Food Facts"
+      aria-label={t("recipes.offProducts")}
       aria-busy={state.status === "loading"}
     >
       <h3 className="mt-2 mb-2 px-1 text-[13px] font-extrabold tracking-wide text-muted uppercase">
-        Sur Open Food Facts
+        {t("recipes.offOn")}
       </h3>
       {state.status === "loading" && (
         <p className="rounded-2xl bg-paper px-4 py-3 text-[15px] text-muted ring-1 ring-line">
-          Recherche en cours…
+          {t("recipes.offSearching")}
         </p>
       )}
       {state.status === "error" && (
@@ -126,7 +130,7 @@ export function OffResults({
       )}
       {state.status === "done" && state.hits.length === 0 && (
         <p className="rounded-2xl bg-paper px-4 py-3 text-[15px] text-muted ring-1 ring-line">
-          Aucun produit trouvé. Essaie un autre mot.
+          {t("recipes.offNoResult")}
         </p>
       )}
       {state.status === "done" && state.hits.length > 0 && (
@@ -165,7 +169,7 @@ export function OffResults({
                 </span>
                 {busyCode === hit.code ? (
                   <span className="text-[13px] font-bold text-muted">
-                    Import…
+                    {t("recipes.offImporting")}
                   </span>
                 ) : (
                   hit.nutriscore && <NutriscoreBadge grade={hit.nutriscore} />
@@ -176,8 +180,7 @@ export function OffResults({
         </ul>
       )}
       <p className="mt-2 px-1 text-[13px] text-muted">
-        Données libres d'Open Food Facts, parfois incomplètes. L'ingrédient
-        reste générique : on peut l'acheter dans n'importe quelle marque.
+        {t("recipes.offDisclaimer")}
       </p>
     </section>
   );
@@ -196,13 +199,14 @@ export function OffPickSheet({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
+  const { t } = useT();
   return (
-    <Sheet open onClose={onClose} title="Chercher sur Open Food Facts">
+    <Sheet open onClose={onClose} title={t("recipes.offSearchTitle")}>
       <div className="space-y-3">
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Nom du produit"
+          placeholder={t("recipes.offProductName")}
         />
         <OffResults query={query} onChoose={onChoose} busyCode={busyCode} />
       </div>

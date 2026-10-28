@@ -12,8 +12,10 @@ import {
   type ProductKind,
 } from "../../convex/domain/products";
 import { MISC_SECTION } from "../../convex/domain/shopping";
-import { NBSP } from "../../convex/domain/quantities";
+import type { Lang } from "../../convex/domain/lang";
 import { useBase, useSession, type Base } from "../lib/session";
+import { translate } from "../i18n";
+import { useT } from "../i18n/useT";
 import { useRun, useToast } from "../lib/toast";
 import { formatChf, plural } from "../lib/format";
 import { amountLabel } from "../lib/units";
@@ -67,25 +69,35 @@ export function useProductRows(): Row[] | null {
 }
 
 /** « CHF 3.50 pour 1000 g », « CHF 6.00 l'article » or « Pas de prix ». */
-export function productPriceText(p: Row): string {
+export function productPriceText(p: Row, lang: Lang = "fr"): string {
   if (
     p.ingredient?.priceChf !== undefined &&
     p.ingredient.priceQty !== undefined
   )
-    return `${formatChf(p.ingredient.priceChf)} pour ${amountLabel(p.ingredient.priceQty, p.ingredient.unit)}`;
+    return translate(lang, "recipes.priceFor", {
+      price: formatChf(p.ingredient.priceChf),
+      amount: amountLabel(p.ingredient.priceQty, p.ingredient.unit, lang),
+    });
   if (p.staple?.priceChf !== undefined)
-    return `${formatChf(p.staple.priceChf)} l'article`;
-  return "Pas de prix";
+    return translate(lang, "recipes.pricePerItem", {
+      price: formatChf(p.staple.priceChf),
+    });
+  return translate(lang, "recipes.noPrice");
 }
 
 /** « Lidl CHF 1.19 pour 1000 g (24.10) », prices read on receipts; "" when none. */
-export function receiptPricesText(p: Row): string {
+export function receiptPricesText(p: Row, lang: Lang = "fr"): string {
   const source = p.ingredient ?? p.staple!;
   return source.receiptPrices
     .map((r) => {
       const [, month, day] = r.observedOn.split("-");
-      const amount = p.ingredient ? ` pour ${amountLabel(r.priceQty, p.ingredient.unit)}` : "";
-      return `${r.chain} ${formatChf(r.priceChf)}${amount} (${day}.${month})`;
+      const price = p.ingredient
+        ? translate(lang, "recipes.priceFor", {
+            price: formatChf(r.priceChf),
+            amount: amountLabel(r.priceQty, p.ingredient.unit, lang),
+          })
+        : formatChf(r.priceChf);
+      return `${r.chain} ${price} (${day}.${month})`;
     })
     .join(", ");
 }
@@ -93,10 +105,19 @@ export function receiptPricesText(p: Row): string {
 export function ProductsPage() {
   const base = useBase();
   const rows = useProductRows();
+  const { t } = useT();
   return (
     <Page
-      title="Produits"
-      subtitle={rows ? plural(rows.length, "produit", "produits") : undefined}
+      title={t("recipes.products")}
+      subtitle={
+        rows
+          ? plural(
+              rows.length,
+              t("recipes.productOne"),
+              t("recipes.productMany"),
+            )
+          : undefined
+      }
       back={<BackButton fallback="/plus" />}
     >
       {base && rows ? <ProductsContent base={base} rows={rows} /> : <Loading />}
@@ -120,6 +141,7 @@ export function ProductsContent({
   const { token } = useSession();
   const run = useRun();
   const toast = useToast();
+  const { t } = useT();
   const removeIngredient = useMutation(api.catalog.removeIngredient);
   const removeStaple = useMutation(api.staples.remove);
   const [search, setSearch] = useState("");
@@ -173,18 +195,22 @@ export function ProductsContent({
   };
 
   const addButtons = (
-    <div className={wide ? "flex justify-end gap-2" : "mt-4 grid gap-2 sm:grid-cols-2"}>
+    <div
+      className={
+        wide ? "flex justify-end gap-2" : "mt-4 grid gap-2 sm:grid-cols-2"
+      }
+    >
       <Button
         variant={wide ? "primary" : "secondary"}
         onClick={() => setEditing({ kind: "ingredient" })}
       >
-        <Plus size={20} /> Ingrédient de recette
+        <Plus size={20} /> {t("recipes.addRecipeIngredient")}
       </Button>
       <Button
         variant={wide ? "primary" : "secondary"}
         onClick={() => setEditing({ kind: "newStaple" })}
       >
-        <Plus size={20} /> Article hors recette
+        <Plus size={20} /> {t("recipes.addStaple")}
       </Button>
     </div>
   );
@@ -197,40 +223,40 @@ export function ProductsContent({
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Chercher un produit"
+          placeholder={t("recipes.searchProduct")}
         />
         <Segmented
-          label="Type de produit"
+          label={t("recipes.productKind")}
           value={kind}
           onChange={setKind}
           options={[
-            { value: "all", label: "Tous" },
-            { value: "ingredient", label: "Ingrédients" },
-            { value: "staple", label: "Articles" },
+            { value: "all", label: t("recipes.kindAll") },
+            { value: "ingredient", label: t("recipes.ingredients") },
+            { value: "staple", label: t("recipes.kindStaples") },
           ]}
         />
         <div className="grid grid-cols-2 gap-2">
           <Select
-            aria-label="Rayon"
+            aria-label={t("recipes.aisle")}
             value={aisle}
             onChange={(e) => setAisle(e.target.value as AisleFilter)}
           >
-            <option value="">Rayons</option>
+            <option value="">{t("recipes.aisles")}</option>
             {base.aisles.map((a) => (
               <option key={a._id} value={a._id}>
                 {a.emoji} {a.name}
               </option>
             ))}
             <option value="none">
-              {MISC_SECTION.emoji} {MISC_SECTION.name}
+              {MISC_SECTION.emoji} {t("recipes.miscAisle")}
             </option>
           </Select>
           <Select
-            aria-label="Enseigne"
+            aria-label={t("recipes.chain")}
             value={chain}
             onChange={(e) => setChain(e.target.value as Chain | "")}
           >
-            <option value="">Enseignes</option>
+            <option value="">{t("recipes.chains")}</option>
             {CHAINS.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -243,13 +269,13 @@ export function ProductsContent({
             selected={missing === "price"}
             onClick={() => toggleMissing("price")}
           >
-            Sans prix ({missingCount("price")})
+            {t("recipes.noPriceCount", { count: missingCount("price") })}
           </Chip>
           <Chip
             selected={missing === "photo"}
             onClick={() => toggleMissing("photo")}
           >
-            Sans photo ({missingCount("photo")})
+            {t("recipes.noPhotoCount", { count: missingCount("photo") })}
           </Chip>
         </div>
       </div>
@@ -257,12 +283,10 @@ export function ProductsContent({
       {shown.length === 0 ? (
         <EmptyState
           emoji="🔎"
-          title="Aucun produit ne correspond"
-          text={
-            filtered
-              ? "Change la recherche ou les filtres."
-              : "Ajoute un premier produit."
-          }
+          title={t("recipes.noProductMatch")}
+          text={t(
+            filtered ? "recipes.changeFilters" : "recipes.addFirstProduct",
+          )}
         />
       ) : renderRows ? (
         renderRows(shown, open)
@@ -311,13 +335,13 @@ export function ProductsContent({
       <ConfirmSheet
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title={`Supprimer « ${deleting?.name ?? ""} » ?`}
-        text={
+        title={t("recipes.deleteTitle", { name: deleting?.name ?? "" })}
+        text={t(
           deleting?.kind === "staple"
-            ? "L'article disparaît des articles habituels. La liste de courses de cette semaine le garde."
-            : "L'ingrédient disparaît du catalogue. Aucune recette ne l'utilise."
-        }
-        confirmLabel="Supprimer"
+            ? "recipes.deleteStapleText"
+            : "recipes.deleteIngredientText",
+        )}
+        confirmLabel={t("recipes.delete")}
         danger
         onConfirm={async () => {
           if (!deleting) return;
@@ -326,7 +350,7 @@ export function ProductsContent({
               await removeIngredient({ token, id: deleting.ingredient._id });
             else await removeStaple({ token, id: deleting.staple!._id });
             return true;
-          }, "Produit supprimé.");
+          }, t("recipes.productDeleted"));
           if (done) close();
         }}
       />
@@ -345,9 +369,10 @@ function ProductRow({
 }) {
   const source = p.ingredient ?? p.staple!;
   const chains = (source.onlyChains ?? []) as Chain[];
+  const { t, lang } = useT();
   const used = p.recipes.filter((r) => !r.archived).length;
-  const price = productPriceText(p);
-  const receipts = receiptPricesText(p);
+  const price = productPriceText(p, lang);
+  const receipts = receiptPricesText(p, lang);
 
   return (
     <button
@@ -385,26 +410,26 @@ function ProductRow({
         </span>
         {receipts && (
           <span className="block text-[13px] font-semibold text-herb">
-            Ticket{NBSP}: {receipts}
+            {t("recipes.receipt", { prices: receipts })}
           </span>
         )}
         <span className="mt-1 flex flex-wrap items-center gap-1.5">
           <span className="text-[13px] font-bold text-muted">
-            {aisle?.name ?? MISC_SECTION.name}
+            {aisle?.name ?? t("recipes.miscAisle")}
           </span>
           {p.kind === "ingredient" ? (
             <Badge tone={used ? "herb" : "neutral"}>
               {used
-                ? plural(used, "recette", "recettes")
-                : "Dans aucune recette"}
+                ? plural(used, t("recipes.recipeOne"), t("recipes.recipeMany"))
+                : t("recipes.inNoRecipe")}
             </Badge>
           ) : (
-            <Badge tone="sun">Hors recette</Badge>
+            <Badge tone="sun">{t("recipes.notInRecipe")}</Badge>
           )}
-          {p.ingredient?.pantry && <Badge>Souvent en stock</Badge>}
+          {p.ingredient?.pantry && <Badge>{t("recipes.oftenInStock")}</Badge>}
           {chains.length > 0 && (
             <span className="inline-flex items-center gap-1 text-[13px] font-bold text-muted">
-              Seulement chez
+              {t("recipes.onlyAt")}
               {chains.map((c) => (
                 <ChainMark key={c} chain={c} size={20} />
               ))}
@@ -428,6 +453,7 @@ function NewStapleSheet({
   const { token } = useSession();
   const run = useRun();
   const create = useMutation(api.staples.create);
+  const { t } = useT();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const save = async () => {
@@ -440,22 +466,22 @@ function NewStapleSheet({
     <Sheet
       open
       onClose={onClose}
-      title="Nouvel article hors recette"
+      title={t("recipes.newStapleTitle")}
       footer={
         <Button size="lg" onClick={save} disabled={busy || !name.trim()}>
-          Continuer
+          {t("recipes.continue")}
         </Button>
       }
     >
       <TextInput
-        label="Nom"
+        label={t("recipes.name")}
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Ex. Papier toilette"
+        placeholder={t("recipes.newStaplePlaceholder")}
         autoFocus
       />
       <p className="mt-2 text-[15px] text-muted">
-        Ensuite, tu choisis le rayon, le prix et la photo.
+        {t("recipes.newStapleHint")}
       </p>
     </Sheet>
   );

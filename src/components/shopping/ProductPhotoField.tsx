@@ -8,6 +8,7 @@ import { useToast } from "../../lib/toast";
 import { errorMessage } from "../../lib/format";
 import { PhotoTooHeavy, uploadPhoto } from "../../lib/image";
 import { Button } from "../ui";
+import { useT } from "../../i18n/useT";
 
 /** Photo of the exact product (brand, size) to recognise it on the shelf. */
 export function ProductPhotoField({
@@ -19,6 +20,7 @@ export function ProductPhotoField({
 }) {
   const { token } = useSession();
   const toast = useToast();
+  const { t, lang } = useT();
   const generateUploadUrl = useMutation(api.recipes.generateUploadUrl);
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -34,8 +36,8 @@ export function ProductPhotoField({
     } catch (e) {
       toast(
         e instanceof PhotoTooHeavy
-          ? "Cette photo est trop lourde, essaie une autre."
-          : errorMessage(e),
+          ? t("recipes.photoTooHeavy")
+          : errorMessage(e, lang),
         "error",
       );
     } finally {
@@ -46,7 +48,7 @@ export function ProductPhotoField({
   return (
     <div>
       <span className="mb-1 block text-[15px] font-bold">
-        Photo du produit (facultatif)
+        {t("recipes.productPhoto")}
       </span>
       <div className="flex items-center gap-3">
         {imageUrl ? (
@@ -71,7 +73,13 @@ export function ProductPhotoField({
             disabled={busy}
           >
             <Camera size={18} />{" "}
-            {busy ? "Envoi…" : imageUrl ? "Changer" : "Prendre ou choisir"}
+            {t(
+              busy
+                ? "recipes.sending"
+                : imageUrl
+                  ? "recipes.photoChange"
+                  : "recipes.takeOrPick",
+            )}
           </Button>
           {imageUrl && (
             <Button
@@ -80,13 +88,13 @@ export function ProductPhotoField({
               onClick={() => onChange(null)}
               disabled={busy}
             >
-              <Trash2 size={18} /> Retirer
+              <Trash2 size={18} /> {t("recipes.photoRemove")}
             </Button>
           )}
         </div>
       </div>
       <p className="mt-1 text-[13px] text-muted">
-        Pour savoir quelle marque ou quel format prendre en magasin.
+        {t("recipes.productPhotoHint")}
       </p>
       <input
         ref={input}

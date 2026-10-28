@@ -12,7 +12,14 @@ import {
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { formatNumber, NBSP, toBase, type Unit } from "../../convex/domain/quantities";
+import {
+  formatNumber,
+  toBase,
+  type Unit,
+} from "../../convex/domain/quantities";
+import type { Lang } from "../../convex/domain/lang";
+import { useT } from "../i18n/useT";
+import type { MessageKey } from "../i18n";
 import { TAGS } from "../../convex/domain/tags";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun } from "../lib/toast";
@@ -36,7 +43,12 @@ import {
 } from "../components/ui";
 import { pastelFor } from "../components/recipes/data";
 import { useIngredientMap, useRecipes, type RecipeRow } from "../lib/queries";
-import { compatibleUnits, parseAmount, unitChoiceLabel, UNITS } from "../lib/units";
+import {
+  compatibleUnits,
+  parseAmount,
+  unitChoiceLabel,
+  UNITS,
+} from "../lib/units";
 import { RecipeNotFound } from "../components/recipes/RecipeNotFound";
 import { IngredientPicker } from "../components/recipes/IngredientPicker";
 import { PhotoField } from "../components/recipes/PhotoField";
@@ -73,6 +85,11 @@ const EMOJIS = [
   "🥞",
   "🍚",
 ];
+
+type Translate = (
+  key: MessageKey,
+  vars?: Record<string, string | number>,
+) => string;
 
 const PREP_STEP = 5;
 const PREP_MAX = 300;
@@ -122,7 +139,11 @@ const emptyItem = (): ItemDraft => ({
 });
 const emptyStep = (): StepDraft => ({ key: newKey(), text: "" });
 
-function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
+function draftFrom(
+  recipe: RecipeRow | undefined,
+  base: Base,
+  lang: Lang,
+): Draft {
   if (!recipe) {
     return {
       name: "",
@@ -150,7 +171,7 @@ function draftFrom(recipe: RecipeRow | undefined, base: Base): Draft {
       key: newKey(),
       ingredientId: i.ingredientId,
       name: base.ingredients.find((x) => x._id === i.ingredientId)?.name ?? "",
-      qty: formatNumber(i.qtyPerPerson, 3),
+      qty: formatNumber(i.qtyPerPerson, 3, lang),
       unit: i.unit,
     })),
     steps: recipe.steps.length
@@ -171,20 +192,18 @@ function isBlank(item: ItemDraft) {
   return !item.ingredientId && !item.newIngredient && !item.qty.trim();
 }
 
-function validate(draft: Draft): string[] {
+function validate(draft: Draft, t: Translate): string[] {
   const errors: string[] = [];
-  if (!draft.name.trim()) errors.push("Donne un nom à la recette.");
-  if (!draft.emoji.trim()) errors.push("Choisis un emoji.");
+  if (!draft.name.trim()) errors.push(t("recipes.errName"));
+  if (!draft.emoji.trim()) errors.push(t("recipes.errEmoji"));
   draft.items.forEach((item, i) => {
     if (isBlank(item)) return;
+    const n = i + 1;
     if (item.newIngredient && !item.newIngredient.name.trim())
-      errors.push(`Ingrédient ${i + 1}${NBSP}: donne un nom au nouvel ingrédient.`);
+      errors.push(t("recipes.errNewIngredientName", { n }));
     else if (!item.ingredientId && !item.newIngredient)
-      errors.push(`Ingrédient ${i + 1}${NBSP}: choisis l'ingrédient.`);
-    if (!(qtyOf(item) > 0))
-      errors.push(
-        `Ingrédient ${i + 1}${NBSP}: indique une quantité plus grande que zéro.`,
-      );
+      errors.push(t("recipes.errIngredient", { n }));
+    if (!(qtyOf(item) > 0)) errors.push(t("recipes.errQty", { n }));
   });
   return errors;
 }
@@ -202,7 +221,8 @@ export function RecipeEditorPage() {
   const { id } = useParams();
   const base = useBase();
   const recipes = useRecipes();
-  const title = id ? "Modifier la recette" : "Nouvelle recette";
+  const { t, lang } = useT();
+  const title = t(id ? "recipes.editRecipe" : "recipes.newRecipe");
   const paths = useAppPaths();
   const back = (
     <BackButton fallback={id ? paths.recipeSaved(id) : paths.recipes} />
@@ -230,7 +250,7 @@ export function RecipeEditorPage() {
       back={back}
       base={base}
       recipeId={recipe?._id}
-      initial={draftFrom(recipe, base)}
+      initial={draftFrom(recipe, base, lang)}
     />
   );
 }
@@ -262,6 +282,7 @@ export function RecipeForm({
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
+  const { t, lang } = useT();
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -284,7 +305,7 @@ export function RecipeForm({
     });
 
   const save = async () => {
-    const found = validate(draft);
+    const found = validate(draft, t);
     setErrors(found);
     if (found.length) {
       requestAnimationFrame(() =>
@@ -310,14 +331,20 @@ export function RecipeForm({
     const filled = draft.items.filter((i) => !isBlank(i));
     const items = filled.flatMap((i) =>
       i.ingredientId
-        ? [{ ingredientId: i.ingredientId, qtyPerPerson: qtyOf(i), unit: i.unit }]
+        ? [
+            {
+              ingredientId: i.ingredientId,
+              qtyPerPerson: qtyOf(i),
+              unit: i.unit,
+            },
+          ]
         : [],
     );
     setSaving(true);
     if (recipeId) {
       const done = await run(
         () => update({ token, id: recipeId, ...payload, items }),
-        "Recette enregistrée",
+        t("recipes.savedRecipe"),
       );
       setSaving(false);
       if (done === undefined) return;
@@ -333,15 +360,22 @@ export function RecipeForm({
             ...payload,
             items: filled.map((i) =>
               i.ingredientId
-                ? { ingredientId: i.ingredientId, qtyPerPerson: qtyOf(i), unit: i.unit }
+                ? {
+                    ingredientId: i.ingredientId,
+                    qtyPerPerson: qtyOf(i),
+                    unit: i.unit,
+                  }
                 : {
-                    newIngredient: { ...i.newIngredient!, name: i.newIngredient!.name.trim() },
+                    newIngredient: {
+                      ...i.newIngredient!,
+                      name: i.newIngredient!.name.trim(),
+                    },
                     qtyPerPerson: qtyOf(i),
                     unit: i.unit,
                   },
             ),
           }),
-        "Recette ajoutée à nos recettes",
+        t("recipes.addedRecipe"),
       );
       setSaving(false);
       if (newId) navigate(paths.recipeSaved(newId), { replace: true });
@@ -350,7 +384,7 @@ export function RecipeForm({
 
   const saveButton = (
     <Button size="sm" onClick={save} disabled={saving}>
-      Enregistrer
+      {t("recipes.saveShort")}
     </Button>
   );
 
@@ -374,10 +408,10 @@ export function RecipeForm({
             </span>
             <div className="min-w-0 flex-1">
               <TextInput
-                label="Nom du plat"
+                label={t("recipes.dishName")}
                 value={draft.name}
                 onChange={(e) => set("name", e.target.value)}
-                placeholder="Ex. Gratin de courge"
+                placeholder={t("recipes.dishNamePlaceholder")}
                 className="text-lg font-extrabold"
               />
             </div>
@@ -395,7 +429,7 @@ export function RecipeForm({
                 <button
                   key={e}
                   type="button"
-                  aria-label={`Emoji ${e}`}
+                  aria-label={t("recipes.emojiOption", { emoji: e })}
                   aria-pressed={draft.emoji === e}
                   onClick={() => set("emoji", e)}
                   className={cx(
@@ -411,8 +445,8 @@ export function RecipeForm({
             </div>
             <div className="mt-3">
               <TextInput
-                aria-label="Autre emoji"
-                placeholder="Ou tape un autre emoji"
+                aria-label={t("recipes.otherEmoji")}
+                placeholder={t("recipes.otherEmojiPlaceholder")}
                 value={EMOJIS.includes(draft.emoji) ? "" : draft.emoji}
                 onChange={(e) => set("emoji", firstGrapheme(e.target.value))}
               />
@@ -430,17 +464,17 @@ export function RecipeForm({
             }
           />
 
-          <SectionTitle>Description</SectionTitle>
+          <SectionTitle>{t("recipes.description")}</SectionTitle>
           <textarea
-            aria-label="Description"
+            aria-label={t("recipes.description")}
             value={draft.description}
             onChange={(e) => set("description", e.target.value)}
             rows={2}
-            placeholder="En une phrase, ce qui donne envie"
+            placeholder={t("recipes.descriptionPlaceholder")}
             className="w-full rounded-2xl bg-paper px-4 py-3 ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
           />
 
-          <SectionTitle>Style</SectionTitle>
+          <SectionTitle>{t("recipes.style")}</SectionTitle>
           <div className="flex flex-wrap gap-2">
             {TAGS.map((tag) => {
               const on = draft.tags.includes(tag);
@@ -452,7 +486,7 @@ export function RecipeForm({
                     set(
                       "tags",
                       on
-                        ? draft.tags.filter((t) => t !== tag)
+                        ? draft.tags.filter((x) => x !== tag)
                         : [...draft.tags, tag],
                     )
                   }
@@ -463,11 +497,11 @@ export function RecipeForm({
             })}
           </div>
 
-          <SectionTitle>Temps et conservation</SectionTitle>
+          <SectionTitle>{t("recipes.timeAndKeeping")}</SectionTitle>
           <Card className="divide-y divide-line">
             <div className="flex items-center justify-between gap-3 p-4">
               <div>
-                <div className="font-extrabold">Préparation</div>
+                <div className="font-extrabold">{t("recipes.steps")}</div>
                 <div className="text-[15px] text-muted">
                   {minutes(draft.prepMinutes)}
                 </div>
@@ -475,10 +509,10 @@ export function RecipeForm({
               <div
                 className="flex items-center gap-1"
                 role="group"
-                aria-label="Temps de préparation"
+                aria-label={t("recipes.prepTime")}
               >
                 <IconButton
-                  label="Cinq minutes de moins"
+                  label={t("recipes.fiveLess")}
                   disabled={draft.prepMinutes <= PREP_STEP}
                   onClick={() =>
                     set(
@@ -494,7 +528,7 @@ export function RecipeForm({
                   {draft.prepMinutes}
                 </span>
                 <IconButton
-                  label="Cinq minutes de plus"
+                  label={t("recipes.fiveMore")}
                   disabled={draft.prepMinutes >= PREP_MAX}
                   onClick={() =>
                     set(
@@ -510,15 +544,20 @@ export function RecipeForm({
             </div>
             <div className="flex items-center justify-between gap-3 p-4">
               <div>
-                <div className="font-extrabold">Au frigo</div>
+                <div className="font-extrabold">{t("recipes.inFridge")}</div>
                 <div className="text-[15px] text-muted">
                   {draft.fridgeDays === 0
-                    ? "À manger tout de suite"
-                    : `Se garde ${draft.fridgeDays} ${draft.fridgeDays > 1 ? "jours" : "jour"}`}
+                    ? t("recipes.eatRightAway")
+                    : t(
+                        draft.fridgeDays > 1
+                          ? "recipes.keepsForMany"
+                          : "recipes.keepsForOne",
+                        { count: draft.fridgeDays },
+                      )}
                 </div>
               </div>
               <Stepper
-                label="Jours au frigo"
+                label={t("recipes.fridgeDays")}
                 value={draft.fridgeDays}
                 onChange={(n) => set("fridgeDays", n)}
                 min={0}
@@ -527,16 +566,18 @@ export function RecipeForm({
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-line p-4">
               <div>
-                <div className="font-extrabold">D'habitude pour</div>
+                <div className="font-extrabold">{t("recipes.usuallyFor")}</div>
                 <div className="text-[15px] text-muted">
-                  {draft.defaultPersons > 1
-                    ? `${draft.defaultPersons}\u00a0portions`
-                    : "1\u00a0portion"}
-                  , proposé en planifiant
+                  {t(
+                    draft.defaultPersons > 1
+                      ? "recipes.usualPortionsMany"
+                      : "recipes.usualPortionsOne",
+                    { count: draft.defaultPersons },
+                  )}
                 </div>
               </div>
               <Stepper
-                label="Portions d'habitude"
+                label={t("recipes.usualPortions")}
                 value={draft.defaultPersons}
                 onChange={(n) => set("defaultPersons", n)}
                 min={1}
@@ -547,17 +588,14 @@ export function RecipeForm({
         </div>
 
         <div>
-          <SectionTitle>Ingrédients</SectionTitle>
+          <SectionTitle>{t("recipes.ingredients")}</SectionTitle>
           <div className="mb-3 flex items-start gap-2 rounded-2xl bg-sun-soft p-3 text-[15px] font-bold">
             <Info
               size={20}
               className="mt-0.5 shrink-0 text-[#8a6200]"
               aria-hidden
             />
-            <span>
-              Quantités pour 1 portion, l'app multiplie selon le nombre de
-              portions au menu.
-            </span>
+            <span>{t("recipes.qtyHint")}</span>
           </div>
           <div className="space-y-3">
             {draft.items.map((item, index) => {
@@ -591,13 +629,13 @@ export function RecipeForm({
                       >
                         {ing?.name ??
                           (isNew
-                            ? "Choisir dans nos produits"
-                            : item.name || "Choisir un ingrédient")}
+                            ? t("recipes.pickFromProducts")
+                            : item.name || t("recipes.pickIngredient"))}
                       </span>
                       <ChevronDown size={20} className="shrink-0 text-muted" />
                     </button>
                     <IconButton
-                      label={`Retirer l'ingrédient ${index + 1}`}
+                      label={t("recipes.removeIngredient", { n: index + 1 })}
                       onClick={() =>
                         set(
                           "items",
@@ -611,20 +649,28 @@ export function RecipeForm({
                   </div>
                   {(item.sourceText || item.check) && (
                     <div className="flex flex-wrap items-center gap-2 px-1 text-[15px] text-muted">
-                      {item.check && <Badge tone="sun">À vérifier</Badge>}
-                      {item.sourceText && <span>« {item.sourceText} »</span>}
+                      {item.check && (
+                        <Badge tone="sun">{t("recipes.toCheck")}</Badge>
+                      )}
+                      {item.sourceText && (
+                        <span>
+                          {t("recipes.quoted", { text: item.sourceText })}
+                        </span>
+                      )}
                     </div>
                   )}
                   {isNew && item.newIngredient && (
                     <div className="space-y-2 rounded-2xl bg-carrot-soft/60 p-3">
                       <div className="flex items-center gap-2">
-                        <Badge tone="carrot">Nouveau</Badge>
+                        <Badge tone="carrot">{t("recipes.newBadge")}</Badge>
                         <span className="text-[15px] font-bold">
-                          Créé dans nos produits à l'enregistrement
+                          {t("recipes.createdOnSave")}
                         </span>
                       </div>
                       <TextInput
-                        aria-label={`Nom du nouvel ingrédient ${index + 1}`}
+                        aria-label={t("recipes.newIngredientName", {
+                          n: index + 1,
+                        })}
                         value={item.newIngredient.name}
                         onChange={(e) =>
                           setItem(item.key, {
@@ -637,7 +683,9 @@ export function RecipeForm({
                         className="font-extrabold"
                       />
                       <Select
-                        aria-label={`Rayon du nouvel ingrédient ${index + 1}`}
+                        aria-label={t("recipes.newIngredientAisle", {
+                          n: index + 1,
+                        })}
                         value={item.newIngredient.aisleId}
                         onChange={(e) =>
                           setItem(item.key, {
@@ -658,18 +706,18 @@ export function RecipeForm({
                   )}
                   <div className="flex gap-2">
                     <input
-                      aria-label={`Quantité pour 1 portion, ingrédient ${index + 1}`}
+                      aria-label={t("recipes.qtyLabel", { n: index + 1 })}
                       inputMode="decimal"
                       value={item.qty}
                       onChange={(e) =>
                         setItem(item.key, { qty: e.target.value })
                       }
-                      placeholder="Quantité"
+                      placeholder={t("recipes.qtyPlaceholder")}
                       className="min-h-12 w-32 rounded-2xl bg-paper px-4 font-bold ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
                     />
                     {units.length > 1 ? (
                       <Select
-                        aria-label={`Unité, ingrédient ${index + 1}`}
+                        aria-label={t("recipes.unitLabel", { n: index + 1 })}
                         value={item.unit}
                         onChange={(e) =>
                           setItem(item.key, {
@@ -686,13 +734,13 @@ export function RecipeForm({
                       >
                         {units.map((u) => (
                           <option key={u} value={u}>
-                            {unitChoiceLabel(u)}
+                            {unitChoiceLabel(u, lang)}
                           </option>
                         ))}
                       </Select>
                     ) : (
                       <span className="flex min-h-12 flex-1 items-center px-2 font-bold text-muted">
-                        {unitChoiceLabel(item.unit)}
+                        {unitChoiceLabel(item.unit, lang)}
                       </span>
                     )}
                   </div>
@@ -705,11 +753,11 @@ export function RecipeForm({
               onClick={() => set("items", [...draft.items, emptyItem()])}
             >
               <Plus size={20} />
-              Ajouter un ingrédient
+              {t("recipes.addIngredient")}
             </Button>
           </div>
 
-          <SectionTitle>Préparation</SectionTitle>
+          <SectionTitle>{t("recipes.steps")}</SectionTitle>
           <div className="space-y-3">
             {draft.steps.map((step, index) => (
               <Card key={step.key} className="p-3">
@@ -718,24 +766,24 @@ export function RecipeForm({
                     {index + 1}
                   </span>
                   <span className="flex-1 pl-1 font-extrabold">
-                    Étape {index + 1}
+                    {t("recipes.stepN", { n: index + 1 })}
                   </span>
                   <IconButton
-                    label={`Monter l'étape ${index + 1}`}
+                    label={t("recipes.stepUp", { n: index + 1 })}
                     disabled={index === 0}
                     onClick={() => moveStep(index, -1)}
                   >
                     <ArrowUp size={20} />
                   </IconButton>
                   <IconButton
-                    label={`Descendre l'étape ${index + 1}`}
+                    label={t("recipes.stepDown", { n: index + 1 })}
                     disabled={index === draft.steps.length - 1}
                     onClick={() => moveStep(index, 1)}
                   >
                     <ArrowDown size={20} />
                   </IconButton>
                   <IconButton
-                    label={`Supprimer l'étape ${index + 1}`}
+                    label={t("recipes.stepDelete", { n: index + 1 })}
                     onClick={() =>
                       set(
                         "steps",
@@ -748,11 +796,11 @@ export function RecipeForm({
                   </IconButton>
                 </div>
                 <textarea
-                  aria-label={`Texte de l'étape ${index + 1}`}
+                  aria-label={t("recipes.stepText", { n: index + 1 })}
                   value={step.text}
                   onChange={(e) => setStep(step.key, e.target.value)}
                   rows={3}
-                  placeholder="Ce qu'il faut faire"
+                  placeholder={t("recipes.stepPlaceholder")}
                   className="w-full rounded-2xl bg-cream px-4 py-3 ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
                 />
               </Card>
@@ -763,7 +811,7 @@ export function RecipeForm({
               onClick={() => set("steps", [...draft.steps, emptyStep()])}
             >
               <Plus size={20} />
-              Ajouter une étape
+              {t("recipes.addStep")}
             </Button>
           </div>
 
@@ -780,7 +828,7 @@ export function RecipeForm({
               </div>
             )}
             <Button size="lg" onClick={save} disabled={saving}>
-              {saving ? "Enregistrement…" : "Enregistrer la recette"}
+              {t(saving ? "recipes.saving" : "recipes.saveRecipe")}
             </Button>
           </div>
         </div>
