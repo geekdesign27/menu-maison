@@ -73,7 +73,7 @@ export const FONTS: {
 ];
 
 const LOOK_KEY = "mm.look";
-const DEFAULT_LOOK: Look = { theme: "carotte", font: "nunito" };
+export const DEFAULT_LOOK: Look = { theme: "carotte", font: "nunito" };
 
 /**
  * Tab icon, home-screen icon and install manifest of the theme. Read when the

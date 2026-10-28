@@ -30,6 +30,8 @@ jobs:
       - run: npx convex deploy --cmd 'npx vite build' --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          # « En parler avec P-A » on the landing page: hidden while the variable is empty
+          VITE_CONTACT_URL: ${{ vars.VITE_CONTACT_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

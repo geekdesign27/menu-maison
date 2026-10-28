@@ -26,6 +26,26 @@ Sans clé, l'écran de scan l'indique clairement. Les tokens de chaque lecture s
 Chaque nouvelle famille reçoit le catalogue de départ (`seedFamily`) : rayons, ingrédients
 avec prix estimés, recettes à découvrir, 5 magasins autour de Fribourg, articles habituels.
 
+## Page de présentation
+
+`menumaison.ch/` montre la page de présentation aux visiteurs, et la Semaine aux téléphones
+déjà connectés. Le code est dans `src/landing/`, chargé à part de l'app (pas de Convex).
+
+- `#/connexion` : écran de connexion (bouton « Se connecter »).
+- `#/decouvrir` : la page de présentation, même connecté.
+- `#/sans-invitation` : la page avec le message « pas encore dans le carnet d'invitations »
+  (lien « Je n'ai pas de compte » de l'écran de connexion).
+- Les liens `#/f/<famille>` et `#/activer/<lien>` ouvrent l'app comme avant.
+
+Les démos (magasins, portions, coût des lasagnes) tournent sur `buildShoppingList` et le
+catalogue de départ (`convex/seedData.ts`) ; `src/landing/demo.test.ts` vérifie les chiffres
+cités. Les captures viennent de `docs/guide/captures` (famille fictive Martin), converties en
+WebP dans `public/landing/`.
+
+Bouton « En parler avec P-A » : variable GitHub (Settings, Secrets and variables, Actions,
+onglet Variables) `VITE_CONTACT_URL`, au format `mailto:…`, `tel:…` ou `https://…`. Sans elle,
+le bouton est masqué et la page invite à passer par la personne qui a fait découvrir l'app.
+
 ## Tests
 
 - `npm test` : Vitest (logique métier `convex/domain`, intégrité des données de départ).
