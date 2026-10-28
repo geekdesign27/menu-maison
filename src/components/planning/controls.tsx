@@ -1,34 +1,26 @@
 import type { ReactNode } from "react";
 import { Coffee, Moon, Sun } from "lucide-react";
 import { cx } from "../ui";
-import type { Slot } from "./data";
+import { useT } from "../../i18n/useT";
+import { SLOTS, type Slot } from "./data";
 
-export const SLOT_OPTIONS: { value: Slot; label: ReactNode }[] = [
-  {
-    value: "matin",
-    label: (
-      <span className="inline-flex items-center gap-1.5">
-        <Coffee size={18} aria-hidden /> Matin
-      </span>
-    ),
-  },
-  {
-    value: "midi",
-    label: (
-      <span className="inline-flex items-center gap-1.5">
-        <Sun size={18} aria-hidden /> Midi
-      </span>
-    ),
-  },
-  {
-    value: "soir",
-    label: (
-      <span className="inline-flex items-center gap-1.5">
-        <Moon size={18} aria-hidden /> Soir
-      </span>
-    ),
-  },
-];
+const SLOT_ICONS = { matin: Coffee, midi: Sun, soir: Moon } as const;
+
+/** Breakfast, lunch, dinner choices with their icon, in the member's language. */
+export function useSlotOptions(): { value: Slot; label: ReactNode }[] {
+  const { t } = useT();
+  return SLOTS.map((value) => {
+    const Icon = SLOT_ICONS[value];
+    return {
+      value,
+      label: (
+        <span className="inline-flex items-center gap-1.5">
+          <Icon size={18} aria-hidden /> {t(`slot.${value}`)}
+        </span>
+      ),
+    };
+  });
+}
 
 /** Small uppercase label above a form control. */
 export function Field({

@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { daysBetween, zurichToday } from "../../convex/domain/dates";
+import type { Lang } from "../../convex/domain/lang";
+import { translate } from "../i18n";
+import { useT } from "../i18n/useT";
 import { useBase, useMe, useSession } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { useRun } from "../lib/toast";
@@ -32,17 +35,20 @@ import {
 
 type Wish = FunctionReturnType<typeof api.wishes.list>[number];
 
-function relativeDay(createdAt: number, today: string) {
+function relativeDay(createdAt: number, today: string, lang: Lang) {
   const n = daysBetween(zurichToday(new Date(createdAt)), today);
-  if (n <= 0) return "aujourd'hui";
-  if (n === 1) return "hier";
-  if (n < 7) return `il y a ${n} jours`;
+  if (n <= 0) return translate(lang, "week.relToday");
+  if (n === 1) return translate(lang, "week.relYesterday");
+  if (n < 7) return translate(lang, "week.relDaysAgo", { n });
   const weeks = Math.round(n / 7);
-  return weeks === 1 ? "il y a une semaine" : `il y a ${weeks} semaines`;
+  return weeks === 1
+    ? translate(lang, "week.relWeekAgo")
+    : translate(lang, "week.relWeeksAgo", { n: weeks });
 }
 
 export function WishesPage() {
   const { token } = useSession();
+  const { t } = useT();
   const wishes = useQuery(api.wishes.list, token ? { token } : "skip");
   const [showDone, setShowDone] = useState(false);
   const open = wishes?.filter((w) => !w.done) ?? [];
@@ -50,22 +56,22 @@ export function WishesPage() {
 
   return (
     <Page
-      title="Envies"
-      subtitle="Ce qu'on a envie de manger bientôt"
+      title={t("week.wishes")}
+      subtitle={t("week.wishesSubtitle")}
       back={<BackButton fallback="/plus" />}
     >
       <AddWish />
       {wishes === undefined ? (
-        <Loading label="Chargement des envies" />
+        <Loading label={t("week.loadingWishes")} />
       ) : (
         <>
-          <SectionTitle>À planifier</SectionTitle>
+          <SectionTitle>{t("week.toPlan")}</SectionTitle>
           {open.length === 0 ? (
             <Card>
               <EmptyState
                 emoji="💭"
-                title="Aucune envie pour l'instant"
-                text="Un plat qui fait envie ? Note-le ici, on y pensera en planifiant la semaine."
+                title={t("week.noWishTitle")}
+                text={t("week.noWishText")}
               />
             </Card>
           ) : (
@@ -86,7 +92,7 @@ export function WishesPage() {
                 onClick={() => setShowDone((s) => !s)}
                 className="flex min-h-11 w-full items-center justify-between gap-2 text-[13px] font-extrabold tracking-wider text-muted uppercase"
               >
-                Déjà mangées ({done.length})
+                {t("week.alreadyEaten", { count: done.length })}
                 <ChevronDown
                   size={20}
                   className={cx("transition", showDone && "rotate-180")}
@@ -111,6 +117,7 @@ export function WishesPage() {
 
 function AddWish() {
   const { token, memberId } = useSession();
+  const { t } = useT();
   const me = useMe();
   const run = useRun();
   const add = useMutation(api.wishes.add);
@@ -121,7 +128,7 @@ function AddWish() {
     if (!memberId) return;
     const id = await run(
       () => add({ token, memberId, ...wish }),
-      "Envie notée",
+      t("week.wishNoted"),
     );
     if (id) setText("");
   };
@@ -131,7 +138,7 @@ function AddWish() {
       <div className="mb-3 flex items-center gap-2">
         {me && <Avatar member={me} size={32} />}
         <span className="font-extrabold">
-          {me ? `${me.name} a envie de…` : "J'ai envie de…"}
+          {me ? t("week.memberWants", { name: me.name }) : t("week.iWant")}
         </span>
       </div>
       <form
@@ -144,14 +151,14 @@ function AddWish() {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Des crêpes, un curry…"
-          aria-label="Ton envie"
+          placeholder={t("week.wishPlaceholder")}
+          aria-label={t("week.yourWish")}
           maxLength={80}
           className="min-h-12 min-w-0 flex-1 rounded-2xl bg-cream px-4 ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
         />
         <IconButton
           type="submit"
-          label="Noter l'envie"
+          label={t("week.noteWish")}
           disabled={!text.trim() || !memberId}
           className="size-12 bg-carrot text-white active:bg-carrot-dark"
         >
@@ -165,12 +172,12 @@ function AddWish() {
         onClick={() => setPicking(true)}
       >
         <BookHeart size={20} />
-        Choisir une recette
+        {t("week.chooseRecipe")}
       </Button>
       <RecipePicker
         open={picking}
         onClose={() => setPicking(false)}
-        title="Une recette qui fait envie"
+        title={t("week.recipeWanted")}
         onPick={(choice) => {
           setPicking(false);
           if ("recipeId" in choice) void save({ recipeId: choice.recipeId });
@@ -182,6 +189,7 @@ function AddWish() {
 
 function WishRow({ wish }: { wish: Wish }) {
   const { token } = useSession();
+  const { t, lang } = useT();
   const base = useBase();
   const { today } = useWeek();
   const navigate = useNavigate();
@@ -201,14 +209,15 @@ function WishRow({ wish }: { wish: Wish }) {
               : wish.text}
           </div>
           <div className="text-[15px] text-muted">
-            {member?.name ?? "Quelqu'un"}, {relativeDay(wish.createdAt, today)}
+            {member?.name ?? t("week.someone")},{" "}
+            {relativeDay(wish.createdAt, today, lang)}
           </div>
         </div>
         <IconButton
-          label="Supprimer l'envie"
+          label={t("week.deleteWish")}
           className="text-muted"
           onClick={() =>
-            run(() => remove({ token, id: wish._id }), "Envie supprimée")
+            run(() => remove({ token, id: wish._id }), t("week.wishDeleted"))
           }
         >
           <Trash size={20} />
@@ -225,7 +234,7 @@ function WishRow({ wish }: { wish: Wish }) {
             }
           >
             <Undo2 size={18} />
-            Remettre en envie
+            {t("week.wishAgain")}
           </Button>
         ) : (
           <>
@@ -236,7 +245,7 @@ function WishRow({ wish }: { wish: Wish }) {
                 onClick={() => navigate(`/?plan=${wish.recipe!._id}`)}
               >
                 <CalendarPlus size={18} />
-                Planifier
+                {t("week.plan")}
               </Button>
             )}
             <Button
@@ -246,12 +255,12 @@ function WishRow({ wish }: { wish: Wish }) {
               onClick={() =>
                 run(
                   () => setDone({ token, id: wish._id, done: true }),
-                  "Envie cochée",
+                  t("week.wishTicked"),
                 )
               }
             >
               <Check size={18} />
-              Fait
+              {t("week.done")}
             </Button>
           </>
         )}

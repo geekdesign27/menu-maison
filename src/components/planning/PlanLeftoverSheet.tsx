@@ -3,13 +3,14 @@ import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { addDays, formatDayLong, weekDays } from "../../../convex/domain/dates";
+import { useT } from "../../i18n/useT";
 import { useSession } from "../../lib/session";
 import { useWeek } from "../../lib/week";
 import { useRun } from "../../lib/toast";
 import { plural } from "../../lib/format";
 import { Button, Segmented, Sheet, Stepper } from "../ui";
 import { DayGrid } from "./DayPicker";
-import { Field, SLOT_OPTIONS } from "./controls";
+import { Field, useSlotOptions } from "./controls";
 import { capitalize, type Slot } from "./data";
 
 /** A dish whose spare portions can be put on another meal. */
@@ -32,8 +33,9 @@ export function PlanLeftoverSheet({
   source: LeftoverSource | null;
   onClose: () => void;
 }) {
+  const { t } = useT();
   return (
-    <Sheet open={!!source} onClose={onClose} title="Planifier les restes">
+    <Sheet open={!!source} onClose={onClose} title={t("week.planLeftovers")}>
       {source && (
         <PlanLeftoverForm key={source._id} source={source} onClose={onClose} />
       )}
@@ -50,6 +52,8 @@ function PlanLeftoverForm({
 }) {
   const { token } = useSession();
   const { today } = useWeek();
+  const { t, lang } = useT();
+  const slotOptions = useSlotOptions();
   const run = useRun();
   const planLeftover = useMutation(api.meals.planLeftover);
   // Leftovers exist from the cooking day on; offer the 7 days from then (never before today)
@@ -73,32 +77,38 @@ function PlanLeftoverForm({
             {source.recipe?.name ?? source.title}
           </div>
           <div className="text-[15px] text-muted">
-            {plural(source.leftoverPortions, "portion", "portions")} à placer,
-            bon jusqu'au {formatDayLong(until)}
+            {t("week.toPlace", {
+              portions: plural(
+                source.leftoverPortions,
+                t("week.portionOne"),
+                t("week.portionMany"),
+              ),
+              date: formatDayLong(until, lang),
+            })}
           </div>
         </div>
       </div>
-      <Field label="Jour">
+      <Field label={t("week.day")}>
         <DayGrid days={weekDays(first)} value={date} onChange={setDate} />
         <p className="mt-2 text-[15px] font-semibold text-muted">
-          {capitalize(formatDayLong(date))}
+          {capitalize(formatDayLong(date, lang))}
           {date > until && (
-            <span className="text-berry"> · après la date limite</span>
+            <span className="text-berry">{t("week.afterLimit")}</span>
           )}
         </p>
       </Field>
-      <Field label="Repas">
+      <Field label={t("week.meal")}>
         <Segmented
-          label="Repas"
+          label={t("week.meal")}
           value={slot}
-          options={SLOT_OPTIONS}
+          options={slotOptions}
           onChange={setSlot}
         />
       </Field>
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
-        <span className="font-extrabold">Portions</span>
+        <span className="font-extrabold">{t("week.portions")}</span>
         <Stepper
-          label="Portions"
+          label={t("week.portions")}
           value={portions}
           max={source.leftoverPortions}
           onChange={setPortions}
@@ -119,13 +129,13 @@ function PlanLeftoverForm({
                 slot,
                 persons: portions,
               }),
-            "Restes ajoutés au menu",
+            t("week.leftoversAdded"),
           );
           setSaving(false);
           if (id) onClose();
         }}
       >
-        Ajouter au menu
+        {t("week.addToMenu")}
       </Button>
     </div>
   );

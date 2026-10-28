@@ -3,6 +3,8 @@ import { useQuery } from "convex/react";
 import { Clock, PencilLine } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { forgottenRecipes } from "../../convex/domain/stats";
+import type { MessageKey } from "../i18n";
+import { useT } from "../i18n/useT";
 import { useBase, useSession, type Member } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { formatChf, minutes, plural } from "../lib/format";
@@ -30,13 +32,13 @@ import {
 
 type Filter = "saved" | "all" | "wishes" | "forgotten" | "free";
 
-const FREE_SUGGESTIONS = [
-  "Pizza",
-  "Restaurant",
-  "Chez mamie",
-  "Pique-nique",
-  "Plat du congélateur",
-  "Chacun pour soi",
+const FREE_SUGGESTIONS: MessageKey[] = [
+  "week.freePizza",
+  "week.freeRestaurant",
+  "week.freeGranny",
+  "week.freePicnic",
+  "week.freeFreezer",
+  "week.freeEachOwn",
 ];
 
 /**
@@ -50,7 +52,7 @@ export function RecipePicker({
   date,
   allowFreeText = false,
   showLeftovers = false,
-  title = "Choisir un plat",
+  title,
 }: {
   open: boolean;
   onClose: () => void;
@@ -59,12 +61,19 @@ export function RecipePicker({
   allowFreeText?: boolean;
   /** With `date`: offer spare portions still good that day, before the recipes. */
   showLeftovers?: boolean;
+  /** Defaults to « Choisir un plat ». */
   title?: string;
 }) {
+  const { t } = useT();
   return (
-    <Sheet open={open} onClose={onClose} title={title}>
+    <Sheet open={open} onClose={onClose} title={title ?? t("week.chooseDish")}>
       {open && (
-        <PickerBody onPick={onPick} date={date} allowFreeText={allowFreeText} showLeftovers={showLeftovers} />
+        <PickerBody
+          onPick={onPick}
+          date={date}
+          allowFreeText={allowFreeText}
+          showLeftovers={showLeftovers}
+        />
       )}
     </Sheet>
   );
@@ -82,7 +91,11 @@ function PickerBody({
   showLeftovers: boolean;
 }) {
   const { token } = useSession();
-  const leftovers = useQuery(api.meals.leftoversFor, token && date && showLeftovers ? { token, date } : "skip");
+  const { t, lang } = useT();
+  const leftovers = useQuery(
+    api.meals.leftoversFor,
+    token && date && showLeftovers ? { token, date } : "skip",
+  );
   const { today } = useWeek();
   const base = useBase();
   const pricing = usePricing();
@@ -101,9 +114,9 @@ function PickerBody({
   const tags = useMemo(
     () =>
       [...new Set((recipes ?? []).flatMap((r) => r.tags))].sort((a, b) =>
-        a.localeCompare(b, "fr"),
+        a.localeCompare(b, lang),
       ),
-    [recipes],
+    [recipes, lang],
   );
 
   const rows = useMemo(() => {
@@ -136,12 +149,15 @@ function PickerBody({
   }, [recipes, wishes, overview, filter, tag, search, today]);
 
   const filters: { value: Filter; label: string }[] = [
-    { value: "saved", label: "❤️ Nos recettes" },
-    { value: "all", label: "Tout" },
-    { value: "wishes", label: "💭 Envies" },
-    { value: "forgotten", label: "🕰️ Oubliées" },
+    { value: "saved", label: t("week.filterSaved") },
+    { value: "all", label: t("week.filterAll") },
+    { value: "wishes", label: t("week.filterWishes") },
+    { value: "forgotten", label: t("week.filterForgotten") },
   ];
-  if (allowFreeText) filters.push({ value: "free", label: "✏️ Texte libre" });
+  if (allowFreeText)
+    filters.push({ value: "free", label: t("week.filterFree") });
+
+  const textOf = (key: MessageKey | undefined) => (key ? t(key) : undefined);
 
   const pickFree = (text: string) => {
     if (text.trim()) onPick({ title: text.trim() });
@@ -149,7 +165,10 @@ function PickerBody({
 
   return (
     <div className="space-y-3">
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1" data-tour="picker-filters">
+      <div
+        className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+        data-tour="picker-filters"
+      >
         {filters.map((f) => (
           <Chip
             key={f.value}
@@ -170,23 +189,23 @@ function PickerBody({
           }}
         >
           <TextInput
-            label="Ce qu'on mange"
+            label={t("week.whatWeEat")}
             value={freeTitle}
             onChange={(e) => setFreeTitle(e.target.value)}
-            placeholder="Pizza, restaurant, chez mamie…"
+            placeholder={t("week.freePlaceholder")}
             maxLength={60}
             autoFocus
           />
           <div className="flex flex-wrap gap-2">
-            {FREE_SUGGESTIONS.map((s) => (
-              <Chip key={s} onClick={() => pickFree(s)}>
-                {s}
+            {FREE_SUGGESTIONS.map((key) => (
+              <Chip key={key} onClick={() => pickFree(t(key))}>
+                {t(key)}
               </Chip>
             ))}
           </div>
           <Button type="submit" size="lg" disabled={!freeTitle.trim()}>
             <PencilLine size={20} />
-            Utiliser ce titre
+            {t("week.useTitle")}
           </Button>
         </form>
       ) : (
@@ -194,33 +213,41 @@ function PickerBody({
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Chercher une recette"
+            placeholder={t("week.searchRecipe")}
           />
           {tags.length > 0 && (
             <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-              {tags.map((t) => (
+              {tags.map((tg) => (
                 <button
-                  key={t}
+                  key={tg}
                   type="button"
-                  aria-pressed={tag === t}
-                  onClick={() => setTag(tag === t ? null : t)}
+                  aria-pressed={tag === tg}
+                  onClick={() => setTag(tag === tg ? null : tg)}
                   className={
-                    tag === t
+                    tag === tg
                       ? "min-h-10 shrink-0 rounded-full bg-herb px-3 text-[15px] font-bold text-white"
                       : "min-h-10 shrink-0 rounded-full bg-herb-soft px-3 text-[15px] font-bold text-herb"
                   }
                 >
-                  #{t}
+                  #{tg}
                 </button>
               ))}
             </div>
           )}
           {leftovers && leftovers.length > 0 && !tag && (
             <section>
-              <h3 className="mb-2 text-[13px] font-extrabold tracking-wider text-herb uppercase">♻️ Restes à finir</h3>
+              <h3 className="mb-2 text-[13px] font-extrabold tracking-wider text-herb uppercase">
+                {t("week.leftoversToFinish")}
+              </h3>
               <ul className="space-y-2">
                 {leftovers
-                  .filter((m) => !search || searchKey(m.recipe?.name ?? m.title ?? "").includes(searchKey(search)))
+                  .filter(
+                    (m) =>
+                      !search ||
+                      searchKey(m.recipe?.name ?? m.title ?? "").includes(
+                        searchKey(search),
+                      ),
+                  )
                   .map((m) => (
                     <li key={m._id}>
                       <button
@@ -229,37 +256,55 @@ function PickerBody({
                           onPick({
                             leftoverOf: m._id,
                             available: m.leftoverPortions,
-                            name: m.recipe?.name ?? m.title ?? "Plat",
+                            name: m.recipe?.name ?? m.title ?? t("week.dish"),
                             emoji: m.recipe?.emoji ?? "🍽️",
                             until: m.until,
                           })
                         }
                         className="flex w-full items-center gap-3 rounded-[var(--radius-card)] bg-herb-soft p-3 text-left ring-1 ring-herb/30 transition active:scale-[0.99]"
                       >
-                        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-paper text-3xl" aria-hidden>
+                        <span
+                          className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-paper text-3xl"
+                          aria-hidden
+                        >
                           {m.recipe?.emoji ?? "🍽️"}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[17px] font-black">{m.recipe?.name ?? m.title}</span>
-                          <span className="block text-[15px] font-semibold text-herb">
-                            {plural(m.leftoverPortions, "portion", "portions")}, bon jusqu'au {formatDayShort(m.until)}
+                          <span className="block truncate text-[17px] font-black">
+                            {m.recipe?.name ?? m.title}
                           </span>
-                          <span className="block text-[13px] text-muted">Cuisiné le {formatDayShort(m.cookedOn)}</span>
+                          <span className="block text-[15px] font-semibold text-herb">
+                            {t("week.goodUntil", {
+                              portions: plural(
+                                m.leftoverPortions,
+                                t("week.portionOne"),
+                                t("week.portionMany"),
+                              ),
+                              date: formatDayShort(m.until, lang),
+                            })}
+                          </span>
+                          <span className="block text-[13px] text-muted">
+                            {t("week.cookedOnShort", {
+                              date: formatDayShort(m.cookedOn, lang),
+                            })}
+                          </span>
                         </span>
                       </button>
                     </li>
                   ))}
               </ul>
-              <h3 className="mt-4 mb-2 text-[13px] font-extrabold tracking-wider text-muted uppercase">Recettes</h3>
+              <h3 className="mt-4 mb-2 text-[13px] font-extrabold tracking-wider text-muted uppercase">
+                {t("nav.recipes")}
+              </h3>
             </section>
           )}
           {rows === undefined ? (
-            <Loading label="Chargement des recettes" />
+            <Loading label={t("week.loadingRecipes")} />
           ) : rows.length === 0 ? (
             <EmptyState
               emoji={filter === "forgotten" ? "🎉" : "🔍"}
-              title={emptyTitle(filter, !!search || !!tag)}
-              text={emptyText(filter)}
+              title={t(emptyTitle(filter, !!search || !!tag))}
+              text={textOf(emptyText(filter))}
             />
           ) : (
             <ul className="space-y-2">
@@ -271,7 +316,13 @@ function PickerBody({
                     perPerson={pricing.cost(r, 1).total}
                     warning={
                       date
-                        ? repeatWarning(overview?.meals, r._id, date, today)
+                        ? repeatWarning(
+                            overview?.meals,
+                            r._id,
+                            date,
+                            today,
+                            lang,
+                          )
                         : null
                     }
                     onPick={() => onPick({ recipeId: r._id })}
@@ -286,19 +337,17 @@ function PickerBody({
   );
 }
 
-function emptyTitle(filter: Filter, narrowed: boolean) {
-  if (narrowed) return "Aucune recette ne correspond";
-  if (filter === "saved") return "Pas encore de recettes à vous";
-  if (filter === "wishes") return "Aucune envie avec recette";
-  if (filter === "forgotten") return "Rien d'oublié";
-  return "Aucune recette";
+function emptyTitle(filter: Filter, narrowed: boolean): MessageKey {
+  if (narrowed) return "week.emptyNarrowed";
+  if (filter === "saved") return "week.emptySaved";
+  if (filter === "wishes") return "week.emptyWishes";
+  if (filter === "forgotten") return "week.emptyForgotten";
+  return "week.emptyAll";
 }
 
-function emptyText(filter: Filter) {
-  if (filter === "saved")
-    return "Mets un cœur sur une recette pour la retrouver ici.";
-  if (filter === "forgotten")
-    return "Toutes les recettes aimées ont été mangées ce mois-ci.";
+function emptyText(filter: Filter): MessageKey | undefined {
+  if (filter === "saved") return "week.emptySavedText";
+  if (filter === "forgotten") return "week.emptyForgottenText";
   return undefined;
 }
 
@@ -315,6 +364,7 @@ function RecipeLine({
   warning: string | null;
   onPick: () => void;
 }) {
+  const { t } = useT();
   const likers = members.filter((m) => recipe.likedBy.includes(m._id));
   return (
     <button
@@ -326,7 +376,16 @@ function RecipeLine({
         className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-cream text-3xl"
         aria-hidden
       >
-        {recipe.imageUrl ? <img src={recipe.imageUrl} alt="" loading="lazy" className="size-full object-cover" /> : recipe.emoji}
+        {recipe.imageUrl ? (
+          <img
+            src={recipe.imageUrl}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        ) : (
+          recipe.emoji
+        )}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[17px] font-black">
@@ -337,7 +396,9 @@ function RecipeLine({
             <Clock size={15} aria-hidden />
             {minutes(recipe.prepMinutes)}
           </span>
-          {perPerson > 0 && <span>env. {formatChf(perPerson)} / pers.</span>}
+          {perPerson > 0 && (
+            <span>{t("week.perPerson", { amount: formatChf(perPerson) })}</span>
+          )}
         </span>
         {warning && (
           <span className="mt-1 block">
@@ -348,7 +409,9 @@ function RecipeLine({
       {likers.length > 0 && (
         <span
           className="flex shrink-0 -space-x-2"
-          aria-label={`Aimée par ${likers.map((m) => m.name).join(", ")}`}
+          aria-label={t("week.likedBy", {
+            names: likers.map((m) => m.name).join(", "),
+          })}
         >
           {likers.map((m) => (
             <Avatar key={m._id} member={m} size={26} />

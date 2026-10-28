@@ -21,6 +21,7 @@ import {
   weekDays,
   weekStart,
 } from "../../convex/domain/dates";
+import { useT } from "../i18n/useT";
 import { useBase, useSession } from "../lib/session";
 import { useStoreChoice, useWeek } from "../lib/week";
 import { formatChf } from "../lib/format";
@@ -30,7 +31,7 @@ import { MealSheet } from "../components/planning/MealSheet";
 import { ValidateWeekSheet } from "../components/planning/ValidateWeekSheet";
 import {
   capitalize,
-  SLOT_LABEL,
+  slotInText,
   SLOTS,
   useWeekMeals,
   type Slot,
@@ -49,9 +50,9 @@ import {
   SectionTitle,
 } from "../components/ui";
 
-
 export function WeekPage() {
   const { start, end, isCurrent, prev, next, goToday } = useWeek();
+  const { t, lang } = useT();
   const meals = useWeekMeals(start);
   const [searchParams, setSearchParams] = useSearchParams();
   const planParam = searchParams.get("plan") as Id<"recipes"> | null;
@@ -67,20 +68,20 @@ export function WeekPage() {
 
   return (
     <Page
-      title="Semaine"
-      subtitle={formatDateRange(start, end)}
+      title={t("nav.week")}
+      subtitle={formatDateRange(start, end, lang)}
       action={
         <div className="flex items-center">
-          <IconButton label="Semaine précédente" onClick={prev}>
+          <IconButton label={t("week.prevWeek")} onClick={prev}>
             <ChevronLeft size={26} />
           </IconButton>
-          <IconButton label="Semaine suivante" onClick={next}>
+          <IconButton label={t("week.nextWeek")} onClick={next}>
             <ChevronRight size={26} />
           </IconButton>
           <Link
             to="/menus-types"
-            aria-label="Menus types"
-            title="Menus types"
+            aria-label={t("week.templates")}
+            title={t("week.templates")}
             className="inline-flex size-11 items-center justify-center rounded-full bg-carrot-soft text-carrot-dark transition active:brightness-95"
           >
             <LayoutTemplate size={22} />
@@ -90,12 +91,12 @@ export function WeekPage() {
     >
       {!isCurrent && <OtherWeekBanner start={start} onToday={goToday} />}
       {meals === undefined ? (
-        <Loading label="Chargement de la semaine" />
+        <Loading label={t("week.loading")} />
       ) : (
         <>
           <Summary meals={meals} />
           <WishesStrip />
-          <SectionTitle>Au menu</SectionTitle>
+          <SectionTitle>{t("week.onMenu")}</SectionTitle>
           <div className="space-y-3">
             {weekDays(start).map((date) => (
               <DayCard
@@ -109,11 +110,17 @@ export function WeekPage() {
           </div>
           {meals.some((m) => m.recipe && !m.fromLeftoverOf) && (
             <div className="mt-6">
-              <Button size="lg" variant="herb" onClick={() => setValidating(true)}>
+              <Button
+                size="lg"
+                variant="herb"
+                onClick={() => setValidating(true)}
+              >
                 <ClipboardCheck size={22} />
-                Valider le menu de la semaine
+                {t("week.validate")}
               </Button>
-              <p className="mt-2 text-center text-[15px] text-muted">On fait le tour de ce que vous avez déjà, puis la liste de courses est prête.</p>
+              <p className="mt-2 text-center text-[15px] text-muted">
+                {t("week.validateHint")}
+              </p>
             </div>
           )}
         </>
@@ -127,7 +134,11 @@ export function WeekPage() {
         recipeId={planParam ?? undefined}
       />
       <MealSheet meal={selected} onClose={() => setSelectedId(null)} />
-      <ValidateWeekSheet open={validating} onClose={() => setValidating(false)} start={start} />
+      <ValidateWeekSheet
+        open={validating}
+        onClose={() => setValidating(false)}
+        start={start}
+      />
     </Page>
   );
 }
@@ -141,21 +152,22 @@ function OtherWeekBanner({
 }) {
   const base = useBase();
   const { today } = useWeek();
+  const { t } = useT();
   const current = weekStart(today, base?.settings.shoppingDay ?? 6);
   const n = Math.round(daysBetween(current, start) / 7);
   const label =
     n === 1
-      ? "Semaine prochaine"
+      ? t("week.bannerNext")
       : n === -1
-        ? "Semaine passée"
+        ? t("week.bannerPrev")
         : n > 0
-          ? `Dans ${n} semaines`
-          : `Il y a ${-n} semaines`;
+          ? t("week.bannerIn", { n })
+          : t("week.bannerAgo", { n: -n });
   return (
     <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl bg-sun-soft py-1.5 pr-1.5 pl-4">
       <span className="font-extrabold text-[#8a6200]">{label}</span>
       <Button variant="secondary" size="sm" onClick={onToday}>
-        Aujourd'hui
+        {t("week.today")}
       </Button>
     </div>
   );
@@ -165,6 +177,7 @@ function Summary({ meals }: { meals: WeekMeal[] }) {
   const recipes = useRecipes();
   const pricing = usePricing();
   const { store } = useStoreChoice();
+  const { t } = useT();
 
   const cost = useMemo(() => {
     if (!recipes || !pricing.ready) return null;
@@ -184,15 +197,19 @@ function Summary({ meals }: { meals: WeekMeal[] }) {
         <div>
           <div className="text-3xl font-black tabular-nums">{meals.length}</div>
           <div className="text-[15px] font-bold text-muted">
-            {meals.length > 1 ? "plats prévus" : "plat prévu"}
+            {meals.length > 1 ? t("week.plannedMany") : t("week.plannedOne")}
           </div>
         </div>
         <div className="text-right">
           <div className="text-xl font-black tabular-nums">
-            {cost === null ? "…" : `env. ${formatChf(cost)}`}
+            {cost === null
+              ? "…"
+              : t("week.approxCost", { amount: formatChf(cost) })}
           </div>
           <div className="text-[15px] font-bold text-muted">
-            {store ? `estimé chez ${store.name}` : "coût estimé"}
+            {store
+              ? t("week.estimatedAt", { store: store.name })
+              : t("week.estimatedCost")}
           </div>
         </div>
       </div>
@@ -201,7 +218,7 @@ function Summary({ meals }: { meals: WeekMeal[] }) {
         className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-carrot px-4 font-extrabold text-white shadow-sm active:bg-carrot-dark"
       >
         <ShoppingCart size={20} />
-        Liste de courses
+        {t("week.shoppingList")}
       </Link>
     </Card>
   );
@@ -210,6 +227,7 @@ function Summary({ meals }: { meals: WeekMeal[] }) {
 function WishesStrip() {
   const { token } = useSession();
   const base = useBase();
+  const { t } = useT();
   const wishes = useQuery(api.wishes.list, token ? { token } : "skip");
   if (!wishes || !base) return null;
   const open = wishes.filter((w) => !w.done);
@@ -222,11 +240,11 @@ function WishesStrip() {
             to="/envies"
             className="inline-flex min-h-11 items-center px-1 text-[15px] font-extrabold text-carrot-dark"
           >
-            {open.length > 0 ? "Tout voir" : "Ajouter"}
+            {open.length > 0 ? t("week.seeAll") : t("week.add")}
           </Link>
         }
       >
-        Envies
+        {t("week.wishes")}
       </SectionTitle>
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {open.length === 0 ? (
@@ -234,7 +252,7 @@ function WishesStrip() {
             to="/envies"
             className="flex min-h-12 items-center gap-2 rounded-full border-2 border-dashed border-line px-4 font-bold text-muted"
           >
-            💭 Une envie pour cette semaine ?
+            {t("week.wishPrompt")}
           </Link>
         ) : (
           open.map((w) => {
@@ -270,16 +288,17 @@ function DayCard({
   onOpen: (id: Id<"meals">) => void;
 }) {
   const { today, start } = useWeek();
+  const { t, lang } = useT();
   const isToday = date === today;
   const past = date < today;
   return (
     <Card className={cx("p-3", isToday && "ring-2 ring-carrot")}>
       <div className="flex flex-wrap items-center gap-2 px-1 pb-1">
         <h3 className={cx("text-lg font-black", past && "text-muted")}>
-          {capitalize(formatDayLong(date))}
+          {capitalize(formatDayLong(date, lang))}
         </h3>
-        {isToday && <Badge tone="carrot">Aujourd'hui</Badge>}
-        {date === start && <Badge tone="herb">🛒 Courses</Badge>}
+        {isToday && <Badge tone="carrot">{t("week.today")}</Badge>}
+        {date === start && <Badge tone="herb">{t("week.shoppingDay")}</Badge>}
       </div>
       {SLOTS.map((slot) => {
         const list = meals.filter((m) => m.slot === slot);
@@ -295,7 +314,7 @@ function DayCard({
             <div className="flex w-11 shrink-0 flex-col items-center pt-2.5 text-muted">
               <Icon size={18} aria-hidden />
               <span className="text-[13px] font-extrabold">
-                {SLOT_LABEL[slot]}
+                {t(`slot.${slot}`)}
               </span>
             </div>
             <div className="min-w-0 flex-1 space-y-1.5" data-tour="slot-meals">
@@ -310,13 +329,13 @@ function DayCard({
                   className="flex min-h-14 w-full items-center gap-2 rounded-2xl border-2 border-dashed border-line px-3 font-bold text-muted transition active:bg-carrot-soft"
                 >
                   <Plus size={20} aria-hidden />
-                  Ajouter
+                  {t("week.add")}
                 </button>
               )}
             </div>
             {list.length > 0 && (
               <IconButton
-                label={`Ajouter un plat (${SLOT_LABEL[slot].toLowerCase()})`}
+                label={t("week.addDishSlot", { slot: slotInText(slot, lang) })}
                 onClick={() => onAdd(slot)}
                 className="self-center bg-carrot-soft text-carrot-dark"
               >
