@@ -317,7 +317,6 @@ function DayCard({
             {list.length > 0 && (
               <IconButton
                 label={`Ajouter un plat (${SLOT_LABEL[slot].toLowerCase()})`}
-                data-tour="add-meal"
                 onClick={() => onAdd(slot)}
                 className="self-center bg-carrot-soft text-carrot-dark"
               >

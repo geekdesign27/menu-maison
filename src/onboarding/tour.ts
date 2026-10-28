@@ -24,6 +24,20 @@ async function waitFor(
   }
 }
 
+/** Waits until the element stops moving (data still arriving pushes it down). */
+async function waitStill(el: Element, timeoutMs = 1500) {
+  const end = performance.now() + timeoutMs;
+  let last = "";
+  let still = 0;
+  while (performance.now() < end && still < 2) {
+    const r = el.getBoundingClientRect();
+    const now = `${Math.round(r.top)},${Math.round(r.left)},${Math.round(r.height)}`;
+    still = now === last ? still + 1 : 0;
+    last = now;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 /** Closes the app's sheets the way a user would, through their own Escape handler. */
 async function closeSheets() {
   for (let i = 0; i < 4 && document.querySelector(OPEN_SHEETS); i++) {
@@ -67,7 +81,9 @@ export function runTour({
       if (!(button instanceof HTMLElement)) return;
       button.click();
     }
-    if (step.target) await waitFor(step.target, step.open ? 2500 : 1500);
+    if (!step.target) return;
+    const target = await waitFor(step.target, step.open ? 2500 : 1500);
+    if (target) await waitStill(target);
   }
 
   // « Suivant » tapped twice while the next screen loads: one move only
@@ -117,6 +133,10 @@ export function runTour({
       popover.footer.prepend(skip);
     },
     onNextClick: (_el, _step, { index }) => void goTo((index ?? 0) + 1),
+    // Late images or data can still shift the screen: place the bubble again
+    onHighlighted: () => {
+      for (const ms of [400, 1200]) setTimeout(() => drv?.isActive() && drv.refresh(), ms);
+    },
     onDestroyed: () => {
       stopped = true;
       window.removeEventListener("keydown", keepSheetsOnEscape, true);
