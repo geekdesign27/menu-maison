@@ -21,6 +21,13 @@ export const fr = {
   "lang.column": "Langue",
   "lang.fr": "Français",
   "lang.de": "Deutsch",
+  "lang.namesTitle": "Noms en allemand",
+  "lang.namesHelp":
+    "Les profils en allemand voient les produits, rayons et articles sous leur nom allemand. Ils sont traduits automatiquement\u00a0; tu peux corriger chaque nom dans sa fiche.",
+  "lang.namesMissing": "{count} sans nom allemand",
+  "lang.namesDone": "Tout a son nom allemand.",
+  "lang.translate": "Traduire maintenant",
+  "lang.translated": "{count} noms traduits",
 
   "slot.matin": "Matin",
   "slot.midi": "Midi",
@@ -50,6 +57,13 @@ export const de: { [K in keyof typeof fr]: string } = {
   "lang.column": "Sprache",
   "lang.fr": "Français",
   "lang.de": "Deutsch",
+  "lang.namesTitle": "Deutsche Namen",
+  "lang.namesHelp":
+    "Profile auf Deutsch sehen Produkte, Abteilungen und Artikel mit dem deutschen Namen. Sie werden automatisch übersetzt; du kannst jeden Namen in seiner Karte korrigieren.",
+  "lang.namesMissing": "{count} ohne deutschen Namen",
+  "lang.namesDone": "Alles hat einen deutschen Namen.",
+  "lang.translate": "Jetzt übersetzen",
+  "lang.translated": "{count} Namen übersetzt",
 
   "slot.matin": "Morgen",
   "slot.midi": "Mittag",

@@ -12,10 +12,12 @@ import { ChainsPicker, type Chain } from "./chains";
 import { ProductPhotoField } from "./ProductPhotoField";
 import type { Staple } from "./StaplesSheet";
 import { useT } from "../../i18n/useT";
+import { frenchName, namesToSave } from "../../lib/catalogNames";
+import { NameFields } from "./NameFields";
 
 export type EditableStaple = Pick<
   Staple,
-  "_id" | "name" | "aisleId" | "priceChf" | "qty" | "onlyChains" | "imageId" | "imageUrl"
+  "_id" | "name" | "nameDe" | "nameFr" | "aisleId" | "priceChf" | "qty" | "onlyChains" | "imageId" | "imageUrl"
 >;
 
 /** Full card of a usual item: name, aisle, price of one item, chains, usual quantity. */
@@ -35,7 +37,8 @@ export function StapleSheet({
   const toast = useToast();
   const { t, lang } = useT();
   const update = useMutation(api.staples.update);
-  const [name, setName] = useState(staple.name);
+  const [name, setName] = useState(frenchName(staple));
+  const [nameDe, setNameDe] = useState(staple.nameDe ?? "");
   const [aisleId, setAisleId] = useState<Id<"aisles"> | "">(
     staple.aisleId ?? "",
   );
@@ -67,7 +70,7 @@ export function StapleSheet({
         update({
           token,
           id: staple._id,
-          name,
+          ...namesToSave(name, nameDe),
           aisleId: aisleId || null,
           priceChf: price ?? null,
           onlyChains,
@@ -86,17 +89,13 @@ export function StapleSheet({
       onClose={onClose}
       title={staple.name}
       footer={
-        <Button size="lg" onClick={save} disabled={busy || !name.trim()}>
+        <Button size="lg" onClick={save} disabled={busy || !(name.trim() || nameDe.trim())}>
           {t("shopping.save")}
         </Button>
       }
     >
       <div className="grid gap-4">
-        <TextInput
-          label={t("shopping.name")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <NameFields name={name} nameDe={nameDe} onName={setName} onNameDe={setNameDe} />
         <Select
           label={t("shopping.aisle")}
           value={aisleId}

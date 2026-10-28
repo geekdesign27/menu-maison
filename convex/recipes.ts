@@ -5,6 +5,7 @@ import { assertEmoji, assertInt, assertPositive, requireMember, requireMemberWri
 import { unitValidator } from "./schema";
 import { checkPublicUrl } from "./domain/recipeImport";
 import { searchKey } from "./domain/text";
+import { translateLater } from "./catalogTranslate";
 
 const itemValidator = v.object({
   ingredientId: v.id("ingredients"),
@@ -114,6 +115,7 @@ export const create = mutation({
       (await db.query("ingredients").collect()).map((i) => [searchKey(i.name), i._id]),
     );
     const items: { ingredientId: Id<"ingredients">; qtyPerPerson: number; unit: typeof data.items[number]["unit"] }[] = [];
+    let createdIngredient = false;
     for (const item of data.items) {
       if ("ingredientId" in item) {
         // Deleted meanwhile by someone else (the draft can stay open a while)
@@ -133,9 +135,11 @@ export const create = mutation({
           unit: item.newIngredient.unit,
         });
         known.set(searchKey(name), ingredientId);
+        createdIngredient = true;
       }
       items.push({ ingredientId, qtyPerPerson: item.qtyPerPerson, unit: item.unit });
     }
+    if (createdIngredient) await translateLater(ctx, db.familyId);
     return db.insert("recipes", {
       ...data,
       items,

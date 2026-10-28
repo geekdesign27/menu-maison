@@ -19,6 +19,7 @@ import {
 } from "../../../convex/domain/openFoodFacts";
 import { useSession, type Base } from "../../lib/session";
 import { useRun } from "../../lib/toast";
+import { frenchName, searchText } from "../../lib/catalogNames";
 
 export interface PickedIngredient {
   _id: Id<"ingredients">;
@@ -76,7 +77,7 @@ export function IngredientPicker({
   const aisleFor = (hit: OffHit) => {
     const name = suggestAisleName(hit.categories);
     return name
-      ? base.aisles.find((a) => searchKey(a.name) === searchKey(name))?._id
+      ? base.aisles.find((a) => searchKey(frenchName(a)) === searchKey(name))?._id
       : undefined;
   };
   const pick = (ingredient: PickedIngredient) => {
@@ -92,11 +93,11 @@ export function IngredientPicker({
   const matches = useMemo(
     () =>
       base.ingredients
-        .filter((i) => searchKey(i.name).includes(q))
+        .filter((i) => searchKey(searchText(i)).includes(q))
         .slice(0, MAX_RESULTS),
     [base.ingredients, q],
   );
-  const exact = base.ingredients.some((i) => searchKey(i.name) === q);
+  const exact = base.ingredients.some((i) => searchKey(i.name) === q || searchKey(frenchName(i)) === q);
 
   return (
     <>

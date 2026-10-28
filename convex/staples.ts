@@ -1,7 +1,8 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { assertDate, assertPositive, requireMember, requireMemberWriter, cleanText, removeReceiptData } from "./lib";
+import { assertDate, assertPositive, requireMember, requireMemberWriter, cleanText, cleanNameDe, removeReceiptData } from "./lib";
 import { chainValidator } from "./schema";
+import { translateLater } from "./catalogTranslate";
 
 /** The usual items, most bought first, with the extra id when already on this week's list. */
 export const list = query({
@@ -40,7 +41,9 @@ export const create = mutation({
     const duplicate = await db.index("staples", "by_family_name", (q) => q.eq("name", clean))
       .first();
     if (duplicate) throw new ConvexError(`« ${clean} » existe déjà.`);
-    return db.insert("staples", { name: clean, useCount: 0 });
+    const id = await db.insert("staples", { name: clean, useCount: 0 });
+    await translateLater(ctx, db.familyId);
+    return id;
   },
 });
 
@@ -81,13 +84,14 @@ export const update = mutation({
     token: v.string(),
     id: v.id("staples"),
     name: v.string(),
+    nameDe: v.optional(v.string()),
     aisleId: v.union(v.id("aisles"), v.null()),
     priceChf: v.union(v.number(), v.null()),
     onlyChains: v.array(chainValidator),
     qty: v.union(v.number(), v.null()),
     imageId: v.union(v.id("_storage"), v.null()),
   },
-  handler: async (ctx, { token, id, name, aisleId, priceChf, onlyChains, qty, imageId }) => {
+  handler: async (ctx, { token, id, name, nameDe, aisleId, priceChf, onlyChains, qty, imageId }) => {
     const { db } = await requireMemberWriter(ctx, token);
     const clean = cleanText(name, 80, "Article");
     if (!clean) throw new ConvexError("Le nom de l'article est obligatoire.");
@@ -97,6 +101,7 @@ export const update = mutation({
     if (aisleId) await db.own(aisleId, "Rayon introuvable.");
     await db.patch(id, {
       name: clean,
+      ...cleanNameDe(nameDe, 80),
       aisleId: aisleId ?? undefined,
       priceChf: priceChf ?? undefined,
       onlyChains: onlyChains.length ? onlyChains : undefined,

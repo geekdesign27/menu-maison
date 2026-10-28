@@ -19,6 +19,7 @@ import {
 } from "./device";
 import { applyLook, rememberLook } from "./look";
 import { localeOf } from "../../convex/domain/lang";
+import { localize } from "./catalogNames";
 
 /** Family link name remembered on this phone, so the sign-in screen knows the family. */
 export const rememberedFamily = {
@@ -128,8 +129,19 @@ export function useSession() {
 
 /** Shared catalog (members, aisles, ingredients, stores, settings), cached by Convex. */
 export function useBase() {
-  const { token } = useSession();
-  return useQuery(api.catalog.base, token ? { token } : "skip");
+  const { token, account } = useSession();
+  const lang = account?.lang ?? "fr";
+  const base = useQuery(api.catalog.base, token ? { token } : "skip");
+  // German profiles see the German names of products and aisles (see catalogNames.ts)
+  return useMemo(
+    () =>
+      base && {
+        ...base,
+        aisles: localize(base.aisles, lang),
+        ingredients: localize(base.ingredients, lang).sort((a, b) => a.name.localeCompare(b.name, lang)),
+      },
+    [base, lang],
+  );
 }
 
 export type Base = NonNullable<ReturnType<typeof useBase>>;

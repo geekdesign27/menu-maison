@@ -94,6 +94,9 @@ export default defineSchema({
     slug: v.string(), // in the sign-in link: menumaison.ch/#/f/schutz
     suspended: v.boolean(),
     aiCapUsd: v.optional(v.number()), // monthly Claude budget set by the super-admin
+    // Background translation of the catalogue: one run at a time, and the ids
+    // Claude left untranslated, not sent again automatically (catalogTranslate.ts)
+    germanNames: v.optional(v.object({ queuedAt: v.optional(v.number()), skipped: v.array(v.string()) })),
     createdAt: v.number(),
   }).index("by_slug", ["slug"]),
 
@@ -121,6 +124,7 @@ export default defineSchema({
   aisles: defineTable({
     familyId,
     name: v.string(),
+    nameDe: v.optional(v.string()), // shown to German profiles, French name otherwise
     emoji: v.string(),
     order: v.number(), // default order when no store is selected
   }).index("by_family", ["familyId"]),
@@ -128,6 +132,7 @@ export default defineSchema({
   ingredients: defineTable({
     familyId,
     name: v.string(),
+    nameDe: v.optional(v.string()), // shown to German profiles, French name otherwise
     aisleId: v.id("aisles"),
     unit: unitValidator, // unit used in recipes and on the list
     // Estimated price in CHF for `priceQty` of `unit` (e.g. 3.50 CHF for 1000 g)
@@ -264,6 +269,7 @@ export default defineSchema({
   staples: defineTable({
     familyId,
     name: v.string(),
+    nameDe: v.optional(v.string()), // shown to German profiles, French name otherwise
     aisleId: v.optional(v.id("aisles")),
     useCount: v.number(),
     lastUsedAt: v.optional(v.number()),

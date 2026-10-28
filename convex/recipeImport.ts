@@ -129,6 +129,7 @@ export const catalog = internalQuery({
       ingredients: ingredients.map((i) => ({
         id: i._id,
         name: i.name,
+        nameDe: i.nameDe,
         unit: i.unit,
       })),
       aisles: aisles
@@ -253,8 +254,10 @@ export const dropUnusedPhoto = internalMutation({
 
 const GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 // Words Whisper should expect, so quantities come out as written in a recipe
-const DICTATION_HINT =
-  "Recette de cuisine. Ingrédients : 200 g de farine, 3 dl de lait, 2 cuillères à soupe d'huile d'olive, une pincée de sel.";
+const DICTATION_HINT = {
+  fr: "Recette de cuisine. Ingrédients : 200 g de farine, 3 dl de lait, 2 cuillères à soupe d'huile d'olive, une pincée de sel.",
+  de: "Kochrezept. Zutaten: 200 g Mehl, 3 dl Milch, 2 Esslöffel Olivenöl, eine Prise Salz.",
+};
 
 /**
  * Turns a dictated recipe, uploaded to storage just before, into text with
@@ -278,10 +281,11 @@ export const transcribe = action({
       const form = new FormData();
       form.append("file", audio, name);
       form.append("model", "whisper-large-v3");
-      form.append("language", "fr");
+      // A German profile dictates in German; the recipe is still written in French
+      form.append("language", meta.lang);
       form.append("response_format", "json");
       form.append("temperature", "0");
-      form.append("prompt", DICTATION_HINT);
+      form.append("prompt", DICTATION_HINT[meta.lang]);
       let response: Response;
       try {
         response = await fetch(GROQ_URL, {
@@ -314,10 +318,12 @@ export const transcribe = action({
 export const audioMeta = internalQuery({
   args: { token: v.string(), audioId: v.id("_storage") },
   handler: async (ctx, { token, audioId }) => {
-    await requireMember(ctx, token);
+    const { member } = await requireMember(ctx, token);
     const meta = await ctx.db.system.get(audioId);
     // Only a recording just uploaded: an older file is not this member's dictation
-    return meta && Date.now() - meta._creationTime < AUDIO_MAX_AGE_MS ? meta : null;
+    return meta && Date.now() - meta._creationTime < AUDIO_MAX_AGE_MS
+      ? { ...meta, lang: member.lang ?? ("fr" as const) }
+      : null;
   },
 });
 
@@ -383,7 +389,8 @@ export const read = action({
           text: [
             `Styles possibles : ${TAGS.join(", ")}`,
             `Rayons :\n${aisles.map((a) => `${a.key} ${a.name}`).join("\n")}`,
-            `Catalogue de la famille :\n${ingredients.map((i) => `${i.key} ${i.name} (${i.unit})`).join("\n")}`,
+            // German names too: a recipe dictated in German still finds the family's products
+            `Catalogue de la famille :\n${ingredients.map((i) => `${i.key} ${i.name}${i.nameDe ? ` / ${i.nameDe}` : ""} (${i.unit})`).join("\n")}`,
             `Recette à transformer :\n${source}`,
           ].join("\n\n"),
         },

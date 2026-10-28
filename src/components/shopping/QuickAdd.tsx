@@ -11,6 +11,7 @@ import { parseAmount, unitChoiceLabel, UNITS } from "../../lib/units";
 import { searchKey } from "../../lib/text";
 import { StaplesSheet, useStaples, useToggleStaple } from "./StaplesSheet";
 import { useT } from "../../i18n/useT";
+import { frenchName, searchText } from "../../lib/catalogNames";
 
 /** « Ajouter un article… » field, with a sheet for quantity, unit and aisle. */
 export function QuickAdd({ start }: { start: string }) {
@@ -39,9 +40,11 @@ export function QuickAdd({ start }: { start: string }) {
   const suggestions = useMemo(() => {
     const q = searchKey(label);
     if (!q || !staples) return [];
-    return staples.filter((s) => searchKey(s.name).includes(q)).slice(0, 6);
+    return staples.filter((s) => searchKey(searchText(s)).includes(q)).slice(0, 6);
   }, [label, staples]);
-  const exactMatch = suggestions.some((s) => searchKey(s.name) === searchKey(label));
+  const exactMatch = suggestions.some(
+    (s) => searchKey(s.name) === searchKey(label) || searchKey(frenchName(s)) === searchKey(label),
+  );
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

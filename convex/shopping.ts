@@ -5,6 +5,8 @@ import { unitValidator } from "./schema";
 import { addDays } from "./domain/dates";
 import { buildShoppingList, MEAL_NOT_COOKED, type HomeStockNote } from "./domain/shopping";
 import { formatQty } from "./domain/quantities";
+import { localName } from "./domain/lang";
+import { translateLater } from "./catalogTranslate";
 
 /** Shopping list of the planning week starting at `start`, ordered for the chosen store. */
 export const list = query({
@@ -69,6 +71,7 @@ export const list = query({
                 i._id,
                 {
                   ...i,
+                  name: localName(i, lang),
                   imageUrl: i.imageId ? await ctx.storage.getUrl(i.imageId) : null,
                   chainPrices: chainPrices.ingredients.get(i._id),
                 },
@@ -76,7 +79,7 @@ export const list = query({
           ),
         ),
       ),
-      aisles,
+      aisles: aisles.map((a) => ({ ...a, name: localName(a, lang) })),
       store: store && {
         chain: store.chain,
         aisleOrder: store.aisleOrder,
@@ -90,7 +93,7 @@ export const list = query({
           return staple
             ? {
                 ...e,
-                label: staple.name,
+                label: localName(staple, lang),
                 aisleId: staple.aisleId ?? e.aisleId,
                 priceChf: staple.priceChf,
                 onlyChains: staple.onlyChains,
@@ -187,9 +190,11 @@ export const addExtra = mutation({
       // Same name typed again: reuse the usual item instead of creating a twin
       const all = await db.query("staples").collect();
       const key = label.toLocaleLowerCase("fr");
-      staple = all.find((s) => s.name.toLocaleLowerCase("fr") === key) ?? null;
+      staple =
+        all.find((s) => [s.name, s.nameDe].some((n) => n?.toLocaleLowerCase("fr") === key)) ?? null;
       if (!staple) {
         const id = await db.insert("staples", { name: label, aisleId: rest.aisleId, useCount: 0 });
+        await translateLater(ctx, db.familyId);
         staple = await db.get(id);
       }
     }

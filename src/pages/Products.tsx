@@ -17,6 +17,7 @@ import { useBase, useSession, type Base } from "../lib/session";
 import { translate } from "../i18n";
 import { useT } from "../i18n/useT";
 import { serverText } from "../i18n/serverText";
+import { localize } from "../lib/catalogNames";
 import { useRun, useToast } from "../lib/toast";
 import { formatChf, plural } from "../lib/format";
 import { amountLabel } from "../lib/units";
@@ -61,11 +62,14 @@ type Editing =
 /** Every ingredient and usual item, live, as « Produits » rows (null while loading). */
 export function useProductRows(): Row[] | null {
   const { token } = useSession();
+  const { lang } = useT();
   const data = useQuery(api.products.list, token ? { token } : "skip");
   return useMemo(
     () =>
-      data ? buildProducts(data.ingredients, data.staples, data.recipes) : null,
-    [data],
+      data
+        ? buildProducts(localize(data.ingredients, lang), localize(data.staples, lang), data.recipes, lang)
+        : null,
+    [data, lang],
   );
 }
 

@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as catalog from "../catalog.js";
+import type * as catalogTranslate from "../catalogTranslate.js";
 import type * as claude from "../claude.js";
 import type * as crons from "../crons.js";
 import type * as domain_auth from "../domain/auth.js";
@@ -39,6 +40,7 @@ import type * as recipeImport from "../recipeImport.js";
 import type * as recipes from "../recipes.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
+import type * as seedNamesDe from "../seedNamesDe.js";
 import type * as shopping from "../shopping.js";
 import type * as staples from "../staples.js";
 import type * as stats from "../stats.js";
@@ -55,6 +57,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   catalog: typeof catalog;
+  catalogTranslate: typeof catalogTranslate;
   claude: typeof claude;
   crons: typeof crons;
   "domain/auth": typeof domain_auth;
@@ -84,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   recipes: typeof recipes;
   seed: typeof seed;
   seedData: typeof seedData;
+  seedNamesDe: typeof seedNamesDe;
   shopping: typeof shopping;
   staples: typeof staples;
   stats: typeof stats;

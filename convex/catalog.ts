@@ -8,6 +8,7 @@ import {
   assertPositive,
   requireMember, requireMemberWriter,
   cleanText,
+  cleanNameDe,
   getSettings,
   loadChainPrices,
 } from "./lib";
@@ -20,6 +21,7 @@ function memberName(name: string) {
 import { chainValidator, fontValidator, themeValidator, unitValidator } from "./schema";
 import { deletionBlocker } from "./domain/products";
 import { removeReceiptData } from "./lib";
+import { translateLater } from "./catalogTranslate";
 
 /** Everything small the UI needs on every screen, in one subscription. */
 export const base = query({
@@ -140,6 +142,7 @@ export const upsertIngredient = mutation({
     token: v.string(),
     id: v.optional(v.id("ingredients")),
     name: v.string(),
+    nameDe: v.optional(v.string()),
     aisleId: v.id("aisles"),
     unit: unitValidator,
     priceChf: v.optional(v.number()),
@@ -149,8 +152,9 @@ export const upsertIngredient = mutation({
     onlyChains: v.optional(v.array(chainValidator)),
     imageId: v.optional(v.id("_storage")),
   },
-  handler: async (ctx, { token, id, ...data }) => {
+  handler: async (ctx, { token, id, nameDe, ...data }) => {
     const { db } = await requireMemberWriter(ctx, token);
+    const german = cleanNameDe(nameDe, 80);
     const name = cleanText(data.name, 80, "Nom de l'ingrédient");
     if (!name) throw new ConvexError("Le nom de l'ingrédient est obligatoire.");
     if (data.priceChf !== undefined)
@@ -165,10 +169,12 @@ export const upsertIngredient = mutation({
       throw new ConvexError(`« ${name} » existe déjà.`);
     if (id) {
       // Explicit undefined so that clearing a price removes it
-      await db.patch(id, { ...data, name, priceChf: data.priceChf, priceQty: data.priceQty, packSize: data.packSize, onlyChains: data.onlyChains?.length ? data.onlyChains : undefined, imageId: data.imageId });
+      await db.patch(id, { ...data, ...german, name, priceChf: data.priceChf, priceQty: data.priceQty, packSize: data.packSize, onlyChains: data.onlyChains?.length ? data.onlyChains : undefined, imageId: data.imageId });
       return id;
     }
-    return db.insert("ingredients", { ...data, name });
+    const created = await db.insert("ingredients", { ...data, ...german, name });
+    if (!german.nameDe) await translateLater(ctx, db.familyId);
+    return created;
   },
 });
 
@@ -190,8 +196,8 @@ export const removeIngredient = mutation({
 // ---------- Aisles ----------
 
 export const addAisle = mutation({
-  args: { token: v.string(), name: v.string(), emoji: v.string() },
-  handler: async (ctx, { token, name, emoji }) => {
+  args: { token: v.string(), name: v.string(), nameDe: v.optional(v.string()), emoji: v.string() },
+  handler: async (ctx, { token, name, nameDe, emoji }) => {
     const { db } = await requireMemberWriter(ctx, token);
     const clean = cleanText(name, 60, "Nom du rayon");
     if (!clean) throw new ConvexError("Le nom du rayon est obligatoire.");
@@ -199,9 +205,11 @@ export const addAisle = mutation({
     const order = (await db.query("aisles").collect()).length;
     const id = await db.insert("aisles", {
       name: clean,
+      ...cleanNameDe(nameDe, 60),
       emoji: emoji || "🛒",
       order,
     });
+    if (!nameDe?.trim()) await translateLater(ctx, db.familyId);
     // New aisle goes at the end of every store walk
     for (const store of await db.query("stores").collect()) {
       await db.patch(store._id, { aisleOrder: [...store.aisleOrder, id] });
@@ -215,14 +223,15 @@ export const renameAisle = mutation({
     token: v.string(),
     id: v.id("aisles"),
     name: v.string(),
+    nameDe: v.optional(v.string()),
     emoji: v.string(),
   },
-  handler: async (ctx, { token, id, name, emoji }) => {
+  handler: async (ctx, { token, id, name, nameDe, emoji }) => {
     const { db } = await requireMemberWriter(ctx, token);
     const clean = cleanText(name, 60, "Nom du rayon");
     if (!clean) throw new ConvexError("Le nom du rayon est obligatoire.");
     assertEmoji(emoji);
-    await db.patch(id, { name: clean, emoji });
+    await db.patch(id, { name: clean, ...cleanNameDe(nameDe, 60), emoji });
   },
 });
 

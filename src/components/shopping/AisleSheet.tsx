@@ -5,9 +5,11 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
-import { Button, Sheet, TextInput } from "../ui";
+import { Button, Sheet } from "../ui";
 import { EmojiField } from "./EmojiField";
 import { useT } from "../../i18n/useT";
+import { frenchName, namesToSave } from "../../lib/catalogNames";
+import { NameFields } from "./NameFields";
 
 const AISLE_EMOJIS = [
   "🥦",
@@ -45,22 +47,24 @@ export function AisleSheet({
   const { t } = useT();
   const renameAisle = useMutation(api.catalog.renameAisle);
   const addAisle = useMutation(api.catalog.addAisle);
-  const [name, setName] = useState(aisle?.name ?? "");
+  const [name, setName] = useState(aisle ? frenchName(aisle) : "");
+  const [nameDe, setNameDe] = useState(aisle?.nameDe ?? "");
   const [emoji, setEmoji] = useState(aisle?.emoji ?? "🛒");
 
-  const save = (next: { name: string; emoji: string }) => {
+  const save = (next: { name: string; nameDe: string; emoji: string }) => {
     if (!aisle) return;
-    if (!next.name.trim()) {
-      setName(aisle.name);
+    const names = namesToSave(next.name, next.nameDe);
+    if (!names.name) {
+      setName(frenchName(aisle));
       return;
     }
-    if (next.name.trim() === aisle.name && next.emoji === aisle.emoji) return;
-    run(() => renameAisle({ token, id: aisle._id, ...next }));
+    if (names.name === frenchName(aisle) && names.nameDe === (aisle.nameDe ?? "") && next.emoji === aisle.emoji) return;
+    run(() => renameAisle({ token, id: aisle._id, ...names, emoji: next.emoji }));
   };
 
   const create = async () => {
     const id = await run(
-      () => addAisle({ token, name, emoji }),
+      () => addAisle({ token, ...namesToSave(name, nameDe), emoji }),
       t("shopping.aisleAdded"),
     );
     if (id) onClose();
@@ -73,18 +77,19 @@ export function AisleSheet({
       title={aisle ? t("shopping.editAisle") : t("shopping.newAisle")}
       footer={
         aisle ? undefined : (
-          <Button size="lg" onClick={create} disabled={!name.trim()}>
+          <Button size="lg" onClick={create} disabled={!(name.trim() || nameDe.trim())}>
             <Plus size={22} /> {t("shopping.addAisle")}
           </Button>
         )
       }
     >
       <div className="grid gap-5">
-        <TextInput
-          label={t("shopping.aisleName")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => save({ name, emoji })}
+        <NameFields
+          name={name}
+          nameDe={nameDe}
+          onName={setName}
+          onNameDe={setNameDe}
+          onBlur={() => save({ name, nameDe, emoji })}
           placeholder={t("shopping.aislePlaceholder")}
           autoFocus={!aisle}
         />
@@ -93,7 +98,7 @@ export function AisleSheet({
           suggestions={AISLE_EMOJIS}
           onChange={(e) => {
             setEmoji(e);
-            save({ name, emoji: e });
+            save({ name, nameDe, emoji: e });
           }}
         />
       </div>

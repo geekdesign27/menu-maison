@@ -145,9 +145,17 @@ Serveurs de dev via Portly.
   calculent quantités, « Diverses » et « Bei Coop kaufen » dans la langue du profil
   (`buildShoppingList({ lang })`) ; le serveur écrit ses messages d'erreur en français et
   l'app les traduit à l'affichage (`src/i18n/serverText.ts`, appelé par `errorMessage`), un
-  test vérifie que chaque phrase du serveur y a son allemand. Restent en français : la
-  connexion, l'onglet Super admin, les données du catalogue (lot 4), la page d'accueil
-  (lot 5, sélecteur FR | DE, captures gardées en français).
+  test vérifie que chaque phrase du serveur y a son allemand. Lot 4 (fait) : produits, rayons
+  et articles habituels ont un nom allemand facultatif (`nameDe`), montré aux profils en
+  allemand (`localName` côté serveur, `localize` dans `useBase`, l'édition garde le nom
+  français via `frenchName`) ; la recherche trouve les deux noms. Le catalogue de départ a
+  ses noms allemands (`convex/seedNamesDe.ts`) ; le reste est traduit par Claude en arrière-plan
+  quand la famille a un profil en allemand (coche « Deutsch », puis chaque création), une
+  seule traduction à la fois, regroupée après 30 secondes, et les noms que Claude laisse ne
+  sont plus renvoyés automatiquement (`families.germanNames`). Bouton « Traduire maintenant »
+  dans Gestion, Famille. La dictée suit la langue du profil, la recette reste rédigée en
+  français. Restent en français : les recettes, la connexion, l'onglet Super admin, la page
+  d'accueil (lot 5, sélecteur FR | DE, captures gardées en français).
 - **Guide pour les nouveaux** (depuis le 2026-10-28) : carte de bienvenue, tour en bulles
   (driver.js) et checklist « Premiers pas » dans Plus, pour les comptes activés après sa mise
   en route. Interrupteur des admins dans Gestion, Famille (`settings.onboarding`, activé pour

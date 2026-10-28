@@ -36,6 +36,7 @@ const DE: Record<string, string> = {
   Étape: "Schritt",
   "Le pseudo": "Der Benutzername",
   "Le nom du lien": "Der Name des Links",
+  "Nom allemand": "Deutscher Name",
 
   // ---------- Shared checks (convex/lib.ts)
   "Session expirée, reconnecte-toi.":
@@ -149,6 +150,10 @@ const DE: Record<string, string> = {
 
   // ---------- Recipes
   "Le nom de la recette est obligatoire.": "Der Name des Rezepts fehlt.",
+  "La traduction n'est pas encore configurée (clé ANTHROPIC_API_KEY manquante).":
+    "Die Übersetzung ist noch nicht eingerichtet (Schlüssel ANTHROPIC_API_KEY fehlt).",
+  "La traduction a échoué. Réessaie dans un moment.":
+    "Die Übersetzung ist fehlgeschlagen. Versuch es gleich nochmals.",
   "Trop de tags ou tag trop long.": "Zu viele Stile oder Stil zu lang.",
   "Lien de la recette invalide.": "Ungültiger Link zum Rezept.",
   "Un nouvel ingrédient n'a pas de nom.": "Eine neue Zutat hat keinen Namen.",

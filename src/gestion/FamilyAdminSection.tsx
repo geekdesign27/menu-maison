@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { Check, Plus } from "lucide-react";
 import type { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
 import { useBase, useSession, type Member } from "../lib/session";
-import { useRun } from "../lib/toast";
+import { useRun, useToast } from "../lib/toast";
 import { plural } from "../lib/format";
 import { FONTS, THEMES, type Font, type Theme } from "../lib/look";
 import { Avatar, Badge, Button, cx, ErrorBox, Loading } from "../components/ui";
@@ -138,6 +138,8 @@ export function FamilyAdminSection() {
           />
         </section>
 
+        {base.members.some((m) => m.lang === "de") && <GermanNamesSection />}
+
         <LookSection theme={account.look.theme} font={account.look.font} />
 
         <GuideSection enabled={base.settings.onboarding === true} />
@@ -151,6 +153,45 @@ export function FamilyAdminSection() {
         />
       )}
     </>
+  );
+}
+
+/** German names of the catalogue: filled automatically, this button fills the rest now. */
+function GermanNamesSection() {
+  const { token } = useSession();
+  const missing = useQuery(api.catalogTranslate.missingCount, { token });
+  const translateNow = useAction(api.catalogTranslate.translateNow);
+  const run = useRun();
+  const toast = useToast();
+  const { t } = useT();
+  const [busy, setBusy] = useState(false);
+  const translate = async () => {
+    setBusy(true);
+    const result = await run(() => translateNow({ token }));
+    setBusy(false);
+    if (result) toast(t("lang.translated", { count: result.saved }));
+  };
+  return (
+    <section className="grid gap-3">
+      <div>
+        <h2 className="text-xl font-black">{t("lang.namesTitle")}</h2>
+        <p className="text-[15px] text-muted">{t("lang.namesHelp")}</p>
+      </div>
+      <div className="flex max-w-xl flex-wrap items-center gap-3 rounded-2xl bg-paper p-4 ring-1 ring-line">
+        <p className="min-w-0 flex-1 font-bold">
+          {missing === undefined
+            ? "…"
+            : missing === 0
+              ? t("lang.namesDone")
+              : t("lang.namesMissing", { count: missing })}
+        </p>
+        {!!missing && (
+          <Button variant="secondary" onClick={translate} disabled={busy}>
+            {t("lang.translate")}
+          </Button>
+        )}
+      </div>
+    </section>
   );
 }
 

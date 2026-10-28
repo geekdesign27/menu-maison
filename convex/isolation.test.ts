@@ -930,6 +930,9 @@ describe("writes on another family's ids are refused", () => {
     "onboarding.facts": "covered by the read test",
     "onboarding.finish": "patches the caller only (covered: own family test)",
     "onboarding.setEnabled": "settings and members of the caller's family only (covered: own family test)",
+    "catalogTranslate.missingCount": "counts the caller's family only, admins (catalogTranslate.test.ts)",
+    "catalogTranslate.translateNow":
+      "fills the caller's family only: internal apply checks the family of each id (catalogTranslate.test.ts)",
   };
 
   it("every public function is covered or explained", async () => {

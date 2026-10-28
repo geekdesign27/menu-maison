@@ -1,3 +1,4 @@
+import { translateLater } from "./catalogTranslate";
 import { action, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -348,6 +349,7 @@ export const save = mutation({
         prices++;
       }
     }
+    if (staples) await translateLater(ctx, db.familyId);
     return { prices, staples };
   },
 });

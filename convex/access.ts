@@ -1,3 +1,4 @@
+import { translateLater } from "./catalogTranslate";
 import {
   action,
   internalMutation,
@@ -361,6 +362,8 @@ export const setLang = mutation({
     }
     // French is the default: nothing stored for it
     await me.db.patch(member._id, { lang: args.lang === "fr" ? undefined : args.lang });
+    // A first German profile: the catalogue gets its German names in the background
+    if (args.lang === "de") await translateLater(ctx, me.familyId);
   },
 });
 

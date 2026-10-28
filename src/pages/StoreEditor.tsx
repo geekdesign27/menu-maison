@@ -42,6 +42,7 @@ import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { useUpdateStore } from "../components/shopping/useUpdateStore";
 import { searchKey } from "../lib/text";
 import { useT } from "../i18n/useT";
+import { searchText } from "../lib/catalogNames";
 
 const MIN_FACTOR = 0.8;
 const MAX_FACTOR = 1.2;
@@ -365,7 +366,7 @@ function AddExceptionSheet({
 
   const needle = searchKey(search);
   const matches = base.ingredients
-    .filter((i) => searchKey(i.name).includes(needle))
+    .filter((i) => searchKey(searchText(i)).includes(needle))
     .slice(0, 40);
   const aisleById = new Map(base.aisles.map((a) => [a._id, a]));
 

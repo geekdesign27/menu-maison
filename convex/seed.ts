@@ -1,6 +1,7 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { AISLES, INGREDIENTS, RECIPES, STAPLES, STORES } from "./seedData";
+import { NAMES_DE } from "./seedNamesDe";
 import { DEFAULT_SETTINGS, familyWriter } from "./lib";
 
 /** Aisles whose products usually stay in stock at home (bought in bulk, not every week). */
@@ -16,7 +17,7 @@ export async function seedFamily(ctx: MutationCtx, familyId: Id<"families">) {
 
   const aisleIds = new Map<string, Id<"aisles">>();
   for (const [order, a] of AISLES.entries()) {
-    aisleIds.set(a.key, await db.insert("aisles", { name: a.name, emoji: a.emoji, order }));
+    aisleIds.set(a.key, await db.insert("aisles", { name: a.name, nameDe: NAMES_DE[a.name], emoji: a.emoji, order }));
   }
 
   const ingredientIds = new Map<string, Id<"ingredients">>();
@@ -27,6 +28,7 @@ export async function seedFamily(ctx: MutationCtx, familyId: Id<"families">) {
       ing.name,
       await db.insert("ingredients", {
         name: ing.name,
+        nameDe: NAMES_DE[ing.name],
         aisleId,
         unit: ing.unit,
         priceChf: ing.priceChf,
@@ -72,7 +74,7 @@ export async function seedFamily(ctx: MutationCtx, familyId: Id<"families">) {
   // New families get the guide for new members, an admin can switch it off
   await db.insert("settings", { ...DEFAULT_SETTINGS, defaultStoreId: firstStore, onboarding: true });
   for (const st of STAPLES) {
-    await db.insert("staples", { name: st.name, aisleId: aisleIds.get(st.aisle), useCount: 0 });
+    await db.insert("staples", { name: st.name, nameDe: NAMES_DE[st.name], aisleId: aisleIds.get(st.aisle), useCount: 0 });
   }
   return true;
 }

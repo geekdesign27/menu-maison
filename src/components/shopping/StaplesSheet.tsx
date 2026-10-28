@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Check, Minus, Plus, Trash2 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
@@ -8,12 +8,16 @@ import { useRun } from "../../lib/toast";
 import { Button, cx, EmptyState, IconButton, Loading, Sheet } from "../ui";
 import { StapleSheet } from "./StapleSheet";
 import { useT } from "../../i18n/useT";
+import { localize } from "../../lib/catalogNames";
 
 export type Staple = NonNullable<ReturnType<typeof useStaples>>[number];
 
 export function useStaples(start: string) {
   const { token } = useSession();
-  return useQuery(api.staples.list, token ? { token, start } : "skip");
+  const { lang } = useT();
+  const staples = useQuery(api.staples.list, token ? { token, start } : "skip");
+  // German profiles see the German names (see catalogNames.ts)
+  return useMemo(() => staples && localize(staples, lang), [staples, lang]);
 }
 
 /** One tap adds a usual item to this week's list, a second tap removes it. */

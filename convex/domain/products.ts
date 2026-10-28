@@ -9,7 +9,9 @@ export type ProductKind = "ingredient" | "staple";
 
 export interface ProductSource {
   _id: string;
-  name: string;
+  name: string; // the name shown (German for a German profile)
+  nameFr?: string; // French name, when `name` is the German one
+  nameDe?: string;
   aisleId?: string;
   priceChf?: number;
   onlyChains?: string[];
@@ -27,6 +29,8 @@ export interface Product<I extends ProductSource, S extends ProductSource> {
   kind: ProductKind;
   key: string; // unique across both kinds
   name: string;
+  /** Every name of the product, French and German, for the search. */
+  searchText: string;
   aisleId?: string;
   priced: boolean;
   hasPhoto: boolean;
@@ -40,6 +44,7 @@ export function buildProducts<I extends ProductSource & { priceQty?: number }, S
   ingredients: I[],
   staples: S[],
   recipes: RecipeUse[],
+  lang: "fr" | "de" = "fr",
 ): Product<I, S>[] {
   const uses = new Map<string, { _id: string; name: string; archived: boolean }[]>();
   for (const r of recipes) {
@@ -50,12 +55,14 @@ export function buildProducts<I extends ProductSource & { priceQty?: number }, S
       uses.set(id, list);
     }
   }
-  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "fr");
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, lang);
+  const allNames = (p: ProductSource) => [p.name, p.nameFr, p.nameDe].filter(Boolean).join(" ");
   const rows: Product<I, S>[] = [
     ...ingredients.map((i) => ({
       kind: "ingredient" as const,
       key: `ing:${i._id}`,
       name: i.name,
+      searchText: allNames(i),
       aisleId: i.aisleId,
       priced: i.priceChf !== undefined && i.priceQty !== undefined,
       hasPhoto: !!i.imageId,
@@ -66,6 +73,7 @@ export function buildProducts<I extends ProductSource & { priceQty?: number }, S
       kind: "staple" as const,
       key: `staple:${s._id}`,
       name: s.name,
+      searchText: allNames(s),
       aisleId: s.aisleId,
       priced: s.priceChf !== undefined,
       hasPhoto: !!s.imageId,
@@ -93,7 +101,7 @@ export function filterProducts<P extends Product<ProductSource, ProductSource>>(
 ): P[] {
   const needle = searchKey(filter.search ?? "");
   return rows.filter((p) => {
-    if (needle && !searchKey(p.name).includes(needle)) return false;
+    if (needle && !searchKey(p.searchText).includes(needle)) return false;
     if (filter.kind && p.kind !== filter.kind) return false;
     if (filter.aisleId !== undefined && (p.aisleId ?? null) !== filter.aisleId) return false;
     if (filter.chain) {

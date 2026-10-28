@@ -28,7 +28,7 @@ function sources() {
 const NOT_SHOWN = [
   /^Bearer /,
   /^(Titre|Description|Portions|Temps total|Rayons|Styles possibles) :/,
-  /^(Catalogue de la famille|Recette à transformer|Recette de cuisine\.)/,
+  /^(Catalogue de la famille|Recette à transformer|Recette de cuisine\.|Kochrezept\.)/,
   /^\$\{(DAY|num|formatNumber|rounded|n \+ 1|twin|words)/,
   /^(À acheter chez|Bei )/, // domain/shopping.ts, in the member's language
   /^\$\{source\.name\} \(/, // recipe copy, in the member's language

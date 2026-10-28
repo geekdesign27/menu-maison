@@ -14,6 +14,8 @@ import { parseAmount, unitChoiceLabel, unitName, UNITS } from "../../lib/units";
 import { ChainsPicker, type Chain } from "./chains";
 import { ProductPhotoField } from "./ProductPhotoField";
 import { useT } from "../../i18n/useT";
+import { frenchName, namesToSave } from "../../lib/catalogNames";
+import { NameFields } from "./NameFields";
 
 export interface SavedIngredient {
   _id: Id<"ingredients">;
@@ -57,7 +59,8 @@ export function IngredientSheet({
   const [pendingOff, setPendingOff] = useState<OffHit | null>(
     initialOff ?? null,
   );
-  const [name, setName] = useState(ingredient?.name ?? initialName);
+  const [name, setName] = useState(ingredient ? frenchName(ingredient) : (lang === "fr" ? initialName : ""));
+  const [nameDe, setNameDe] = useState(ingredient?.nameDe ?? (lang === "de" ? initialName : ""));
   const [aisleId, setAisleId] = useState<Id<"aisles"> | "">(
     ingredient?.aisleId ?? initialAisleId ?? "",
   );
@@ -118,7 +121,7 @@ export function IngredientSheet({
         upsert({
           token,
           id: ingredient?._id,
-          name,
+          ...namesToSave(name, nameDe),
           aisleId,
           unit,
           priceChf,
@@ -139,7 +142,7 @@ export function IngredientSheet({
     }
     setBusy(false);
     if (id) {
-      onSaved?.({ _id: id, name: name.trim(), unit });
+      onSaved?.({ _id: id, name: (lang === "de" && nameDe.trim()) || namesToSave(name, nameDe).name, unit });
       onClose();
     }
   };
@@ -150,16 +153,17 @@ export function IngredientSheet({
       onClose={onClose}
       title={ingredient ? ingredient.name : t("recipes.newIngredient")}
       footer={
-        <Button size="lg" onClick={save} disabled={busy || !name.trim()}>
+        <Button size="lg" onClick={save} disabled={busy || !(name.trim() || nameDe.trim())}>
           {t(ingredient ? "recipes.saveShort" : "recipes.addThisIngredient")}
         </Button>
       }
     >
       <div className="grid gap-4">
-        <TextInput
-          label={t("recipes.name")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+        <NameFields
+          name={name}
+          nameDe={nameDe}
+          onName={setName}
+          onNameDe={setNameDe}
           placeholder={t("recipes.ingredientNamePlaceholder")}
           autoFocus={!ingredient}
         />

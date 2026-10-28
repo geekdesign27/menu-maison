@@ -241,6 +241,11 @@ export const fr = {
   "common.steps.checkHint": "Courses, pendant les achats.",
   "common.steps.status": "Dire comment s'est passé un plat",
   "common.steps.statusHint": "Toucher un plat : Mangé, Pas mangé, Il en reste…",
+  // Names of products, aisles and usual items in both languages
+  "common.nameFr": "Nom",
+  "common.nameFrHint": "Le nom que voient les profils en français.",
+  "common.nameDe": "Nom en allemand",
+  "common.nameDeHint": "Facultatif : les profils en allemand voient ce nom.",
 } as const;
 
 export const de: { [K in keyof typeof fr]: string } = {
@@ -472,4 +477,8 @@ export const de: { [K in keyof typeof fr]: string } = {
   "common.steps.status": "Sagen, wie ein Gericht war",
   "common.steps.statusHint":
     "Tippe auf ein Gericht: Gegessen, Nicht gegessen, Reste übrig…",
+  "common.nameFr": "Name auf Französisch",
+  "common.nameFrHint": "Den sehen die Profile auf Französisch. Leer gelassen: der deutsche Name.",
+  "common.nameDe": "Name auf Deutsch",
+  "common.nameDeHint": "Diesen Namen siehst du in der App.",
 };

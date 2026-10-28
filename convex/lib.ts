@@ -173,6 +173,12 @@ export function cleanText(s: string, max: number, what: string) {
   return t;
 }
 
+/** Optional German name: undefined keeps it, "" removes it. */
+export function cleanNameDe(nameDe: string | undefined, max: number) {
+  if (nameDe === undefined) return {};
+  return { nameDe: cleanText(nameDe, max, "Nom allemand") || undefined };
+}
+
 export function assertInt(n: number, min: number, max: number, what: string) {
   if (!Number.isInteger(n) || n < min || n > max)
     throw new ConvexError(`${what} : entre ${min} et ${max}.`);

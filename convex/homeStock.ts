@@ -3,6 +3,7 @@ import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { requireMember, requireMemberWriter } from "./lib";
 import { formatQty } from "./domain/quantities";
+import { localName } from "./domain/lang";
 
 /**
  * « À utiliser »: ingredients bought for a dish that was not cooked, with the
@@ -20,7 +21,7 @@ export const list = query({
         .sort((a, b) => a.since.localeCompare(b.since))
         .map(async (s) => {
           const ing = await db.get(s.ingredientId);
-          return ing && { _id: s._id, ingredientId: ing._id, name: ing.name, display: formatQty(s.qty, s.unit, lang), since: s.since, from: s.fromName };
+          return ing && { _id: s._id, ingredientId: ing._id, name: localName(ing, lang), display: formatQty(s.qty, s.unit, lang), since: s.since, from: s.fromName };
         }),
     );
     const items = rows.filter((r) => r !== null);

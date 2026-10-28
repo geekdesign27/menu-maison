@@ -10,6 +10,7 @@ import type { FamilyWriter } from "./lib";
 import { getSettings } from "./lib";
 import { unitValidator } from "./schema";
 import { weekStart } from "./domain/dates";
+import { localName } from "./domain/lang";
 
 function assertPersons(n: number) {
   assertInt(n, 1, 30, "Nombre de personnes");
@@ -255,7 +256,8 @@ async function checksFor(db: FamilyDb, meal: Doc<"meals">) {
 export const notCookedPreview = query({
   args: { token: v.string(), id: v.id("meals") },
   handler: async (ctx, { token, id }) => {
-    const { db } = await requireMember(ctx, token);
+    const { db, member } = await requireMember(ctx, token);
+    const lang = member.lang ?? "fr";
     const meal = await db.own(id, "Repas introuvable.");
     const recipe = meal.recipeId ? await db.get(meal.recipeId) : null;
     if (!recipe || meal.fromLeftoverOf) return { items: [], leftoversPlanned: 0, together: [] };
@@ -266,11 +268,11 @@ export const notCookedPreview = query({
     const items = [];
     for (const n of needs) {
       const ing = await db.get(n.ingredientId as Id<"ingredients">);
-      if (ing) items.push({ ...n, ingredientId: ing._id, name: ing.name, pantry: ing.pantry ?? false });
+      if (ing) items.push({ ...n, ingredientId: ing._id, name: localName(ing, lang), pantry: ing.pantry ?? false });
     }
     const later = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 30));
     return {
-      items: items.sort((a, b) => Number(b.bought) - Number(a.bought) || a.name.localeCompare(b.name, "fr")),
+      items: items.sort((a, b) => Number(b.bought) - Number(a.bought) || a.name.localeCompare(b.name, lang)),
       leftoversPlanned: later.filter((m) => group.some((g) => g._id === m.fromLeftoverOf) && m.status === "prévu").length,
       // The other meals of this cooking, cancelled with it
       together: group.slice(1).map((m) => ({ date: m.date, slot: m.slot })),

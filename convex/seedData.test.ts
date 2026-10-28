@@ -230,3 +230,13 @@ describe("staples", () => {
     expect(STAPLES.length).toBeGreaterThanOrEqual(20);
   });
 });
+
+describe("German names of the starter catalogue", () => {
+  it("names every aisle, ingredient and usual item, in Swiss German", async () => {
+    const { NAMES_DE } = await import("./seedNamesDe");
+    const names = [...AISLES, ...INGREDIENTS, ...STAPLES].map((x) => x.name);
+    expect(names.filter((n) => !NAMES_DE[n])).toEqual([]);
+    expect(Object.keys(NAMES_DE).filter((n) => !names.includes(n))).toEqual([]);
+    expect(Object.values(NAMES_DE).filter((n) => /[ß—–]/.test(n))).toEqual([]);
+  });
+});
