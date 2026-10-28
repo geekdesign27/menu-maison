@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Check } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { ShoppingItem } from "../../../convex/domain/shopping";
+import { useT } from "../../i18n/useT";
 import { useSession } from "../../lib/session";
 import { useStoreChoice } from "../../lib/week";
 import { useRun } from "../../lib/toast";
@@ -24,8 +25,9 @@ export function ValidateWeekSheet({
   onClose: () => void;
   start: string;
 }) {
+  const { t } = useT();
   return (
-    <Sheet open={open} onClose={onClose} title="Valider le menu de la semaine">
+    <Sheet open={open} onClose={onClose} title={t("week.validate")}>
       {/* Mounted only while open, so the ticks start from the saved state each time */}
       {open && <ValidateWeekBody start={start} onDone={onClose} />}
     </Sheet>
@@ -41,11 +43,12 @@ function ValidateWeekBody({
 }) {
   const { token } = useSession();
   const { store } = useStoreChoice();
+  const { t } = useT();
   const list = useQuery(
     api.shopping.list,
     token ? { token, start, storeId: store?._id } : "skip",
   );
-  if (list === undefined) return <Loading label="Calcul des ingrédients" />;
+  if (list === undefined) return <Loading label={t("week.computing")} />;
   return <Checklist start={start} list={list} onDone={onDone} />;
 }
 
@@ -60,6 +63,7 @@ function Checklist({
 }) {
   const { token } = useSession();
   const navigate = useNavigate();
+  const { t, lang } = useT();
   const run = useRun();
   const setAtHome = useMutation(api.shopping.setAtHome);
   const [atHome, setAtHomeKeys] = useState(
@@ -72,20 +76,20 @@ function Checklist({
       ...list.sections.flatMap((s) => s.items),
       ...list.skipped,
     ].filter((i) => !i.extra);
-    all.sort((a, b) => a.label.localeCompare(b.label, "fr"));
+    all.sort((a, b) => a.label.localeCompare(b.label, lang));
     return {
       pantry: all.filter((i) => i.pantry),
       fresh: all.filter((i) => !i.pantry),
     };
-  }, [list]);
+  }, [list, lang]);
 
   const total = pantry.length + fresh.length;
   if (total === 0) {
     return (
       <EmptyState
         emoji="🍽️"
-        title="Aucun ingrédient cette semaine"
-        text="Ajoute des plats avec une recette, puis valide le menu."
+        title={t("week.noIngredientTitle")}
+        text={t("week.noIngredientText")}
       />
     );
   }
@@ -105,7 +109,7 @@ function Checklist({
     setSaving(true);
     const ok = await run(
       () => setAtHome({ token, start, itemKeys: [...atHome] }),
-      "Liste de courses prête",
+      t("week.listReady"),
     );
     setSaving(false);
     if (ok !== undefined) {
@@ -116,20 +120,17 @@ function Checklist({
 
   return (
     <div>
-      <p className="mt-1 text-[15px] text-muted">
-        Tout est coché pour l'achat. Décoche ce que vous avez déjà à la
-        maison&nbsp;: ça ne sera pas sur la liste.
-      </p>
+      <p className="mt-1 text-[15px] text-muted">{t("week.validateIntro")}</p>
 
       {pantry.length > 0 && (
         <>
-          <SectionTitle>Souvent en stock</SectionTitle>
+          <SectionTitle>{t("week.pantry")}</SectionTitle>
           <ItemList items={pantry} atHome={atHome} onToggle={toggle} />
         </>
       )}
       {fresh.length > 0 && (
         <>
-          <SectionTitle>Frais et du quotidien</SectionTitle>
+          <SectionTitle>{t("week.fresh")}</SectionTitle>
           <ItemList items={fresh} atHome={atHome} onToggle={toggle} />
         </>
       )}
@@ -137,8 +138,14 @@ function Checklist({
       <div className="sticky bottom-0 -mx-4 mt-4 bg-cream px-4 pt-3 pb-1">
         <Button size="lg" onClick={save} disabled={saving}>
           {saving
-            ? "Enregistrement…"
-            : `Valider : ${plural(toBuy, "article", "articles")} à acheter`}
+            ? t("week.saving")
+            : t("week.validateButton", {
+                articles: plural(
+                  toBuy,
+                  t("week.articleOne"),
+                  t("week.articleMany"),
+                ),
+              })}
         </Button>
       </div>
     </div>
@@ -154,6 +161,7 @@ function ItemList({
   atHome: Set<string>;
   onToggle: (key: string) => void;
 }) {
+  const { t } = useT();
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-paper shadow-sm">
       {items.map((item) => {
@@ -187,10 +195,14 @@ function ItemList({
                 >
                   {item.label}
                 </span>
-                {item.packDetail && <span className="block text-[13px] text-muted">{item.packDetail}</span>}
+                {item.packDetail && (
+                  <span className="block text-[13px] text-muted">
+                    {item.packDetail}
+                  </span>
+                )}
                 {!buy && (
                   <span className="block text-[13px] font-bold text-herb">
-                    Déjà à la maison
+                    {t("week.atHome")}
                   </span>
                 )}
               </span>

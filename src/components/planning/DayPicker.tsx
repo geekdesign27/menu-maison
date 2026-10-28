@@ -1,10 +1,11 @@
 import { useState } from "react";
 import {
   addDays,
-  DAY_SHORT,
   dayOfWeek,
+  dayShortName,
   weekDays,
 } from "../../../convex/domain/dates";
+import { useT } from "../../i18n/useT";
 import { useWeek } from "../../lib/week";
 import { cx } from "../ui";
 
@@ -19,11 +20,12 @@ export function DayGrid({
   onChange: (date: string) => void;
 }) {
   const { today } = useWeek();
+  const { t, lang } = useT();
   return (
     <div
       className="grid grid-cols-7 gap-1.5"
       role="radiogroup"
-      aria-label="Jour"
+      aria-label={t("week.day")}
     >
       {days.map((d) => {
         const selected = d === value;
@@ -44,7 +46,7 @@ export function DayGrid({
             )}
           >
             <span className="text-[13px] font-bold leading-none">
-              {DAY_SHORT[dayOfWeek(d)]}
+              {dayShortName(dayOfWeek(d), lang)}
             </span>
             <span className="mt-1 text-lg font-black leading-none tabular-nums">
               {Number(d.slice(8))}
@@ -65,6 +67,7 @@ export function WeekDayPicker({
   onChange: (date: string) => void;
 }) {
   const { start } = useWeek();
+  const { t } = useT();
   const nextStart = addDays(start, 7);
   const [showNext, setShowNext] = useState(value >= nextStart);
   const days = weekDays(showNext ? nextStart : start);
@@ -76,7 +79,7 @@ export function WeekDayPicker({
         onClick={() => setShowNext((s) => !s)}
         className="mt-1 min-h-11 px-1 text-[15px] font-extrabold text-carrot-dark"
       >
-        {showNext ? "Revenir à la semaine affichée" : "Semaine suivante"}
+        {showNext ? t("week.backToShownWeek") : t("week.nextWeek")}
       </button>
     </div>
   );

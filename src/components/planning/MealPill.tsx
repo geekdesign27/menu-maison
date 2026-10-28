@@ -1,5 +1,6 @@
 import { Check, Refrigerator, Users } from "lucide-react";
 import { daysBetween, formatDayShort } from "../../../convex/domain/dates";
+import { useT } from "../../i18n/useT";
 import { cx } from "../ui";
 import type { WeekMeal } from "./data";
 
@@ -11,7 +12,8 @@ export function MealPill({
   meal: WeekMeal;
   onClick: () => void;
 }) {
-  const name = meal.recipe?.name ?? meal.title ?? "Plat";
+  const { t, lang } = useT();
+  const name = meal.recipe?.name ?? meal.title ?? t("week.dish");
   const ahead = daysBetween(meal.cookedOn, meal.date);
   const eaten = meal.status === "mangé";
   const notEaten = meal.status === "pas mangé";
@@ -47,26 +49,30 @@ export function MealPill({
           </span>
           {!!meal.extraPortions && (
             <span className="rounded-full bg-herb-soft px-2 font-extrabold text-herb">
-              +{meal.extraPortions}&nbsp;frigo
+              {t("week.pillExtra", { count: meal.extraPortions })}
             </span>
           )}
           {meal.fromLeftoverOf ? (
             <span className="rounded-full bg-sun-soft px-2 font-extrabold text-[#8a6200]">
-              restes du {formatDayShort(meal.cookedOn)}
+              {t("week.pillLeftoversOf", {
+                date: formatDayShort(meal.cookedOn, lang),
+              })}
             </span>
           ) : (
             ahead > 0 && (
               <span>
                 {ahead === 1
-                  ? "préparé la veille"
-                  : `préparé le ${formatDayShort(meal.cookedOn)}`}
+                  ? t("week.pillCookedDayBefore")
+                  : t("week.pillCookedOn", {
+                      date: formatDayShort(meal.cookedOn, lang),
+                    })}
               </span>
             )
           )}
           {meal.leftoverPortions > 0 && meal.status !== "prévu" && (
             <span className="inline-flex items-center gap-1 text-herb">
               <Refrigerator size={14} aria-hidden />
-              {meal.leftoverPortions} au frigo
+              {t("week.inFridge", { count: meal.leftoverPortions })}
             </span>
           )}
         </span>
@@ -74,19 +80,19 @@ export function MealPill({
       {eaten && (
         <span
           className="flex size-7 shrink-0 items-center justify-center rounded-full bg-herb text-white"
-          aria-label="Mangé"
+          aria-label={t("status.mangé")}
         >
           <Check size={16} strokeWidth={3} />
         </span>
       )}
       {notEaten && (
         <span className="shrink-0 text-[13px] font-extrabold text-berry">
-          pas mangé
+          {t("status.pas mangé").toLowerCase()}
         </span>
       )}
       {notCooked && (
         <span className="shrink-0 text-[13px] font-extrabold text-muted">
-          pas cuisiné
+          {t("status.pas cuisiné").toLowerCase()}
         </span>
       )}
     </button>

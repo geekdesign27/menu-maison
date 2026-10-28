@@ -3,13 +3,20 @@ import { useMutation } from "convex/react";
 import { RefreshCw } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { addDays, DAY_SHORT, dayOfWeek, formatDayLong, weekStart } from "../../convex/domain/dates";
+import {
+  addDays,
+  dayOfWeek,
+  dayShortName,
+  formatDayLong,
+  weekStart,
+} from "../../convex/domain/dates";
+import { useT } from "../i18n/useT";
 import { useBase, useSession } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { useRun, useToast } from "../lib/toast";
 import { RecipePicker } from "./RecipePicker";
 import { WeekDayPicker } from "./planning/DayPicker";
-import { Field, SLOT_OPTIONS, Toggle } from "./planning/controls";
+import { Field, Toggle, useSlotOptions } from "./planning/controls";
 import {
   capitalize,
   repeatWarning,
@@ -19,7 +26,7 @@ import {
 } from "./planning/data";
 import { useOverview, useRecipes } from "../lib/queries";
 import { Badge, Button, cx, Segmented, Sheet, Stepper } from "./ui";
-import { plural, portions } from "../lib/format";
+import { plural } from "../lib/format";
 
 interface Props {
   open: boolean;
@@ -42,6 +49,8 @@ function PlanMealForm({
   recipeId,
 }: Props) {
   const { token } = useSession();
+  const { t, lang } = useT();
+  const slotOptions = useSlotOptions();
   const base = useBase();
   const { start, today } = useWeek();
   const recipes = useRecipes();
@@ -51,6 +60,11 @@ function PlanMealForm({
   const planLeftover = useMutation(api.meals.planLeftover);
   const toast = useToast();
   const run = useRun();
+
+  const portions = (n: number) =>
+    plural(n, t("week.portionOne"), t("week.portionMany"));
+  const mealsText = (n: number) =>
+    plural(n, t("week.mealOne"), t("week.mealMany"));
 
   const [choice, setChoice] = useState<MealChoice | null>(
     recipeId ? { recipeId } : null,
@@ -88,23 +102,27 @@ function PlanMealForm({
       ? recipes?.find((r) => r._id === choice.recipeId)
       : undefined;
   // The recipe's usual servings (1 for a personal breakfast), else the household default
-  const defaultPersons = recipe?.defaultPersons ?? base?.settings.defaultPersons ?? 3;
+  const defaultPersons =
+    recipe?.defaultPersons ?? base?.settings.defaultPersons ?? 3;
   const effectivePersons = persons ?? defaultPersons;
   const effectiveTomorrowPersons = tomorrowPersons ?? effectivePersons;
   const isRecipe = !!choice && "recipeId" in choice;
   // Spare portions of a dish already cooked: no shopping, no repeat, no extra portions
   const leftover = choice && "leftoverOf" in choice ? choice : null;
   const cookedPortions =
-    effectivePersons + (slot === "soir" && alsoTomorrow ? effectiveTomorrowPersons : 0) + extraPortions;
+    effectivePersons +
+    (slot === "soir" && alsoTomorrow ? effectiveTomorrowPersons : 0) +
+    extraPortions;
   const warning =
     choice && "recipeId" in choice
-      ? repeatWarning(overview?.meals, choice.recipeId, date, today)
+      ? repeatWarning(overview?.meals, choice.recipeId, date, today, lang)
       : null;
 
   const chosenDays = repeatDays ?? [dayOfWeek(date)];
   const repeatCount = (() => {
     let n = 0;
-    for (let i = 0; i < repeatWeeks * 7; i++) if (chosenDays.includes(dayOfWeek(addDays(date, i)))) n++;
+    for (let i = 0; i < repeatWeeks * 7; i++)
+      if (chosenDays.includes(dayOfWeek(addDays(date, i)))) n++;
     return n;
   })();
 
@@ -113,8 +131,15 @@ function PlanMealForm({
     setSaving(true);
     if ("leftoverOf" in choice) {
       const id = await run(
-        () => planLeftover({ token, sourceId: choice.leftoverOf, date, slot, persons: Math.min(effectivePersons, choice.available) }),
-        "Restes ajoutés au menu",
+        () =>
+          planLeftover({
+            token,
+            sourceId: choice.leftoverOf,
+            date,
+            slot,
+            persons: Math.min(effectivePersons, choice.available),
+          }),
+        t("week.leftoversAdded"),
       );
       setSaving(false);
       if (id) onClose();
@@ -127,14 +152,25 @@ function PlanMealForm({
           date,
           slot,
           persons: effectivePersons,
-          ...("recipeId" in choice ? { recipeId: choice.recipeId } : { title: choice.title }),
+          ...("recipeId" in choice
+            ? { recipeId: choice.recipeId }
+            : { title: choice.title }),
           weekdays: chosenDays,
           weeks: repeatWeeks,
         }),
       );
       setSaving(false);
       if (res) {
-        toast(res.added > 0 ? `${plural(res.added, "repas ajouté", "repas ajoutés")} au menu` : "Ces jours avaient déjà ce plat");
+        toast(
+          res.added > 0
+            ? t(
+                res.added > 1 ? "week.addedToMenuMany" : "week.addedToMenuOne",
+                {
+                  meals: mealsText(res.added),
+                },
+              )
+            : t("week.alreadyThere"),
+        );
         onClose();
       }
       return;
@@ -154,9 +190,10 @@ function PlanMealForm({
               ? effectiveTomorrowPersons
               : undefined,
           cookedTheEveningBefore: slot !== "soir" ? eveningBefore : undefined,
-          extraPortions: isRecipe && extraPortions > 0 ? extraPortions : undefined,
+          extraPortions:
+            isRecipe && extraPortions > 0 ? extraPortions : undefined,
         }),
-      "Ajouté au menu",
+      t("week.added"),
     );
     setSaving(false);
     if (id) onClose();
@@ -167,15 +204,22 @@ function PlanMealForm({
       <Sheet
         open
         onClose={onClose}
-        title="Ajouter au menu"
+        title={t("week.addToMenu")}
         footer={
           <Button
             size="lg"
             onClick={submit}
-            disabled={!choice || saving || (repeat && !leftover && repeatCount === 0) || (!!leftover && date > leftover.until)}
+            disabled={
+              !choice ||
+              saving ||
+              (repeat && !leftover && repeatCount === 0) ||
+              (!!leftover && date > leftover.until)
+            }
             className="mb-2"
           >
-            {repeat && !leftover ? `Ajouter ${plural(repeatCount, "repas", "repas")}` : "Ajouter au menu"}
+            {repeat && !leftover
+              ? t("week.addMeals", { meals: mealsText(repeatCount) })
+              : t("week.addToMenu")}
           </Button>
         }
       >
@@ -193,97 +237,157 @@ function PlanMealForm({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-lg font-black">
-                {(leftover && `Restes\u00a0: ${leftover.name}`) ??
+                {(leftover && t("week.leftoversOf", { name: leftover.name })) ??
                   recipe?.name ??
                   (choice && "title" in choice
                     ? choice.title
                     : choice
-                      ? "Chargement…"
-                      : "Choisir un plat")}
+                      ? t("week.loadingShort")
+                      : t("week.chooseDish"))}
               </span>
               <span className="inline-flex items-center gap-1 text-[15px] font-bold text-carrot-dark">
                 <RefreshCw size={15} aria-hidden />
-                {choice ? "Changer" : "Recette ou texte libre"}
+                {choice ? t("week.change") : t("week.recipeOrText")}
               </span>
             </span>
           </button>
           {leftover && (
             <div className="-mt-2">
               <Badge tone="herb">
-                {plural(leftover.available, "portion disponible", "portions disponibles")}, bon jusqu'au {formatDayLong(leftover.until)}
+                {t("week.goodUntil", {
+                  portions: plural(
+                    leftover.available,
+                    t("week.portionAvailableOne"),
+                    t("week.portionAvailableMany"),
+                  ),
+                  date: formatDayLong(leftover.until, lang),
+                })}
               </Badge>
               {date > leftover.until && (
-                <p className="mt-1 text-[15px] font-bold text-berry">Après la date limite&nbsp;: choisis un jour plus tôt.</p>
+                <p className="mt-1 text-[15px] font-bold text-berry">
+                  {t("week.tooLate")}
+                </p>
               )}
             </div>
           )}
           {warning && !leftover && (
             <div className="-mt-2">
-              <Badge tone="sun">⚠️ Déjà {warning}</Badge>
+              <Badge tone="sun">{t("week.alreadyWarning", { warning })}</Badge>
             </div>
           )}
 
-          <Field label="Jour">
+          <Field label={t("week.day")}>
             <WeekDayPicker value={date} onChange={setDate} />
             <p className="mt-1 text-[15px] font-semibold text-muted">
-              {capitalize(formatDayLong(date))}
+              {capitalize(formatDayLong(date, lang))}
             </p>
           </Field>
 
-          <Field label="Repas">
+          <Field label={t("week.meal")}>
             <Segmented
-              label="Repas"
+              label={t("week.meal")}
               value={slot}
-              options={SLOT_OPTIONS}
+              options={slotOptions}
               onChange={setSlot}
             />
           </Field>
 
-          <Field label={slot === "soir" ? "Portions ce soir" : slot === "midi" ? "Portions ce midi" : "Portions ce matin"}>
+          <Field
+            label={
+              slot === "soir"
+                ? t("week.portionsEvening")
+                : slot === "midi"
+                  ? t("week.portionsNoon")
+                  : t("week.portionsMorning")
+            }
+          >
             <Stepper
-              label="Portions"
-              value={leftover ? Math.min(effectivePersons, leftover.available) : effectivePersons}
+              label={t("week.portions")}
+              value={
+                leftover
+                  ? Math.min(effectivePersons, leftover.available)
+                  : effectivePersons
+              }
               max={leftover ? leftover.available : undefined}
               onChange={setPersons}
             />
           </Field>
 
           {!leftover && (
-          <div className={cx("rounded-[var(--radius-card)] p-4 transition", repeat ? "bg-sun-soft" : "bg-paper ring-1 ring-line")}>
-            <Toggle checked={repeat} onChange={setRepeat} label="Répéter ce plat" hint="Les mêmes jours, plusieurs semaines de suite." />
-            {repeat && (
-              <div className="mt-3 space-y-3">
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Jours de la répétition">
-                  {[1, 2, 3, 4, 5, 6, 0].map((d) => {
-                    const on = chosenDays.includes(d);
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => setRepeatDays(on ? chosenDays.filter((x) => x !== d) : [...chosenDays, d])}
-                        className={cx(
-                          "min-h-11 min-w-11 rounded-full px-2 font-extrabold transition",
-                          on ? "bg-ink text-white" : "bg-paper text-ink ring-1 ring-line",
-                        )}
-                      >
-                        {DAY_SHORT[d]}
-                      </button>
-                    );
-                  })}
+            <div
+              className={cx(
+                "rounded-[var(--radius-card)] p-4 transition",
+                repeat ? "bg-sun-soft" : "bg-paper ring-1 ring-line",
+              )}
+            >
+              <Toggle
+                checked={repeat}
+                onChange={setRepeat}
+                label={t("week.repeat")}
+                hint={t("week.repeatHint")}
+              />
+              {repeat && (
+                <div className="mt-3 space-y-3">
+                  <div
+                    className="flex flex-wrap gap-1.5"
+                    role="group"
+                    aria-label={t("week.repeatDays")}
+                  >
+                    {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+                      const on = chosenDays.includes(d);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() =>
+                            setRepeatDays(
+                              on
+                                ? chosenDays.filter((x) => x !== d)
+                                : [...chosenDays, d],
+                            )
+                          }
+                          className={cx(
+                            "min-h-11 min-w-11 rounded-full px-2 font-extrabold transition",
+                            on
+                              ? "bg-ink text-white"
+                              : "bg-paper text-ink ring-1 ring-line",
+                          )}
+                        >
+                          {dayShortName(d, lang)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-bold">
+                      {t("week.during", {
+                        weeks: plural(
+                          repeatWeeks,
+                          t("week.weekOne"),
+                          t("week.weekMany"),
+                        ),
+                      })}
+                    </span>
+                    <Stepper
+                      label={t("week.weekCount")}
+                      value={repeatWeeks}
+                      onChange={setRepeatWeeks}
+                      min={1}
+                      max={12}
+                    />
+                  </div>
+                  <p className="text-[15px] font-semibold text-muted">
+                    {repeatCount > 0
+                      ? t("week.repeatFrom", {
+                          meals: mealsText(repeatCount),
+                          date: formatDayLong(date, lang),
+                        })
+                      : t("week.pickOneDay")}
+                  </p>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-bold">Pendant {plural(repeatWeeks, "semaine", "semaines")}</span>
-                  <Stepper label="Nombre de semaines" value={repeatWeeks} onChange={setRepeatWeeks} min={1} max={12} />
-                </div>
-                <p className="text-[15px] font-semibold text-muted">
-                  {repeatCount > 0
-                    ? `${plural(repeatCount, "repas", "repas")} à partir du ${formatDayLong(date)}.`
-                    : "Choisis au moins un jour."}
-                </p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           )}
 
           {repeat || leftover ? null : slot === "soir" ? (
@@ -296,18 +400,20 @@ function PlanMealForm({
               <Toggle
                 checked={alsoTomorrow}
                 onChange={setTomorrow}
-                label="Aussi pour demain midi"
+                label={t("week.tomorrowToo")}
                 hint={
                   tomorrowTaken && !alsoTomorrow
-                    ? "Un plat est déjà prévu demain midi."
-                    : "On cuisine une fois, les quantités s'additionnent."
+                    ? t("week.tomorrowTaken")
+                    : t("week.tomorrowHint")
                 }
               />
               {alsoTomorrow && (
                 <div className="mt-3 flex items-center justify-between gap-3">
-                  <span className="font-bold">Portions demain midi</span>
+                  <span className="font-bold">
+                    {t("week.portionsTomorrow")}
+                  </span>
                   <Stepper
-                    label="Portions demain midi"
+                    label={t("week.portionsTomorrow")}
                     value={effectiveTomorrowPersons}
                     onChange={setTomorrowPersons}
                   />
@@ -319,8 +425,8 @@ function PlanMealForm({
               <Toggle
                 checked={eveningBefore}
                 onChange={setEveningBefore}
-                label="Préparé la veille au soir"
-                hint="Les restes se comptent à partir de la veille."
+                label={t("week.eveningBefore")}
+                hint={t("week.eveningBeforeHint")}
               />
             </div>
           )}
@@ -329,14 +435,25 @@ function PlanMealForm({
             <div className="rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="font-bold">En plus pour le frigo</div>
-                  <div className="text-[15px] text-muted">À manger plus tard dans la semaine</div>
+                  <div className="font-bold">{t("week.extraForFridge")}</div>
+                  <div className="text-[15px] text-muted">
+                    {t("week.laterInWeek")}
+                  </div>
                 </div>
-                <Stepper label="Portions en plus pour le frigo" value={extraPortions} onChange={setExtraPortions} min={0} />
+                <Stepper
+                  label={t("week.extraForFridgeLabel")}
+                  value={extraPortions}
+                  onChange={setExtraPortions}
+                  min={0}
+                />
               </div>
               <p className="mt-3 rounded-2xl bg-carrot-soft px-3 py-2 text-center font-extrabold text-carrot-dark">
-                Tu prépares {portions(cookedPortions)}
-                {extraPortions > 0 ? `, dont ${portions(extraPortions)} pour le frigo` : ""}
+                {extraPortions > 0
+                  ? t("week.youCookExtra", {
+                      portions: portions(cookedPortions),
+                      extra: portions(extraPortions),
+                    })
+                  : t("week.youCook", { portions: portions(cookedPortions) })}
               </p>
             </div>
           )}

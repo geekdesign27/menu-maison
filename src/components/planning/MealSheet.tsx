@@ -15,13 +15,14 @@ import {
 import { api } from "../../../convex/_generated/api";
 import { formatDayLong } from "../../../convex/domain/dates";
 import { formatQty } from "../../../convex/domain/quantities";
+import { useT } from "../../i18n/useT";
 import { useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
 import { plural } from "../../lib/format";
 import { Button, cx, Segmented, Sheet, Stepper } from "../ui";
 import { WeekDayPicker } from "./DayPicker";
-import { Field, SLOT_OPTIONS } from "./controls";
-import { capitalize, SLOT_LABEL, type Slot, type WeekMeal } from "./data";
+import { Field, useSlotOptions } from "./controls";
+import { capitalize, slotInText, type Slot, type WeekMeal } from "./data";
 import { PlanLeftoverSheet } from "./PlanLeftoverSheet";
 
 type StatusChoice = "prévu" | "mangé" | "pas mangé" | "pas cuisiné" | "reste";
@@ -39,11 +40,12 @@ export function MealSheet({
   meal: WeekMeal | null;
   onClose: () => void;
 }) {
+  const { t } = useT();
   return (
     <Sheet
       open={!!meal}
       onClose={onClose}
-      title={meal ? (meal.recipe?.name ?? meal.title ?? "Plat") : ""}
+      title={meal ? (meal.recipe?.name ?? meal.title ?? t("week.dish")) : ""}
     >
       {meal && <MealActions key={meal._id} meal={meal} onClose={onClose} />}
     </Sheet>
@@ -58,6 +60,10 @@ function MealActions({
   onClose: () => void;
 }) {
   const { token } = useSession();
+  const { t, lang } = useT();
+  const slotOptions = useSlotOptions();
+  const portionsText = (n: number) =>
+    plural(n, t("week.portionOne"), t("week.portionMany"));
   const run = useRun();
   const update = useMutation(api.meals.update);
   const setStatus = useMutation(api.meals.setStatus);
@@ -84,7 +90,7 @@ function MealActions({
   };
 
   const move = (patch: { date?: string; slot?: Slot }) =>
-    run(() => update({ token, id: meal._id, ...patch }), "Plat déplacé");
+    run(() => update({ token, id: meal._id, ...patch }), t("week.moved"));
 
   const status = (
     next: "prévu" | "mangé" | "pas mangé",
@@ -105,7 +111,7 @@ function MealActions({
   }[] = [
     {
       value: "prévu",
-      label: "Prévu",
+      label: t("status.prévu"),
       icon: CalendarDays,
       tone: "bg-carrot text-white",
       onClick: () => {
@@ -116,29 +122,29 @@ function MealActions({
     },
     {
       value: "mangé",
-      label: "Mangé",
+      label: t("status.mangé"),
       icon: Check,
       tone: "bg-herb text-white",
       onClick: () => {
         setAskPortions(false);
         setAskNotCooked(false);
-        void status("mangé", 0, "Bon appétit !");
+        void status("mangé", 0, t("week.enjoy"));
       },
     },
     {
       value: "pas mangé",
-      label: "Pas mangé",
+      label: t("status.pas mangé"),
       icon: Utensils,
       tone: "bg-berry text-white",
       onClick: () => {
         setAskPortions(false);
         setAskNotCooked(false);
-        void status("pas mangé", undefined, "Le plat est au frigo");
+        void status("pas mangé", undefined, t("week.dishInFridge"));
       },
     },
     {
       value: "reste",
-      label: "Il en reste",
+      label: t("week.someLeft"),
       icon: Refrigerator,
       tone: "bg-sun text-ink",
       onClick: () => {
@@ -152,7 +158,7 @@ function MealActions({
       : [
           {
             value: "pas cuisiné" as const,
-            label: "Pas cuisiné",
+            label: t("status.pas cuisiné"),
             icon: Ban,
             tone: "bg-muted text-white",
             onClick: () => {
@@ -174,13 +180,17 @@ function MealActions({
         </span>
         <div className="min-w-0 flex-1">
           <div className="font-extrabold">
-            {capitalize(formatDayLong(meal.date))},{" "}
-            {SLOT_LABEL[meal.slot].toLowerCase()}
+            {capitalize(formatDayLong(meal.date, lang))},{" "}
+            {slotInText(meal.slot, lang)}
           </div>
           {meal.cookedOn !== meal.date && (
             <div className="text-[15px] text-muted">
-              {meal.fromLeftoverOf ? "Restes cuisinés le " : "Préparé le "}
-              {formatDayLong(meal.cookedOn)}
+              {t(
+                meal.fromLeftoverOf
+                  ? "week.leftoversCookedOn"
+                  : "week.cookedOn",
+                { date: formatDayLong(meal.cookedOn, lang) },
+              )}
             </div>
           )}
           {meal.recipe && (
@@ -188,15 +198,19 @@ function MealActions({
               to={`/recette/${meal.recipe._id}`}
               className="mt-0.5 inline-flex min-h-11 items-center gap-0.5 font-extrabold text-carrot-dark"
             >
-              Voir la recette <ChevronRight size={18} />
+              {t("week.seeRecipe")} <ChevronRight size={18} />
             </Link>
           )}
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
-        <span className="font-extrabold">Portions</span>
-        <Stepper label="Portions" value={persons} onChange={changePersons} />
+        <span className="font-extrabold">{t("week.portions")}</span>
+        <Stepper
+          label={t("week.portions")}
+          value={persons}
+          onChange={changePersons}
+        />
       </div>
       {meal.leftoverPortions > 0 && !meal.fromLeftoverOf && (
         <Button
@@ -206,20 +220,19 @@ function MealActions({
           onClick={() => setPlanningLeftovers(true)}
         >
           <CalendarPlus size={20} />
-          Planifier les restes (
-          {plural(meal.leftoverPortions, "portion", "portions")})
+          {t("week.planLeftoversCount", {
+            portions: portionsText(meal.leftoverPortions),
+          })}
         </Button>
       )}
       {meal.recipe && !meal.fromLeftoverOf && meal.status === "prévu" && (
         <div className="mt-2 flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
           <div>
-            <div className="font-extrabold">En plus pour le frigo</div>
-            <div className="text-[15px] text-muted">
-              Achetées avec, au frigo une fois cuisinées
-            </div>
+            <div className="font-extrabold">{t("week.extraForFridge")}</div>
+            <div className="text-[15px] text-muted">{t("week.boughtWith")}</div>
           </div>
           <Stepper
-            label="Portions en plus pour le frigo"
+            label={t("week.extraForFridgeLabel")}
             value={extra}
             onChange={changeExtra}
             min={0}
@@ -227,7 +240,7 @@ function MealActions({
         </div>
       )}
 
-      <Field label="Statut">
+      <Field label={t("week.status")}>
         <div className="grid grid-cols-2 gap-2" data-tour="meal-status">
           {STATUSES.map((s, i) => {
             const active =
@@ -259,9 +272,9 @@ function MealActions({
         {askPortions && (
           <div className="mt-3 rounded-[var(--radius-card)] bg-sun-soft p-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="font-extrabold">Portions restantes</span>
+              <span className="font-extrabold">{t("week.portionsLeft")}</span>
               <Stepper
-                label="Portions restantes"
+                label={t("week.portionsLeft")}
                 value={portions}
                 min={1}
                 max={60}
@@ -275,13 +288,13 @@ function MealActions({
                 await status(
                   "mangé",
                   portions,
-                  `${plural(portions, "portion", "portions")} au frigo`,
+                  t("week.inFridge", { count: portionsText(portions) }),
                 );
                 setAskPortions(false);
               }}
             >
               <Refrigerator size={20} />
-              Mettre au frigo
+              {t("week.putInFridge")}
             </Button>
           </div>
         )}
@@ -290,27 +303,28 @@ function MealActions({
         )}
         {meal.status === "pas cuisiné" && (
           <p className="mt-2 text-[15px] font-semibold text-muted">
-            Pas cuisiné : retiré de la liste de courses. Les ingrédients gardés
-            sont dans le Frigo, «{"\u00a0"}À utiliser{"\u00a0"}». «{"\u00a0"}
-            Prévu{"\u00a0"}» le remet au menu.
+            {t("week.notCookedInfo")}
           </p>
         )}
         {!askPortions &&
           meal.leftoverPortions > 0 &&
           meal.status !== "prévu" && (
             <p className="mt-2 text-[15px] font-semibold text-muted">
-              {plural(meal.leftoverPortions, "portion", "portions")} au frigo.
+              {t("week.inFridge", {
+                count: portionsText(meal.leftoverPortions),
+              })}
+              .
             </p>
           )}
       </Field>
 
-      <Field label="Déplacer">
+      <Field label={t("week.move")}>
         <WeekDayPicker value={meal.date} onChange={(date) => move({ date })} />
         <div className="mt-2">
           <Segmented
-            label="Repas"
+            label={t("week.meal")}
             value={meal.slot}
-            options={SLOT_OPTIONS}
+            options={slotOptions}
             onChange={(slot) => move({ slot })}
           />
         </div>
@@ -318,20 +332,23 @@ function MealActions({
 
       {confirmDelete ? (
         <div className="rounded-[var(--radius-card)] bg-berry-soft p-4">
-          <p className="font-extrabold text-berry">Retirer ce plat du menu ?</p>
+          <p className="font-extrabold text-berry">{t("week.removeConfirm")}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
-              Annuler
+              {t("week.cancel")}
             </Button>
             <button
               type="button"
               className="min-h-12 rounded-2xl bg-berry px-4 font-extrabold text-white active:brightness-95"
               onClick={async () => {
                 onClose();
-                await run(() => remove({ token, id: meal._id }), "Plat retiré");
+                await run(
+                  () => remove({ token, id: meal._id }),
+                  t("week.removed"),
+                );
               }}
             >
-              Retirer
+              {t("week.remove")}
             </button>
           </div>
         </div>
@@ -342,7 +359,7 @@ function MealActions({
           onClick={() => setConfirmDelete(true)}
         >
           <Trash size={20} />
-          Retirer du menu
+          {t("week.removeFromMenu")}
         </Button>
       )}
       <PlanLeftoverSheet
@@ -365,6 +382,7 @@ function NotCookedPanel({
   onDone: () => void;
 }) {
   const { token } = useSession();
+  const { t, lang } = useT();
   const run = useRun();
   const preview = useQuery(api.meals.notCookedPreview, { token, id: meal._id });
   const markNotCooked = useMutation(api.meals.markNotCooked);
@@ -384,7 +402,9 @@ function NotCookedPanel({
   }, [preview, kept]);
 
   if (!preview || !kept)
-    return <p className="mt-3 text-[15px] text-muted">Chargement…</p>;
+    return (
+      <p className="mt-3 text-[15px] text-muted">{t("week.loadingShort")}</p>
+    );
   const toggle = (key: string) =>
     setKept((k) => {
       const next = new Set(k);
@@ -401,8 +421,14 @@ function NotCookedPanel({
     const done = await run(
       () => markNotCooked({ token, id: meal._id, keep }),
       keep.length
-        ? `Retiré de la liste. ${plural(keep.length, "ingrédient", "ingrédients")} à utiliser dans le Frigo.`
-        : "Retiré de la liste de courses.",
+        ? t("week.notCookedKept", {
+            ingredients: plural(
+              keep.length,
+              t("week.ingredientOne"),
+              t("week.ingredientMany"),
+            ),
+          })
+        : t("week.notCookedDone"),
     );
     setBusy(false);
     if (done !== undefined) onDone();
@@ -410,17 +436,12 @@ function NotCookedPanel({
 
   return (
     <div className="mt-3 grid gap-3 rounded-[var(--radius-card)] bg-line/40 p-4">
-      <p className="text-[15px]">
-        Le plat sort de la liste de courses : ce qui n'est pas encore acheté
-        disparaît. Pour le cuisiner un autre jour, change plutôt le jour dans «
-        {"\u00a0"}Déplacer{"\u00a0"}», plus bas.
-      </p>
+      <p className="text-[15px]">{t("week.notCookedExplain")}</p>
       {preview.items.length > 0 && (
         <div>
-          <p className="mb-1 font-extrabold">Déjà à la maison</p>
+          <p className="mb-1 font-extrabold">{t("week.atHome")}</p>
           <p className="mb-2 text-[15px] text-muted">
-            Coche ce qui a été acheté : ça ira dans le Frigo, «{"\u00a0"}À
-            utiliser{"\u00a0"}».
+            {t("week.notCookedTick")}
           </p>
           <ul className="grid gap-1.5">
             {preview.items.map((i) => {
@@ -448,7 +469,7 @@ function NotCookedPanel({
                     </span>
                     <span className="min-w-0 flex-1 font-bold">{i.name}</span>
                     <span className="shrink-0 text-[15px] text-muted">
-                      {formatQty(i.qty, i.unit)}
+                      {formatQty(i.qty, i.unit, lang)}
                     </span>
                   </button>
                 </li>
@@ -459,29 +480,31 @@ function NotCookedPanel({
       )}
       {preview.together.length > 0 && (
         <p className="text-[15px] font-bold">
-          Cuisiné en même temps,{" "}
-          {preview.together.length > 1
-            ? "ces repas sont aussi annulés"
-            : "ce repas est aussi annulé"}
-          {"\u00a0"}:{" "}
-          {preview.together
-            .map(
-              (m) =>
-                `${formatDayLong(m.date)}, ${SLOT_LABEL[m.slot].toLowerCase()}`,
-            )
-            .join(", ")}
-          .
+          {t(
+            preview.together.length > 1
+              ? "week.togetherMany"
+              : "week.togetherOne",
+            {
+              meals: preview.together
+                .map(
+                  (m) =>
+                    `${formatDayLong(m.date, lang)}, ${slotInText(m.slot, lang)}`,
+                )
+                .join(", "),
+            },
+          )}
         </p>
       )}
       {preview.leftoversPlanned > 0 && (
         <p className="text-[15px] font-bold text-berry">
           {preview.leftoversPlanned > 1
-            ? `${preview.leftoversPlanned} repas de restes prévus avec ce plat seront retirés du menu.`
-            : "Le repas de restes prévu avec ce plat sera retiré du menu."}
+            ? t("week.leftoverMealsMany", { count: preview.leftoversPlanned })
+            : t("week.leftoverMealsOne")}
         </p>
       )}
       <Button size="lg" onClick={confirm} disabled={busy}>
-        <Ban size={20} /> {busy ? "Un instant…" : "Pas cuisiné, on l'enlève"}
+        <Ban size={20} />{" "}
+        {busy ? t("week.oneMoment") : t("week.notCookedButton")}
       </Button>
     </div>
   );
