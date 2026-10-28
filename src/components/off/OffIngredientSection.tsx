@@ -3,16 +3,13 @@ import { useAction, useMutation } from "convex/react";
 import { Search, Unlink } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import {
-  allergenLabels,
-  type OffData,
-  type OffHit,
-} from "../../../convex/domain/openFoodFacts";
-import { NBSP } from "../../../convex/domain/quantities";
+import type { OffData, OffHit } from "../../../convex/domain/openFoodFacts";
 import { useBase, useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
 import { Button } from "../ui";
 import { NutriscoreBadge, OffPickSheet } from "./OffSearch";
+import { allergenNames } from "./allergens";
+import { useT } from "../../i18n/useT";
 
 export type ImportedImage = {
   imageId: Id<"_storage"> | null;
@@ -27,7 +24,8 @@ export function OffSummary({
   off: OffData;
   liquid?: boolean;
 }) {
-  const allergens = allergenLabels(off.allergens);
+  const { t, lang } = useT();
+  const allergens = allergenNames(off.allergens, t, lang);
   const kcal = off.per100?.kcal;
   return (
     <div className="grid gap-2 text-[15px]">
@@ -35,21 +33,21 @@ export function OffSummary({
         {off.nutriscore && <NutriscoreBadge grade={off.nutriscore} size="md" />}
         {kcal !== undefined && (
           <span className="font-bold">
-            {Math.round(kcal)}
-            {NBSP}kcal pour 100{NBSP}
-            {liquid ? "ml" : "g"}
+            {t("recipes.kcalPer100", {
+              kcal: Math.round(kcal),
+              unit: liquid ? "ml" : "g",
+            })}
           </span>
         )}
       </div>
       <p>
-        <span className="font-bold">Allergènes{NBSP}: </span>
-        {allergens.length ? allergens.join(", ") : "aucun indiqué sur Open Food Facts"}
+        <span className="font-bold">{t("recipes.allergensLabel")}</span>
+        {allergens.length
+          ? allergens.join(", ")
+          : t("recipes.noneIndicatedOff")}
       </p>
       <p className="text-[13px] text-muted">
-        D'après le produit «{NBSP}
-        {off.productName}
-        {NBSP}» d'Open Food Facts. L'ingrédient reste achetable dans n'importe
-        quelle marque.
+        {t("recipes.offSource", { product: off.productName })}
       </p>
     </div>
   );
@@ -78,6 +76,7 @@ export function OffIngredientSection({
   const base = useBase();
   const { token } = useSession();
   const run = useRun();
+  const { t } = useT();
   const importProduct = useAction(api.openFoodFacts.importProduct);
   const detach = useMutation(api.openFoodFacts.detach);
   const [searching, setSearching] = useState(false);
@@ -96,7 +95,7 @@ export function OffIngredientSection({
     setBusyCode(hit.code);
     const image = await run(
       () => importProduct({ token, id: ingredientId, code: hit.code }),
-      "Allergènes et nutrition ajoutés.",
+      t("recipes.offImported"),
     );
     setBusyCode(null);
     if (image) {
@@ -117,7 +116,7 @@ export function OffIngredientSection({
               variant="secondary"
               onClick={() => setSearching(true)}
             >
-              <Search size={16} /> Autre produit
+              <Search size={16} /> {t("recipes.offOtherProduct")}
             </Button>
             <Button
               size="sm"
@@ -126,29 +125,25 @@ export function OffIngredientSection({
                 ingredientId
                   ? run(
                       () => detach({ token, id: ingredientId }),
-                      "Lien retiré, la photo reste.",
+                      t("recipes.offDetached"),
                     )
                   : onPending(null)
               }
             >
-              <Unlink size={16} /> Retirer
+              <Unlink size={16} /> {t("recipes.photoRemove")}
             </Button>
           </div>
           {!ingredientId && (
             <p className="mt-2 text-[13px] text-muted">
-              La photo, les allergènes et la nutrition seront ajoutés à
-              l'enregistrement.
+              {t("recipes.offAddedOnSave")}
             </p>
           )}
         </>
       ) : (
         <>
-          <p className="mb-3 text-[15px] text-muted">
-            Photo, allergènes et valeurs nutritionnelles d'un produit semblable,
-            pour les recettes.
-          </p>
+          <p className="mb-3 text-[15px] text-muted">{t("recipes.offIntro")}</p>
           <Button variant="secondary" onClick={() => setSearching(true)}>
-            <Search size={18} /> Compléter depuis Open Food Facts
+            <Search size={18} /> {t("recipes.offComplete")}
           </Button>
         </>
       )}

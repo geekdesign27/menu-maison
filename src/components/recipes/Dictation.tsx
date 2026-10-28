@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square, X } from "lucide-react";
 import { Button, Card } from "../ui";
+import { useT } from "../../i18n/useT";
+import type { MessageKey } from "../../i18n";
 
 const MAX_SECONDS = 5 * 60;
 // Safari records AAC in mp4, Chrome and Firefox Opus in webm
 const TYPES = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
 
-function micError(e: unknown): string {
+function micError(e: unknown): MessageKey {
   const name = e instanceof DOMException ? e.name : "";
   if (name === "NotAllowedError" || name === "SecurityError")
-    return "Le micro est refusé. Sur l'iPhone : Réglages, Safari, Micro, puis « Autoriser ».";
-  if (name === "NotFoundError") return "Aucun micro trouvé sur cet appareil.";
-  return "Le micro ne démarre pas. Ferme l'app et réessaie.";
+    return "recipes.micDenied";
+  if (name === "NotFoundError") return "recipes.micMissing";
+  return "recipes.micFailed";
 }
 
 const clock = (s: number) =>
@@ -28,6 +30,7 @@ export function Dictation({
   onRecorded: (audio: Blob) => void;
   onError: (message: string) => void;
 }) {
+  const { t } = useT();
   const [seconds, setSeconds] = useState<number | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const cancelled = useRef(false);
@@ -65,9 +68,7 @@ export function Dictation({
       !navigator.mediaDevices?.getUserMedia ||
       typeof MediaRecorder === "undefined"
     ) {
-      onError(
-        "Ce navigateur ne permet pas d'enregistrer. Colle plutôt le texte de la recette.",
-      );
+      onError(t("recipes.micUnsupported"));
       return;
     }
     starting.current = true;
@@ -103,7 +104,7 @@ export function Dictation({
       setSeconds(0);
     } catch (e) {
       release();
-      onError(micError(e));
+      onError(t(micError(e)));
     } finally {
       starting.current = false;
     }
@@ -122,12 +123,14 @@ export function Dictation({
             <Mic size={30} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-black">Dicter la recette</div>
+            <div className="text-lg font-black">
+              {t("recipes.dictateTitle")}
+            </div>
             <div className="text-[15px] text-muted">
-              Raconte ce que tu fais, avec les quantités. 5 minutes au plus.
+              {t("recipes.dictateText")}
             </div>
             <div className="mt-1 text-[13px] text-muted">
-              Ta voix est transcrite par Groq (États-Unis), puis effacée.
+              {t("recipes.dictatePrivacy")}
             </div>
           </div>
         </Card>
@@ -147,23 +150,23 @@ export function Dictation({
         </span>
       </span>
       <div>
-        <div className="text-lg font-black">Je t'écoute…</div>
+        <div className="text-lg font-black">{t("recipes.listening")}</div>
         <div className="text-[15px] text-muted tabular-nums" aria-live="off">
-          {clock(seconds)} sur {clock(MAX_SECONDS)}
+          {t("recipes.clockOf", {
+            elapsed: clock(seconds),
+            max: clock(MAX_SECONDS),
+          })}
         </div>
       </div>
-      <p className="text-[15px] text-muted">
-        Par exemple : « Pour 4 personnes, je prends 2 oignons, 500 g de bœuf
-        haché… ». Dis aussi les étapes.
-      </p>
+      <p className="text-[15px] text-muted">{t("recipes.dictateExample")}</p>
       <div className="grid w-full grid-cols-[auto_1fr] gap-3">
         <Button variant="secondary" onClick={() => finish(true)}>
           <X size={20} />
-          Annuler
+          {t("recipes.cancel")}
         </Button>
         <Button onClick={() => finish(false)}>
           <Square size={18} fill="currentColor" />
-          Terminer
+          {t("recipes.finish")}
         </Button>
       </div>
     </Card>

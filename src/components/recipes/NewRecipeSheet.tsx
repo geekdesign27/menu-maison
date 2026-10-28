@@ -1,19 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Card, Sheet } from "../ui";
+import { useT } from "../../i18n/useT";
+import type { MessageKey } from "../../i18n";
 
-const CHOICES = [
+const CHOICES: {
+  to: string;
+  emoji: string;
+  title: MessageKey;
+  text: MessageKey;
+}[] = [
   {
     to: "/recette/importer",
     emoji: "🎙️",
-    title: "Dicter ou importer",
-    text: "Raconte la recette, ou colle un lien Fooby, Marmiton… ou un texte",
+    title: "recipes.newImportTitle",
+    text: "recipes.newImportText",
   },
   {
     to: "/recette/nouvelle",
     emoji: "✍️",
-    title: "Écrire la recette",
-    text: "Ingrédients et étapes, à la main",
+    title: "recipes.newWriteTitle",
+    text: "recipes.newWriteText",
   },
 ];
 
@@ -26,8 +33,9 @@ export function NewRecipeSheet({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { t } = useT();
   return (
-    <Sheet open={open} onClose={onClose} title="Nouvelle recette">
+    <Sheet open={open} onClose={onClose} title={t("recipes.newRecipe")}>
       <div className="space-y-3">
         {CHOICES.map((c) => (
           <button
@@ -44,8 +52,8 @@ export function NewRecipeSheet({
                 {c.emoji}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-lg font-black">{c.title}</div>
-                <div className="text-[15px] text-muted">{c.text}</div>
+                <div className="text-lg font-black">{t(c.title)}</div>
+                <div className="text-[15px] text-muted">{t(c.text)}</div>
               </div>
               <ChevronRight
                 size={22}

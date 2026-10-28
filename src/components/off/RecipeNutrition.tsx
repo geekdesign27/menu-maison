@@ -10,6 +10,8 @@ import {
 } from "../../../convex/domain/quantities";
 import { Card, SectionTitle } from "../ui";
 import { plural } from "../../lib/format";
+import { useT } from "../../i18n/useT";
+import { allergenNames } from "./allergens";
 
 type Items = { ingredientId: string; qtyPerPerson: number; unit: Unit }[];
 
@@ -21,56 +23,68 @@ export function RecipeNutrition({
   items: Items;
   ingredients: Record<string, { off?: OffData } | undefined>;
 }) {
+  const { t, lang } = useT();
   const allergens = recipeAllergens(items, ingredients);
   const nutrition = recipeNutrition(items, ingredients);
-  const grams = (n: number) => `${formatNumber(n, 1)}${NBSP}g`;
+  const allergenTags = [...new Set(items.map((i) => i.ingredientId))].flatMap(
+    (id) => ingredients[id]?.off?.allergens ?? [],
+  );
+  const labels = allergenNames(allergenTags, t, lang);
+  const grams = (n: number) => `${formatNumber(n, 1, lang)}${NBSP}g`;
+  const ingredientCount = (n: number) =>
+    plural(n, t("recipes.ingredientOne"), t("recipes.ingredientMany"));
 
   return (
     <>
-      <SectionTitle>Allergènes et nutrition</SectionTitle>
+      <SectionTitle>{t("recipes.allergensAndNutrition")}</SectionTitle>
       <Card className="grid gap-3 p-4 text-[15px]">
         {allergens.known === 0 ? (
-          <p className="text-muted">
-            Complète les ingrédients depuis Open Food Facts (fiche d'un
-            ingrédient) pour voir ici les allergènes et les calories.
-          </p>
+          <p className="text-muted">{t("recipes.nutritionEmpty")}</p>
         ) : (
           <>
             <p>
-              <span className="font-bold">Allergènes{NBSP}: </span>
-              {allergens.labels.length
-                ? allergens.labels.join(", ")
-                : "aucun indiqué"}
+              <span className="font-bold">{t("recipes.allergensLabel")}</span>
+              {labels.length ? labels.join(", ") : t("recipes.noneIndicated")}
               {allergens.known < allergens.total && (
                 <span className="block text-[13px] text-muted">
-                  {`D'après ${plural(allergens.known, "ingrédient", "ingrédients")} sur ${allergens.total}, les autres ne sont pas encore complétés.`}
+                  {t("recipes.allergensPartial", {
+                    known: ingredientCount(allergens.known),
+                    total: allergens.total,
+                  })}
                 </span>
               )}
             </p>
             <p className="rounded-xl bg-sun-soft px-3 py-2 text-[13px] font-semibold text-[#6b4d00]">
-              Données d'Open Food Facts, parfois incomplètes. En cas d'allergie,
-              vérifie toujours l'emballage.
+              {t("recipes.allergyWarning")}
             </p>
             {nutrition.covered > 0 && (
               <div>
                 <p>
                   <span className="font-bold">
-                    {nutrition.covered < nutrition.total
-                      ? "Au moins "
-                      : "Environ "}
-                    {nutrition.kcal}
-                    {NBSP}kcal
+                    {t(
+                      nutrition.covered < nutrition.total
+                        ? "recipes.kcalAtLeast"
+                        : "recipes.kcalAbout",
+                      { kcal: nutrition.kcal },
+                    )}
                   </span>{" "}
-                  par portion
+                  {t("recipes.perPortion")}
                 </p>
                 <p className="text-muted">
-                  Protéines {grams(nutrition.proteins)}, glucides{" "}
-                  {grams(nutrition.carbs)} dont sucres {grams(nutrition.sugars)}
-                  , lipides {grams(nutrition.fat)}, sel {grams(nutrition.salt)}.
+                  {t("recipes.nutrients", {
+                    proteins: grams(nutrition.proteins),
+                    carbs: grams(nutrition.carbs),
+                    sugars: grams(nutrition.sugars),
+                    fat: grams(nutrition.fat),
+                    salt: grams(nutrition.salt),
+                  })}
                 </p>
                 {nutrition.covered < nutrition.total && (
                   <p className="text-[13px] text-muted">
-                    {`Calcul partiel${NBSP}: ${plural(nutrition.covered, "ingrédient", "ingrédients")} sur ${nutrition.total} avec des valeurs et une quantité en grammes, millilitres ou cuillères.`}
+                    {t("recipes.nutritionPartial", {
+                      covered: ingredientCount(nutrition.covered),
+                      total: nutrition.total,
+                    })}
                   </p>
                 )}
               </div>

@@ -4,6 +4,7 @@ import { Plus, Zap } from "lucide-react";
 import { TAGS } from "../../convex/domain/tags";
 import { useBase, useSession } from "../lib/session";
 import { plural } from "../lib/format";
+import { useT } from "../i18n/useT";
 import {
   Button,
   Chip,
@@ -32,6 +33,7 @@ export function RecipesPage() {
   const { memberId } = useSession();
   const pricing = usePricing();
   const toggleLike = useToggleLike();
+  const { t } = useT();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
@@ -68,14 +70,14 @@ export function RecipesPage() {
       onClick={() => setChoosing(true)}
     >
       <Plus size={20} strokeWidth={3} />
-      Nouvelle
+      {t("recipes.newShort")}
     </Button>
   );
 
   if (!recipes || !base) {
     return (
-      <Page title="Recettes" action={newButton}>
-        <Loading label="Chargement des recettes" />
+      <Page title={t("nav.recipes")} action={newButton}>
+        <Loading label={t("recipes.loadingMany")} />
       </Page>
     );
   }
@@ -85,31 +87,40 @@ export function RecipesPage() {
 
   return (
     <Page
-      title="Recettes"
-      subtitle={plural(shown.length, "recette", "recettes")}
+      title={t("nav.recipes")}
+      subtitle={plural(
+        shown.length,
+        t("recipes.recipeOne"),
+        t("recipes.recipeMany"),
+      )}
       action={newButton}
     >
       <div className="space-y-3" data-tour="recipes">
         <Segmented
-          label="Choix des recettes"
+          label={t("recipes.viewLabel")}
           value={view}
           onChange={setView}
           options={[
-            { value: "saved", label: `Nos recettes (${savedCount})` },
+            {
+              value: "saved",
+              label: t("recipes.viewSaved", { count: savedCount }),
+            },
             {
               value: "discover",
-              label: `Découvrir (${recipes.length - savedCount})`,
+              label: t("recipes.viewDiscover", {
+                count: recipes.length - savedCount,
+              }),
             },
           ]}
         />
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Chercher une recette"
+          placeholder={t("recipes.searchPlaceholder")}
         />
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           <Chip selected={filter === null} onClick={() => setFilter(null)}>
-            Tout
+            {t("recipes.filterAll")}
           </Chip>
           <Chip
             selected={filter === EXPRESS}
@@ -146,8 +157,8 @@ export function RecipesPage() {
       ) : filtering ? (
         <EmptyState
           emoji="🔍"
-          title="Aucune recette ne correspond"
-          text="Essaie un autre mot ou un autre style."
+          title={t("recipes.noMatchTitle")}
+          text={t("recipes.noMatchText")}
           action={
             <Button
               variant="secondary"
@@ -156,24 +167,26 @@ export function RecipesPage() {
                 setFilter(null);
               }}
             >
-              Effacer les filtres
+              {t("recipes.clearFilters")}
             </Button>
           }
         />
       ) : view === "saved" ? (
         <EmptyState
           emoji="💛"
-          title="Pas encore de recettes à nous"
-          text="Aime des recettes dans Découvrir pour les garder ici."
+          title={t("recipes.noSavedTitle")}
+          text={t("recipes.noSavedText")}
           action={
-            <Button onClick={() => setView("discover")}>Découvrir</Button>
+            <Button onClick={() => setView("discover")}>
+              {t("recipes.discover")}
+            </Button>
           }
         />
       ) : (
         <EmptyState
           emoji="🎉"
-          title="Tout le catalogue est à vous"
-          text="Toutes les recettes sont déjà dans Nos recettes. Ajoute les tiennes avec « Nouvelle »."
+          title={t("recipes.allSavedTitle")}
+          text={t("recipes.allSavedText")}
         />
       )}
       <NewRecipeSheet open={choosing} onClose={() => setChoosing(false)} />

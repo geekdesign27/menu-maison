@@ -15,12 +15,13 @@ import {
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { formatDayLong } from "../../convex/domain/dates";
-import { formatQty, NBSP } from "../../convex/domain/quantities";
+import { formatQty } from "../../convex/domain/quantities";
 import { ingredientCost } from "../../convex/domain/shopping";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useStoreChoice } from "../lib/week";
 import { useRun } from "../lib/toast";
-import { formatChf, minutes, portions } from "../lib/format";
+import { formatChf, minutes, plural } from "../lib/format";
+import { useT } from "../i18n/useT";
 import { BackButton } from "../components/Layout";
 import { RecipeNutrition } from "../components/off/RecipeNutrition";
 import {
@@ -50,12 +51,13 @@ export function RecipeDetailPage() {
   const { id } = useParams();
   const recipes = useRecipes();
   const base = useBase();
+  const { t } = useT();
   const back = <BackButton fallback="/recettes" />;
 
   if (!recipes || !base) {
     return (
-      <Page title="Recette" back={back}>
-        <Loading label="Chargement de la recette" />
+      <Page title={t("recipes.recipe")} back={back}>
+        <Loading label={t("recipes.loadingOne")} />
       </Page>
     );
   }
@@ -63,7 +65,7 @@ export function RecipeDetailPage() {
   const recipe = recipes.find((r) => r._id === id);
   if (!recipe) {
     return (
-      <Page title="Recette" back={back}>
+      <Page title={t("recipes.recipe")} back={back}>
         <RecipeNotFound />
       </Page>
     );
@@ -82,7 +84,10 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
   const archive = useMutation(api.recipes.archive);
   const duplicate = useMutation(api.recipes.duplicate);
   const overview = useOverview();
-  const [count, setCount] = useState(recipe.defaultPersons ?? base.settings.defaultPersons);
+  const { t, lang } = useT();
+  const [count, setCount] = useState(
+    recipe.defaultPersons ?? base.settings.defaultPersons,
+  );
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [taps, setTaps] = useState(0);
 
@@ -95,18 +100,18 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
   const doArchive = async () => {
     const done = await run(
       () => archive({ token, id: recipe._id }),
-      "Recette archivée",
+      t("recipes.archived"),
     );
     if (done !== undefined) navigate("/recettes", { replace: true });
   };
 
   return (
     <Page
-      title="Recette"
+      title={t("recipes.recipe")}
       back={<BackButton fallback="/recettes" />}
       action={
         <IconButton
-          label="Modifier la recette"
+          label={t("recipes.editRecipe")}
           onClick={() => navigate(editPath)}
         >
           <Pencil size={22} />
@@ -119,7 +124,11 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
         style={{ background: pastelFor(recipe.name) }}
       >
         {recipe.imageUrl ? (
-          <img src={recipe.imageUrl} alt={`Photo\u00a0: ${recipe.name}`} className="size-full object-cover" />
+          <img
+            src={recipe.imageUrl}
+            alt={t("recipes.photoAlt", { name: recipe.name })}
+            className="size-full object-cover"
+          />
         ) : (
           <span aria-hidden className="drop-shadow">
             {recipe.emoji}
@@ -140,11 +149,15 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
         {recipe.fridgeDays > 0 ? (
           <Badge tone="herb">
             <Refrigerator size={14} strokeWidth={2.8} aria-hidden />
-            Se garde {recipe.fridgeDays}{" "}
-            {recipe.fridgeDays > 1 ? "jours" : "jour"} au frigo
+            {t(
+              recipe.fridgeDays > 1
+                ? "recipes.keepsDaysMany"
+                : "recipes.keepsDaysOne",
+              { count: recipe.fridgeDays },
+            )}
           </Badge>
         ) : (
-          <Badge tone="berry">À manger tout de suite</Badge>
+          <Badge tone="berry">{t("recipes.eatRightAway")}</Badge>
         )}
         {recipe.tags.map((t) => (
           <Badge key={t}>{t}</Badge>
@@ -191,7 +204,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
                 key={m._id}
                 type="button"
                 aria-pressed={liked}
-                aria-label={liked ? "Je n'aime plus" : "J'aime"}
+                aria-label={t(liked ? "recipes.unlike" : "recipes.like")}
                 onClick={() => {
                   setTaps((n) => n + 1);
                   toggleLike(recipe._id);
@@ -211,7 +224,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
           })}
         </div>
         <p className="mt-1 text-center text-[15px] text-muted">
-          Touche ton portrait pour donner ton cœur.
+          {t("recipes.heartHint")}
         </p>
       </Card>
 
@@ -223,32 +236,37 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
           </span>
           <p>
             {stat && stat.count12w > 0
-              ? `Mangé ${stat.count12w} fois ces 12 dernières semaines, dernière fois le ${formatDayLong(stat.lastDate)}.`
+              ? t("recipes.statEaten", {
+                  count: stat.count12w,
+                  date: formatDayLong(stat.lastDate, lang),
+                })
               : stat
-                ? `Pas mangé ces 12 dernières semaines, dernière fois le ${formatDayLong(stat.lastDate)}.`
-                : "Pas encore au menu ces derniers mois."}
+                ? t("recipes.statNotEaten", {
+                    date: formatDayLong(stat.lastDate, lang),
+                  })
+                : t("recipes.statNever")}
           </p>
         </div>
       )}
 
       {/* Ingredients */}
-      <SectionTitle>Ingrédients</SectionTitle>
+      <SectionTitle>{t("recipes.ingredients")}</SectionTitle>
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-lg font-black">Pour</span>
+          <span className="text-lg font-black">{t("recipes.for")}</span>
           <Stepper
-            label="Nombre de portions"
+            label={t("recipes.portionCount")}
             value={count}
             onChange={setCount}
             min={1}
             max={20}
           />
           <span className="w-24 text-right text-lg font-black">
-            {count > 1 ? "portions" : "portion"}
+            {t(count > 1 ? "recipes.portionMany" : "recipes.portionOne")}
           </span>
         </div>
         {recipe.items.length === 0 ? (
-          <p className="mt-3 text-muted">Aucun ingrédient pour l'instant.</p>
+          <p className="mt-3 text-muted">{t("recipes.noIngredients")}</p>
         ) : (
           <ul className="mt-3 divide-y divide-line">
             {recipe.items.map((item, i) => {
@@ -267,7 +285,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
                   className="flex min-h-12 items-center gap-3 py-2"
                 >
                   <span className="min-w-0 flex-1 font-bold">
-                    {ing?.name ?? "Ingrédient supprimé"}
+                    {ing?.name ?? t("recipes.ingredientDeleted")}
                   </span>
                   {cost !== undefined && cost >= 0.05 && (
                     <span className="text-[15px] text-muted tabular-nums">
@@ -275,7 +293,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
                     </span>
                   )}
                   <span className="min-w-20 text-right font-black text-carrot-dark tabular-nums">
-                    {formatQty(item.qtyPerPerson * count, item.unit)}
+                    {formatQty(item.qtyPerPerson * count, item.unit, lang)}
                   </span>
                 </li>
               );
@@ -285,12 +303,20 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
         {totalCost && (
           <div className="mt-3 rounded-2xl bg-herb-soft px-4 py-3">
             <div className="flex items-center justify-between gap-2 font-black text-herb">
-              <span>Coût estimé</span>
+              <span>{t("recipes.estimatedCost")}</span>
               <span className="tabular-nums">{totalCost}</span>
             </div>
             <div className="text-[15px] text-muted">
-              Pour {portions(count)}
-              {store ? `, prix indicatifs chez ${store.name}` : ""}.
+              {(() => {
+                const persons = plural(
+                  count,
+                  t("recipes.portionOne"),
+                  t("recipes.portionMany"),
+                );
+                return store
+                  ? t("recipes.costNoteStore", { persons, store: store.name })
+                  : t("recipes.costNote", { persons });
+              })()}
             </div>
           </div>
         )}
@@ -301,7 +327,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
       {/* Steps */}
       {recipe.steps.length > 0 && (
         <>
-          <SectionTitle>Préparation</SectionTitle>
+          <SectionTitle>{t("recipes.steps")}</SectionTitle>
           <Card className="p-4">
             <ol className="space-y-4">
               {recipe.steps.map((step, i) => (
@@ -325,7 +351,9 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
           className="mt-4 flex min-h-11 items-center gap-2 px-1 font-bold text-carrot-dark"
         >
           <ExternalLink size={18} aria-hidden />
-          Recette d'origine sur {new URL(recipe.sourceUrl).hostname.replace(/^www\./, "")}
+          {t("recipes.sourceOn", {
+            site: new URL(recipe.sourceUrl).hostname.replace(/^www\./, ""),
+          })}
         </a>
       )}
 
@@ -333,19 +361,24 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
       <div className="mt-6 space-y-3">
         <Button size="lg" onClick={() => navigate(`/?plan=${recipe._id}`)}>
           <CalendarPlus size={22} />
-          Planifier
+          {t("recipes.plan")}
         </Button>
         <div className="grid gap-3">
           <Button variant="secondary" onClick={() => navigate(editPath)}>
             <Pencil size={18} />
-            Modifier
+            {t("recipes.edit")}
           </Button>
           <Button
             variant="secondary"
             onClick={async () => {
               const copyId = await run(
-                () => duplicate({ token, id: recipe._id, memberId: memberId ?? undefined }),
-                "Copie créée, tu peux l'adapter",
+                () =>
+                  duplicate({
+                    token,
+                    id: recipe._id,
+                    memberId: memberId ?? undefined,
+                  }),
+                t("recipes.duplicated"),
               );
               if (copyId) {
                 // The copy takes the original's place in history: saving the editor comes back to it
@@ -355,7 +388,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
             }}
           >
             <Copy size={18} />
-            Dupliquer
+            {t("recipes.duplicate")}
           </Button>
           {recipe.saved ? (
             <Button
@@ -363,12 +396,12 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
               onClick={() =>
                 run(
                   () => setSaved({ token, id: recipe._id, saved: false }),
-                  "Retirée de nos recettes",
+                  t("recipes.unsavedToast"),
                 )
               }
             >
               <BookmarkMinus size={18} />
-              Retirer de nos recettes
+              {t("recipes.unsave")}
             </Button>
           ) : (
             <Button
@@ -376,12 +409,12 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
               onClick={() =>
                 run(
                   () => setSaved({ token, id: recipe._id, saved: true }),
-                  "Gardée dans nos recettes",
+                  t("recipes.savedToast"),
                 )
               }
             >
               <BookmarkPlus size={18} />
-              Garder dans nos recettes
+              {t("recipes.save")}
             </Button>
           )}
         </div>
@@ -391,33 +424,30 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
           onClick={() => setConfirmArchive(true)}
         >
           <Archive size={18} />
-          Archiver la recette
+          {t("recipes.archiveRecipe")}
         </Button>
       </div>
 
       <Sheet
         open={confirmArchive}
         onClose={() => setConfirmArchive(false)}
-        title={`Archiver cette recette${NBSP}?`}
+        title={t("recipes.archiveConfirmTitle")}
         footer={
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="secondary"
               onClick={() => setConfirmArchive(false)}
             >
-              Annuler
+              {t("recipes.cancel")}
             </Button>
             <Button variant="danger" onClick={doArchive}>
-              Archiver
+              {t("recipes.archive")}
             </Button>
           </div>
         }
       >
         <p className="text-[17px]">
-          «{NBSP}
-          {recipe.name}
-          {NBSP}» disparaîtra des recettes. Les repas déjà passés la gardent
-          dans l'historique.
+          {t("recipes.archiveConfirmText", { name: recipe.name })}
         </p>
       </Sheet>
     </Page>

@@ -8,6 +8,7 @@ import { useToast } from "../../lib/toast";
 import { errorMessage } from "../../lib/format";
 import { Button, SectionTitle } from "../ui";
 import { PhotoTooHeavy, uploadPhoto } from "../../lib/image";
+import { useT } from "../../i18n/useT";
 
 const MAX_SIDE = 1200;
 
@@ -21,6 +22,7 @@ export function PhotoField({
 }) {
   const { token } = useSession();
   const toast = useToast();
+  const { t, lang } = useT();
   const generateUploadUrl = useMutation(api.recipes.generateUploadUrl);
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -28,13 +30,15 @@ export function PhotoField({
   async function upload(file: File) {
     setBusy(true);
     try {
-      const photo = await uploadPhoto(file, MAX_SIDE, () => generateUploadUrl({ token }));
+      const photo = await uploadPhoto(file, MAX_SIDE, () =>
+        generateUploadUrl({ token }),
+      );
       onChange({ id: photo.id, url: photo.previewUrl });
     } catch (e) {
       toast(
         e instanceof PhotoTooHeavy
-          ? "Cette photo est trop lourde, essaie une autre."
-          : errorMessage(e),
+          ? t("recipes.photoTooHeavy")
+          : errorMessage(e, lang),
         "error",
       );
     } finally {
@@ -45,12 +49,12 @@ export function PhotoField({
 
   return (
     <>
-      <SectionTitle>Photo</SectionTitle>
+      <SectionTitle>{t("recipes.photo")}</SectionTitle>
       {imageUrl ? (
         <div className="overflow-hidden rounded-[var(--radius-card)] bg-paper shadow-sm">
           <img
             src={imageUrl}
-            alt="Photo de la recette"
+            alt={t("recipes.recipePhotoAlt")}
             className="aspect-[4/3] w-full object-cover"
           />
           <div className="flex gap-2 p-3">
@@ -60,7 +64,7 @@ export function PhotoField({
               onClick={() => input.current?.click()}
               disabled={busy}
             >
-              <Camera size={18} /> Changer
+              <Camera size={18} /> {t("recipes.photoChange")}
             </Button>
             <Button
               variant="danger"
@@ -68,7 +72,7 @@ export function PhotoField({
               onClick={() => onChange(null)}
               disabled={busy}
             >
-              <Trash2 size={18} /> Retirer
+              <Trash2 size={18} /> {t("recipes.photoRemove")}
             </Button>
           </div>
         </div>
@@ -81,9 +85,9 @@ export function PhotoField({
         >
           <Camera size={28} />
           <span className="font-extrabold">
-            {busy ? "Envoi de la photo…" : "Prendre ou choisir une photo"}
+            {t(busy ? "recipes.photoUploading" : "recipes.photoPick")}
           </span>
-          <span className="text-[13px]">Sinon, l'emoji reste affiché.</span>
+          <span className="text-[13px]">{t("recipes.photoFallback")}</span>
         </button>
       )}
       <input
