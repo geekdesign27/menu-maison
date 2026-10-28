@@ -129,8 +129,15 @@ Serveurs de dev via Portly.
   et appliqués en direct sur tous les téléphones de la famille (`access.check` renvoie
   `look`). Les thèmes ne changent que les variables de couleur (`src/index.css`, attribut
   `data-theme`) ; les polices sont servies par l'app (Fontsource) et seule celle choisie est
-  téléchargée (`src/lib/look.ts`). Contraste : Sauge et Myrtille au-dessus de 4,5:1 (texte
-  blanc sur bouton) ; Carotte à 3,0:1. Captures : `docs/themes/`.
+  téléchargée (`src/lib/look.ts`). Couleurs du kit d'identité v1 ; contraste au-dessus de 4,5:1
+  dans les trois thèmes (boutons Carotte en #C1511C, l'orange vif #E97537 reste pour le
+  logo). Captures : `docs/themes/`.
+- **Logo** (kit d'identité v1, « m » souriant avec fourchette) : `src/components/Logo.tsx`
+  en `currentColor`, il prend la couleur du thème (connexion, gestion). L'icône d'onglet,
+  l'icône d'écran d'accueil et le manifeste suivent aussi le thème (`public/brand/`,
+  `manifest-<thème>.webmanifest`, posés par `src/lib/look.ts`) ; une icône déjà installée
+  garde sa couleur : il faut la réinstaller après un changement de thème. Carotte tant que
+  le téléphone ne connaît pas la famille.
 - **Espace super-admin** (PA, `members.superadmin`, posé seulement en base) : onglet
   « Super admin » de `/gestion` (`#/gestion/super-admin`) (`convex/superadmin.ts`). Liste de toutes les familles avec des
   chiffres seulement (comptes activés, recettes, dernière connexion, statut), jamais leur

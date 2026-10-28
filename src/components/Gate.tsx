@@ -5,6 +5,7 @@ import { MIN_PASSWORD_LENGTH } from "../../convex/domain/auth";
 import { rememberedFamily, useSession } from "../lib/session";
 import { errorMessage } from "../lib/format";
 import { Button, ErrorBox, Loading, TextInput } from "./ui";
+import { AppIcon } from "./Logo";
 
 /**
  * Sign-in links live in the address, before the app's own routes:
@@ -74,12 +75,7 @@ export function Gate({ children }: { children: ReactNode }) {
 function Brand({ subtitle }: { subtitle: string }) {
   return (
     <div className="mb-8 text-center">
-      <div
-        className="mx-auto mb-3 flex size-20 items-center justify-center rounded-[1.75rem] bg-carrot text-5xl shadow-lg"
-        aria-hidden
-      >
-        🥕
-      </div>
+      <AppIcon size={80} className="mx-auto mb-3 shadow-lg" />
       <h1 className="text-3xl font-black tracking-tight">Menu Maison</h1>
       <p className="mt-1 font-semibold text-muted">{subtitle}</p>
     </div>

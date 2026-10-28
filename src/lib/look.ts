@@ -18,19 +18,19 @@ export const THEMES: {
     id: "carotte",
     label: "Carotte",
     description: "Orange chaleureux, l'original",
-    swatch: ["#fff7ee", "#e8762f", "#fde9da", "#2f8a57"],
+    swatch: ["#fff7ee", "#c1511c", "#fde9db", "#2f8a57"],
   },
   {
     id: "sauge",
     label: "Sauge",
     description: "Vert doux et frais",
-    swatch: ["#f4f7f1", "#3f7a52", "#e0eee2", "#2a7a84"],
+    swatch: ["#f4f7f1", "#3d7a53", "#e0eee2", "#2a7a84"],
   },
   {
     id: "myrtille",
     label: "Myrtille",
     description: "Bleu-violet profond",
-    swatch: ["#f7f6fd", "#5548c8", "#e8e5fb", "#2f8a57"],
+    swatch: ["#f7f6fd", "#5848c6", "#e8e5fa", "#2f8a57"],
   },
 ];
 
@@ -75,6 +75,18 @@ export const FONTS: {
 const LOOK_KEY = "mm.look";
 const DEFAULT_LOOK: Look = { theme: "carotte", font: "nunito" };
 
+/**
+ * Tab icon, home-screen icon and install manifest of the theme. Read when the
+ * app is added to the home screen: an icon already installed keeps its colour.
+ */
+function setThemeIcons(theme: Theme) {
+  const set = (selector: string, href: string) =>
+    document.querySelector(selector)?.setAttribute("href", href);
+  set("link#icon", `brand/${theme}-favicon.svg`);
+  set("link#apple-touch-icon", `brand/${theme}-180.png`);
+  set("link#manifest", `manifest-${theme}.webmanifest`);
+}
+
 /** Puts the look on the page: colours at once, the font as soon as it is downloaded. */
 export function applyLook(look: Look) {
   const root = document.documentElement;
@@ -85,6 +97,7 @@ export function applyLook(look: Look) {
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", cream ?? "#fff7ee");
+  setThemeIcons(look.theme);
   font
     .load()
     .then(() => {

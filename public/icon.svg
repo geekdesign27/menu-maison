@@ -1,12 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#E8762F"/>
-  <circle cx="256" cy="276" r="150" fill="#FFF7EE"/>
-  <circle cx="256" cy="276" r="112" fill="none" stroke="#F3D9C4" stroke-width="10"/>
-  <g transform="translate(256 270) rotate(-35)">
-    <path d="M-22 -70 C -26 -20, -18 40, 0 92 C 18 40, 26 -20, 22 -70 Z" fill="#E8762F"/>
-    <path d="M-12 -40 h14 M-6 -6 h16 M-8 28 h12" stroke="#C65D1C" stroke-width="7" stroke-linecap="round"/>
-    <path d="M0 -70 C -6 -104, -34 -118, -50 -112 C -36 -98, -20 -86, -6 -72 Z" fill="#2F8A57"/>
-    <path d="M0 -70 C 2 -110, 22 -130, 40 -128 C 30 -110, 16 -90, 4 -72 Z" fill="#2F8A57"/>
-    <path d="M0 -70 C 0 -100, -2 -128, 0 -140 C 6 -124, 6 -96, 2 -72 Z" fill="#3FA56C"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Menu Maison, thème Carotte" fill="none"><rect width="64" height="64" rx="14" fill="#E97537"/><g transform="translate(7.36 7.36) scale(0.77)" color="white" fill="white"><g transform="translate(-2 0)"><path d="M12 49V29.5C12 22.6 17.2 17.5 24 17.5C29.1 17.5 32.2 20.8 33 25.1C34.9 20.5 38.8 17.5 44.3 17.5C51.5 17.5 56 22.8 56 29.5V49H47.7V30.4C47.7 27.6 46.2 25.4 43.4 25.4C40.6 25.4 38.5 27.5 38.5 30.4V49H30V30.4C30 27.6 28.5 25.4 25.8 25.4C23 25.4 20.7 27.6 20.7 30.4V49H12Z"/><path d="M23.5 53.4C29.1 58.4 37.2 58.4 42.9 53.4" fill="none" stroke="white" stroke-width="4.8" stroke-linecap="round"/></g></g></svg>

@@ -8,9 +8,11 @@
   --color-ink: #2b2420;
   --color-muted: #6b6058;
   --color-line: #efe3d6;
-  --color-carrot: #e8762f;
-  --color-carrot-dark: #c65d1c;
-  --color-carrot-soft: #fde9da;
+  /* Logo colour of the theme (identity kit v1); buttons use the darker accent */
+  --color-brand: #e97537;
+  --color-carrot: #c1511c;
+  --color-carrot-dark: #9e3f12;
+  --color-carrot-soft: #fde9db;
   --color-herb: #2f8a57;
   --color-herb-soft: #def3e6;
   --color-berry: #c2415d;
@@ -23,15 +25,17 @@
 /*
  * Family themes (chosen by the family admins, see src/lib/look.ts). They
  * only swap the colour variables: the « carrot » names stay the accent of
- * every theme. Contrast checked: white on the accent and dark accent on its
- * soft tint are above 4.5:1 for Sauge and Myrtille.
+ * every theme. Colours from the identity kit v1. Contrast checked: white on
+ * the accent and dark accent on its soft tint are above 4.5:1 in all three
+ * (Carotte buttons use #c1511c, the bright #e97537 is kept for the logo).
  */
 html[data-theme="sauge"] {
   --color-cream: #f4f7f1;
   --color-line: #dde6d8;
   --color-ink: #212a22;
   --color-muted: #5b665b;
-  --color-carrot: #3f7a52;
+  --color-brand: #3d7a53;
+  --color-carrot: #3d7a53;
   --color-carrot-dark: #2c5c3b;
   --color-carrot-soft: #e0eee2;
   /* Success stays apart from the green accent */
@@ -44,9 +48,10 @@ html[data-theme="myrtille"] {
   --color-line: #e3e0f2;
   --color-ink: #23213a;
   --color-muted: #5f5c78;
-  --color-carrot: #5548c8;
+  --color-brand: #5848c6;
+  --color-carrot: #5848c6;
   --color-carrot-dark: #3f33a6;
-  --color-carrot-soft: #e8e5fb;
+  --color-carrot-soft: #e8e5fa;
 }
 
 /* Family fonts, loaded on demand (only the chosen one is downloaded) */

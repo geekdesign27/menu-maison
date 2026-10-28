@@ -12,6 +12,7 @@ import {
 import { GestionContext } from "../lib/paths";
 import { useMe, useSession } from "../lib/session";
 import { Avatar, cx } from "../components/ui";
+import { AppIcon } from "../components/Logo";
 
 const SECTIONS = [
   { to: "/gestion/recettes", label: "Recettes", icon: BookHeart },
@@ -45,12 +46,7 @@ export function GestionLayout() {
       <div className="flex min-h-dvh flex-col md:flex-row">
         <aside className="z-20 flex shrink-0 flex-col gap-1 border-line bg-paper p-3 md:sticky md:top-0 md:h-dvh md:w-60 md:border-r md:p-4">
           <div className="mb-1 flex items-center gap-2 px-2 md:mb-4">
-            <span
-              className="flex size-10 items-center justify-center rounded-2xl bg-carrot text-2xl"
-              aria-hidden
-            >
-              🥕
-            </span>
+            <AppIcon size={40} />
             <span className="min-w-0">
               <span className="block text-lg leading-tight font-black">
                 Menu Maison
