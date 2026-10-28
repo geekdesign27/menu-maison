@@ -97,6 +97,10 @@ export const APP_METADATA = { app: "menu-maison" } as const;
 
 /** Sign-ups opened from the whole site: 30 an hour, then a quarter of an hour of pause. */
 export const CHECKOUT_LIMIT: Limit = { max: 30, windowMs: 60 * 60_000, lockMs: 15 * 60_000 };
+/** Checkout pages opened by one existing family: 5 an hour. */
+export const FAMILY_CHECKOUT_LIMIT: Limit = { max: 5, windowMs: 60 * 60_000, lockMs: 60 * 60_000 };
+/** Stripe states of a subscription that still bills or may bill again: no second one then. */
+export const LIVE_STRIPE_STATUSES = ["trialing", "active", "past_due", "unpaid", "incomplete", "paused"];
 /** Return pages checked with Stripe: 60 in 10 minutes. */
 export const CLAIM_LIMIT: Limit = { max: 60, windowMs: 10 * 60_000, lockMs: 10 * 60_000 };
 

@@ -33,6 +33,7 @@ import { AislesSection } from "./gestion/AislesSection";
 import { StoresSection } from "./gestion/StoresSection";
 import { FamiliesSection } from "./gestion/FamiliesSection";
 import { FamilyAdminSection } from "./gestion/FamilyAdminSection";
+import { SubscriptionSection } from "./gestion/SubscriptionSection";
 import { OnboardingGate } from "./onboarding";
 import { InstallPrompt } from "./components/InstallPrompt";
 
@@ -93,6 +94,10 @@ export function App() {
                         <Route
                           path="famille"
                           element={<FamilyAdminSection />}
+                        />
+                        <Route
+                          path="abonnement"
+                          element={<SubscriptionSection />}
                         />
                         <Route
                           path="super-admin"

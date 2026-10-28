@@ -11,11 +11,13 @@ import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { accessLink, reserve } from "./access";
 import { createFamily } from "./families";
-import { sha256 } from "./lib";
+import { assertAdmin, requireMember, sha256 } from "./lib";
 import { slugFromName } from "./domain/auth";
 import {
   CHECKOUT_LIMIT,
   CLAIM_LIMIT,
+  FAMILY_CHECKOUT_LIMIT,
+  isOffered,
   numberedFamilyName,
   signupProblem,
   statusFromStripe,
@@ -76,9 +78,11 @@ export const recordSignup = internalMutation({
     adminName: v.string(),
     lang: langValidator,
     claimHash: v.string(),
+    // An existing family subscribing (Gestion, Abonnement): no new family is created
+    familyId: v.optional(v.id("families")),
   },
   handler: async (ctx, args) => {
-    const problem = signupProblem(args);
+    const problem = args.familyId ? null : signupProblem(args);
     if (problem) throw new ConvexError(problem);
     await ctx.db.insert("signups", {
       ...args,
@@ -264,5 +268,61 @@ export const purgeStale = internalMutation({
       }
     }
     return { removed };
+  },
+});
+
+/** The admin's family, for a Checkout or the Stripe portal; read-only families may reactivate. */
+export const familyForBilling = internalQuery({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const me = await requireMember(ctx, token);
+    assertAdmin(me);
+    return {
+      familyId: me.familyId,
+      familyName: me.family.name,
+      adminName: me.member.name,
+      lang: me.member.lang ?? ("fr" as const),
+      customerId: me.family.billing?.customerId ?? null,
+      status: me.family.billing?.status ?? null,
+      // The free trial is for the first subscription only
+      hadSubscription: !!me.family.billing,
+      // Offered without PA ever choosing: subscribing must not take the gift away
+      offeredImplicitly: me.family.offered === undefined && !me.family.billing,
+    };
+  },
+});
+
+/** An offered family that subscribes anyway stays offered (its access never depends on paying). */
+export const keepOffered = internalMutation({
+  args: { familyId: v.id("families") },
+  handler: async (ctx, { familyId }) => {
+    const family = await ctx.db.get(familyId);
+    if (family && family.offered === undefined && !family.billing) await ctx.db.patch(familyId, { offered: true });
+  },
+});
+
+/** A family's own Checkout pages: a few an hour, so one family cannot use up the site's limit. */
+export const allowFamilyCheckout = internalMutation({
+  args: { familyId: v.id("families") },
+  handler: async (ctx, { familyId }) =>
+    (await reserve(ctx, `billing:family:${familyId}`, FAMILY_CHECKOUT_LIMIT, Date.now())).allowed,
+});
+
+/** Gestion, Abonnement: the family's subscription, for its admins. */
+export const mine = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const me = await requireMember(ctx, token);
+    assertAdmin(me);
+    const billing = me.family.billing;
+    return {
+      offered: isOffered(me.family),
+      status: billing?.status ?? null,
+      periodEnd: billing?.periodEnd ?? null,
+      cancelAtPeriodEnd: billing?.cancelAtPeriodEnd ?? false,
+      pastDueSince: billing?.pastDueSince ?? null,
+      email: billing?.email ?? null,
+      hasCustomer: !!billing?.customerId,
+    };
   },
 });

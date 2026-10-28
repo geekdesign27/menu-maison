@@ -11,6 +11,7 @@ import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 import {
   APP_METADATA,
+  LIVE_STRIPE_STATUSES,
   PRICE_CHF,
   PRICE_LOOKUP_KEY,
   signupProblem,
@@ -21,6 +22,8 @@ const NOT_CONFIGURED = "Le paiement n'est pas encore configuré.";
 const BUSY =
   "Trop d'inscriptions en même temps. Réessaie dans quelques minutes.";
 const INVALID_LINK = "Lien invalide.";
+const ALREADY_SUBSCRIBED = "Un abonnement existe déjà : gère-le avec « Gérer mon abonnement ».";
+const CHECKOUT_FAILED = "La page de paiement n'a pas pu s'ouvrir. Réessaie dans un moment.";
 // A Checkout page left open longer is closed by Stripe (30 minutes is its minimum)
 const CHECKOUT_MINUTES = 30;
 
@@ -120,6 +123,128 @@ export const startCheckout = action({
       claimHash: createHash("sha256").update(claimSecret).digest("hex"),
     });
     return { url: session.url, claimSecret };
+  },
+});
+
+/**
+ * Gestion, Abonnement: an existing family subscribes (offered family wishing to
+ * pay, family whose subscription ended). The free trial only for a first one.
+ */
+export const startFamilyCheckout = action({
+  args: { token: v.string() },
+  handler: async (ctx, { token }): Promise<{ url: string }> => {
+    const family = await ctx.runQuery(internal.billing.familyForBilling, { token });
+    // One subscription per family: a second one would charge twice
+    if (family.status && family.status !== "canceled") throw new ConvexError(ALREADY_SUBSCRIBED);
+    const client = stripe();
+    const site = siteUrl();
+    if (!(await ctx.runMutation(internal.billing.allowFamilyCheckout, { familyId: family.familyId })))
+      throw new ConvexError(BUSY);
+    if (!(await ctx.runMutation(internal.billing.allowAttempt, { kind: "checkout" }))) throw new ConvexError(BUSY);
+    let customer = family.customerId;
+    if (customer) {
+      // Stripe has the last word: an older subscription still alive there
+      try {
+        const subs = await client.subscriptions.list({ customer, status: "all", limit: 20 });
+        if (subs.data.some((sub) => isOurs(sub.metadata) && LIVE_STRIPE_STATUSES.includes(sub.status)))
+          throw new ConvexError(ALREADY_SUBSCRIBED);
+      } catch (e) {
+        if (e instanceof ConvexError) throw e;
+        // Customer deleted in Stripe: Checkout creates a new one
+        customer = null;
+      }
+    }
+    if (family.offeredImplicitly) await ctx.runMutation(internal.billing.keepOffered, { familyId: family.familyId });
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await client.checkout.sessions.create({
+        mode: "subscription",
+        line_items: [{ price: await priceId(client), quantity: 1 }],
+        subscription_data: {
+          ...(family.hadSubscription ? {} : { trial_period_days: TRIAL_DAYS }),
+          metadata: APP_METADATA,
+        },
+        metadata: APP_METADATA,
+        ...(customer ? { customer } : {}),
+        payment_method_collection: "always",
+        locale: family.lang,
+        expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_MINUTES * 60,
+        success_url: `${site}/#/bienvenue?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${site}/#/gestion/abonnement`,
+      });
+    } catch {
+      throw new ConvexError(CHECKOUT_FAILED);
+    }
+    if (!session.url) throw new ConvexError(CHECKOUT_FAILED);
+    await ctx.runMutation(internal.billing.recordSignup, {
+      sessionId: session.id,
+      familyName: family.familyName,
+      adminName: family.adminName,
+      lang: family.lang,
+      // No first link to hand out: the admin is already signed in
+      claimHash: createHash("sha256").update(randomBytes(32)).digest("hex"),
+      familyId: family.familyId,
+    });
+    return { url: session.url };
+  },
+});
+
+/**
+ * The portal of Menu Maison's customers, apart from the account's other
+ * products: card, invoices, e-mail and resigning at the end of the year, never
+ * a change of plan. STRIPE_PORTAL_CONFIG_ID once set, else found or created.
+ */
+async function portalConfiguration(client: Stripe): Promise<string> {
+  if (process.env.STRIPE_PORTAL_CONFIG_ID) return process.env.STRIPE_PORTAL_CONFIG_ID;
+  const found = await client.billingPortal.configurations.list({ active: true, limit: 100 });
+  const ours = found.data.find((c) => isOurs(c.metadata));
+  if (ours) return ours.id;
+  const created = await client.billingPortal.configurations.create({
+    business_profile: { headline: "Menu Maison : ton abonnement" },
+    features: {
+      invoice_history: { enabled: true },
+      payment_method_update: { enabled: true },
+      customer_update: { enabled: true, allowed_updates: ["email", "address"] },
+      subscription_cancel: {
+        enabled: true,
+        mode: "at_period_end",
+        cancellation_reason: {
+          enabled: true,
+          options: ["too_expensive", "unused", "missing_features", "too_complex", "other"],
+        },
+      },
+      subscription_update: { enabled: false },
+    },
+    metadata: APP_METADATA,
+  });
+  return created.id;
+}
+
+/** Setup: the portal configuration of Menu Maison; the id returned goes in STRIPE_PORTAL_CONFIG_ID. */
+export const ensurePortalConfig = internalAction({
+  args: {},
+  handler: async () => portalConfiguration(stripe()),
+});
+
+/** Gestion, Abonnement: Stripe's own page for the card, the invoices and resigning. */
+export const openPortal = action({
+  args: { token: v.string() },
+  handler: async (ctx, { token }): Promise<{ url: string }> => {
+    const family = await ctx.runQuery(internal.billing.familyForBilling, { token });
+    if (!family.customerId) throw new ConvexError("Aucun abonnement à gérer pour l'instant.");
+    try {
+      const client = stripe();
+      const portal = await client.billingPortal.sessions.create({
+        configuration: await portalConfiguration(client),
+        customer: family.customerId,
+        locale: family.lang,
+        return_url: `${siteUrl()}/#/gestion/abonnement`,
+      });
+      return { url: portal.url };
+    } catch (e) {
+      if (e instanceof ConvexError) throw e;
+      throw new ConvexError("La page de gestion de l'abonnement n'a pas pu s'ouvrir. Réessaie dans un moment.");
+    }
   },
 });
 

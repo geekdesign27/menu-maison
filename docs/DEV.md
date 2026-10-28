@@ -29,7 +29,10 @@ défaut). En local, uniquement des clés de **test** (`sk_test_…`), même mét
 `pbpaste | CONVEX_AGENT_MODE=anonymous npx convex env set STRIPE_SECRET_KEY`, puis
 `CONVEX_AGENT_MODE=anonymous npx convex env set SITE_URL http://localhost:5190`.
 Le produit « Menu Maison » et son prix de 20 CHF par an se créent seuls au premier paiement,
-ou d'avance avec `npx convex run stripeNode:ensurePrice`. Webhook en local : Stripe CLI
+ou d'avance avec `npx convex run stripeNode:ensurePrice` (l'identifiant rendu peut aller dans
+`STRIPE_PRICE_ID`). Le portail client a sa propre configuration (carte, factures, résiliation
+en fin d'année, jamais de changement d'offre) : `npx convex run stripeNode:ensurePortalConfig`,
+identifiant dans `STRIPE_PORTAL_CONFIG_ID`. Webhook en local : Stripe CLI
 `stripe listen --forward-to http://127.0.0.1:3211/stripe/webhook` (3211 : port par défaut
 du site Convex local, à vérifier dans `.env.local`, `CONVEX_SITE_URL` ; le secret `whsec_…`
 affiché va dans `STRIPE_WEBHOOK_SECRET`). En production, l'adresse du webhook est

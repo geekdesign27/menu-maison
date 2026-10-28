@@ -25,6 +25,7 @@ import {
 import { ChainMark } from "../components/shopping/chains";
 import { useT } from "../i18n/useT";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
+import { SubscriptionPanel } from "../components/SubscriptionPanel";
 import { MemberSheet } from "../components/shopping/MemberSheet";
 import { AisleSheet } from "../components/shopping/AisleSheet";
 
@@ -58,7 +59,7 @@ export function SettingsPage() {
 }
 
 function SettingsContent({ base }: { base: Base }) {
-  const { token, setToken } = useSession();
+  const { token, setToken, account } = useSession();
   const { t, lang } = useT();
   const run = useRun();
   const updateSettings = useMutation(api.catalog.updateSettings);
@@ -76,6 +77,15 @@ function SettingsContent({ base }: { base: Base }) {
     <>
       <SectionTitle>{t("common.settings.family")}</SectionTitle>
       <FamilyNameCard />
+
+      {account?.role === "admin" && (
+        <>
+          <SectionTitle>{t("billing.panel.title")}</SectionTitle>
+          <Card className="p-4">
+            <SubscriptionPanel />
+          </Card>
+        </>
+      )}
 
       <SectionTitle>{t("common.settings.profiles")}</SectionTitle>
       <Card className="overflow-hidden">

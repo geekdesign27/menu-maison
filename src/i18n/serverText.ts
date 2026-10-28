@@ -220,6 +220,11 @@ const DE: Record<string, string> = {
     "Die Zahlungsseite konnte nicht geöffnet werden. Versuch es gleich nochmals.",
   "Lien invalide.": "Ungültiger Link.",
   "Ta famille reste offerte.": "Deine Familie bleibt geschenkt.",
+  "Aucun abonnement à gérer pour l'instant.": "Im Moment gibt es kein Abo zu verwalten.",
+  "Un abonnement existe déjà : gère-le avec « Gérer mon abonnement ».":
+    "Es gibt schon ein Abo: Verwalte es mit «Mein Abo verwalten».",
+  "La page de gestion de l'abonnement n'a pas pu s'ouvrir. Réessaie dans un moment.":
+    "Die Seite zur Abo-Verwaltung konnte nicht geöffnet werden. Versuch es gleich nochmals.",
   "Nom trop long.": "Name zu lang.",
   "Trop d'inscriptions en même temps. Réessaie dans quelques minutes.":
     "Zu viele Anmeldungen gleichzeitig. Versuch es in ein paar Minuten nochmals.",

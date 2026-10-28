@@ -289,3 +289,63 @@ describe("what a family may do according to its subscription", () => {
     expect(await reserve()).toBeNull();
   });
 });
+
+describe("an existing family subscribing", () => {
+  it("attaches the subscription to the family, without creating another one", async () => {
+    const t = convexTest(schema, modules);
+    const { familyId } = await t.mutation(internal.families.create, { name: "Martin", admin: "Léa" });
+    await t.mutation(internal.billing.recordSignup, {
+      sessionId: "cs_test_martin",
+      familyName: "Martin",
+      adminName: "Léa",
+      lang: "fr",
+      claimHash: "x",
+      familyId,
+    });
+    expect(await t.mutation(internal.billing.completeSignup, { sessionId: "cs_test_martin", ...sub({ stripeStatus: "active" }) })).toBe(familyId);
+    const families = await t.run((ctx) => ctx.db.query("families").collect());
+    expect(families).toHaveLength(1);
+    expect(families[0].billing).toMatchObject({ status: "active", customerId: "cus_123" });
+  });
+
+  it("shows the subscription to the family's admins only", async () => {
+    const t = convexTest(schema, modules);
+    const { familyId } = await t.mutation(internal.families.create, { name: "Martin", admin: "Léa" });
+    const { hashPassword } = await import("./domain/auth");
+    const passwordHash = await hashPassword("carottes-rapees", 1000);
+    await t.run(async (ctx) => {
+      const lea = (await ctx.db.query("members").collect())[0];
+      await ctx.db.patch(lea._id, { passwordHash });
+      await ctx.db.insert("members", { familyId, name: "Tom", emoji: "🙂", color: "#A8C8E8", order: 1, role: "membre", username: "tom", passwordHash });
+    });
+    const login = async (username: string) => {
+      const r = await t.action(api.access.login, { family: "martin", username, password: "carottes-rapees" });
+      if (!r.ok) throw new Error(r.error);
+      return r.token;
+    };
+    expect(await t.query(api.billing.mine, { token: await login("lea") })).toMatchObject({ offered: true, status: null, hasCustomer: false });
+    await expect(t.query(api.billing.mine, { token: await login("tom") })).rejects.toThrow("admins");
+    // A first subscription gets the free trial, a later one does not
+    expect(await t.query(internal.billing.familyForBilling, { token: await login("lea") })).toMatchObject({ hadSubscription: false });
+  });
+});
+
+describe("one subscription per family, and an offer that stays", () => {
+  it("keeps an offered family offered when it subscribes anyway, not a family PA set as paying", async () => {
+    const t = convexTest(schema, modules);
+    const { familyId } = await t.mutation(internal.families.create, { name: "Martin", admin: "Léa" });
+    await t.mutation(internal.billing.keepOffered, { familyId });
+    expect((await t.run((ctx) => ctx.db.get(familyId)))?.offered).toBe(true);
+    await t.run((ctx) => ctx.db.patch(familyId, { offered: false }));
+    await t.mutation(internal.billing.keepOffered, { familyId });
+    expect((await t.run((ctx) => ctx.db.get(familyId)))?.offered).toBe(false);
+  });
+
+  it("limits a family's own Checkout pages", async () => {
+    const t = convexTest(schema, modules);
+    const { familyId } = await t.mutation(internal.families.create, { name: "Martin", admin: "Léa" });
+    const results = [];
+    for (let n = 0; n < 6; n++) results.push(await t.mutation(internal.billing.allowFamilyCheckout, { familyId }));
+    expect(results).toEqual([true, true, true, true, true, false]);
+  });
+});

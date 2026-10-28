@@ -10,10 +10,12 @@ import { LangSwitch } from "./LangSwitch";
 import { Button, ErrorBox, Loading, TextInput } from "./ui";
 import { AppIcon } from "./Logo";
 import { NO_INVITE_HASH } from "../landing/entry";
+import { SignupScreen, WelcomeScreen } from "./SignupScreens";
 
 /**
  * Sign-in links live in the address, before the app's own routes:
- * « #/f/dupont » opens the family's sign-in, « #/activer/<link> » an invitation.
+ * « #/f/dupont » opens the family's sign-in, « #/activer/<link> » an invitation,
+ * « #/essai » the sign-up and « #/bienvenue?session_id=… » Stripe's return.
  */
 function readLink() {
   const hash = window.location.hash;
@@ -21,7 +23,9 @@ function readLink() {
     hash.match(/^#\/f\/([a-z0-9._-]{2,30})\/?$/i)?.[1]?.toLowerCase() ?? null;
   const invite =
     hash.match(/^#\/activer\/([0-9a-f]{64})\/?$/i)?.[1]?.toLowerCase() ?? null;
-  return { family, invite };
+  const signup = /^#\/essai\/?$/.test(hash);
+  const welcome = hash.match(/^#\/bienvenue\?session_id=(cs_(?:test|live)_[A-Za-z0-9]+)$/)?.[1] ?? null;
+  return { family, invite, signup, welcome };
 }
 
 function useLink() {
@@ -53,6 +57,9 @@ export function Gate({ children }: { children: ReactNode }) {
   }, [token, link.family, link.invite]);
 
   if (checking) return <Loading label={t("gate.opening")} />;
+  // Sign-up and Stripe's return, whether this phone is signed in or not
+  if (link.signup) return <SignupScreen />;
+  if (link.welcome) return <WelcomeScreen sessionId={link.welcome} />;
   if (link.invite && !token)
     return (
       <InviteScreen
@@ -77,7 +84,7 @@ export function Gate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function Brand({ subtitle }: { subtitle: string }) {
+export function Brand({ subtitle }: { subtitle: string }) {
   return (
     <div className="mb-8 text-center">
       <AppIcon size={80} className="mx-auto mb-3 shadow-lg" />
@@ -87,7 +94,7 @@ function Brand({ subtitle }: { subtitle: string }) {
   );
 }
 
-function Screen({ children }: { children: ReactNode }) {
+export function Screen({ children }: { children: ReactNode }) {
   return (
     <main className="pt-safe mx-auto flex min-h-dvh max-w-md flex-col px-6 pb-8">
       {/* In the flow, not absolute: never covers the content on a small phone */}

@@ -29,6 +29,32 @@ export const fr = {
   "gate.invite.mismatch": "Les deux mots de passe ne sont pas pareils.",
   "gate.invite.saving": "Enregistrement…",
   "gate.invite.submit": "C'est parti",
+
+  "gate.signup.subtitle": "Essai gratuit de 7 jours",
+  "gate.signup.offer":
+    "7 jours pour essayer, puis 20\u00a0CHF par an pour toute la famille. Ta carte est demandée maintenant, débitée seulement après l'essai. Résiliable en un clic.",
+  "gate.signup.family": "Nom de la famille",
+  "gate.signup.familyPlaceholder": "Par exemple Dupont",
+  "gate.signup.familyHelp": "Il donne le lien de connexion de ta famille.",
+  "gate.signup.taken": "Ce nom est déjà pris\u00a0: ajoute par exemple ton village.",
+  "gate.signup.admin": "Ton prénom",
+  "gate.signup.adminHelp": "Tu seras l'admin\u00a0: tu ajouteras ensuite les autres membres.",
+  "gate.signup.submit": "Continuer vers le paiement",
+  "gate.signup.opening": "Ouverture du paiement…",
+  "gate.signup.secure": "Paiement sécurisé par Stripe. Menu Maison ne voit jamais ta carte.",
+  "gate.signup.haveAccount": "J'ai déjà un compte",
+  "gate.signup.signedIn": "Tu es connecté à la famille «\u00a0{family}\u00a0» sur ce téléphone.",
+  "gate.signup.openApp": "Ouvrir l'app",
+  "gate.signup.signOutFirst": "Pour créer une autre famille, déconnecte d'abord ce téléphone (Plus, Réglages).",
+  "gate.welcome.subtitle": "Bienvenue",
+  "gate.welcome.checking": "On vérifie ton paiement…",
+  "gate.welcome.pending": "Stripe n'a pas encore confirmé ton inscription. Patiente un instant puis réessaie.",
+  "gate.welcome.retry": "Réessayer",
+  "gate.welcome.ready": "Ta famille «\u00a0{family}\u00a0» est prête.",
+  "gate.welcome.otherDevice":
+    "Pour choisir ton mot de passe, ouvre le lien reçu par e-mail sur ce téléphone, ou connecte-toi si c'est déjà fait.",
+  "gate.welcome.subscribed": "Abonnement enregistré, merci\u00a0!",
+  "gate.welcome.toLogin": "Aller à la connexion",
 } as const;
 
 export const de: { [K in keyof typeof fr]: string } = {
@@ -62,4 +88,30 @@ export const de: { [K in keyof typeof fr]: string } = {
   "gate.invite.mismatch": "Die beiden Passwörter stimmen nicht überein.",
   "gate.invite.saving": "Wird gespeichert…",
   "gate.invite.submit": "Los geht's",
+
+  "gate.signup.subtitle": "7 Tage gratis testen",
+  "gate.signup.offer":
+    "7 Tage zum Ausprobieren, danach 20 CHF pro Jahr für die ganze Familie. Deine Karte wird jetzt erfasst und erst nach dem Test belastet. Mit einem Klick kündbar.",
+  "gate.signup.family": "Name der Familie",
+  "gate.signup.familyPlaceholder": "Zum Beispiel Müller",
+  "gate.signup.familyHelp": "Daraus entsteht der Anmeldelink deiner Familie.",
+  "gate.signup.taken": "Dieser Name ist schon vergeben: Füge zum Beispiel dein Dorf hinzu.",
+  "gate.signup.admin": "Dein Vorname",
+  "gate.signup.adminHelp": "Du bist der Admin: Danach fügst du die anderen Mitglieder hinzu.",
+  "gate.signup.submit": "Weiter zur Zahlung",
+  "gate.signup.opening": "Zahlung wird geöffnet…",
+  "gate.signup.secure": "Sichere Zahlung über Stripe. Menu Maison sieht deine Karte nie.",
+  "gate.signup.haveAccount": "Ich habe schon ein Konto",
+  "gate.signup.signedIn": "Du bist auf diesem Handy bei der Familie «{family}» angemeldet.",
+  "gate.signup.openApp": "App öffnen",
+  "gate.signup.signOutFirst": "Um eine weitere Familie zu erstellen, melde dieses Handy zuerst ab (Mehr, Einstellungen).",
+  "gate.welcome.subtitle": "Willkommen",
+  "gate.welcome.checking": "Deine Zahlung wird geprüft…",
+  "gate.welcome.pending": "Stripe hat deine Anmeldung noch nicht bestätigt. Warte einen Moment und versuch es nochmals.",
+  "gate.welcome.retry": "Nochmals versuchen",
+  "gate.welcome.ready": "Deine Familie «{family}» ist bereit.",
+  "gate.welcome.otherDevice":
+    "Um dein Passwort zu wählen, öffne den Link aus der E-Mail auf diesem Handy, oder melde dich an, falls das schon erledigt ist.",
+  "gate.welcome.subscribed": "Abo gespeichert, danke!",
+  "gate.welcome.toLogin": "Zur Anmeldung",
 };

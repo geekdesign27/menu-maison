@@ -7,8 +7,7 @@ import {
   ShoppingBasket,
   House,
   ShieldCheck,
-  Store,
-} from "lucide-react";
+  Store, CreditCard } from "lucide-react";
 import { GestionContext } from "../lib/paths";
 import { useMe, useSession } from "../lib/session";
 import { Avatar, cx } from "../components/ui";
@@ -36,7 +35,10 @@ export function GestionLayout() {
   const sections = [
     ...SECTIONS.map(({ labelKey, ...s }) => ({ ...s, label: t(labelKey) })),
     ...(account?.role === "admin"
-      ? [{ to: "/gestion/famille", label: t("admin.tabFamily"), icon: House }]
+      ? [
+          { to: "/gestion/famille", label: t("admin.tabFamily"), icon: House },
+          { to: "/gestion/abonnement", label: t("billing.panel.title"), icon: CreditCard },
+        ]
       : []),
     ...(account?.superadmin
       ? [

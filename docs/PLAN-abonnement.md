@@ -162,7 +162,7 @@ complété pour une famille qui arrive seule, sans P-A pour l'aider :
 | 0 | Fenêtre « Ajouter à l'écran d'accueil » au premier lancement sur téléphone | nouveau composant, `Layout`, i18n |
 | S1 | **Fait le 2026-10-28** (sans UI, inactif tant que les clés manquent). Stripe côté serveur : produit et prix, Checkout, page de retour, webhook signé, statut sur la famille | `schema`, `http.ts`, `billing.ts`, `stripeNode.ts` |
 | S2 | **Fait le 2026-10-28.** Accès selon le statut (offert à part : `families.offered`, les familles sans abonnement sont offertes), écritures et IA coupées en lecture seule, budget d'essai réduit, bandeau, bouton Offrir / Retirer l'offre dans Super admin | `lib.ts`, `domain/billing.ts`, tests |
-| S3 | Parcours client : formulaire, `#/bienvenue`, onglet Abonnement, portail | `Gate`, `gestion/` |
+| S3 | **Fait le 2026-10-28.** Parcours client : `#/essai`, `#/bienvenue` puis mot de passe, carte Abonnement (Réglages et Gestion), portail Stripe dédié, un seul abonnement par famille | `Gate`, `SignupScreens`, `SubscriptionPanel` |
 | S3b | E-mails HTML de marque (clients et alertes à PA), aperçus dans Super admin | `convex/emails/` |
 | S3c | Actions en libre-service : mot de passe oublié, e-mail, export, suppression, déconnexion | `access.ts`, `Settings`, `gestion/` |
 | S3d | Guide de bienvenue d'une famille cliente | `onboarding/`, i18n |
