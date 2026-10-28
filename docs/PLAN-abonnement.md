@@ -155,6 +155,48 @@ complété pour une famille qui arrive seule, sans P-A pour l'aider :
 - **Textes** revus pour un client qui ne connaît pas P-A, en français et en allemand.
 - Vérifié de bout en bout sur téléphone, dans les deux langues, avec un compte de test.
 
+## Avant la mise en ligne : ce qui n'a pas encore été vérifié
+
+Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au public.
+
+**Paiement (Stripe)**
+- [ ] Webhook de bout en bout en mode test (Stripe CLI, `STRIPE_WEBHOOK_SECRET`) :
+  renouvellement, résiliation dans le portail, paiement échoué (carte de test 4000 0000 0000 0341),
+  fin d'essai sans paiement.
+- [ ] Bouton « Réactiver » avec un vrai abonnement terminé.
+- [ ] Bandeaux « paiement échoué » et « lecture seule » vus à l'écran (seuls les tests les couvrent).
+- [ ] TWINT activé dans Stripe et un abonnement de test payé avec.
+- [ ] Nom affiché sur la page de paiement : « Entreprise 1 » à remplacer (réglages publics du
+  compte, ou second compte Stripe).
+- [ ] Production : clé live, `SITE_URL=https://menumaison.ch`, webhook live vers
+  `https://resolute-squid-776.eu-west-1.convex.site/stripe/webhook`, `STRIPE_PRICE_ID` et
+  `STRIPE_PORTAL_CONFIG_ID` live, puis un vrai paiement de 20 CHF remboursé.
+
+**IA et coûts**
+- [ ] Compteur IA en production : vérifier qu'un premier vrai ticket fait bouger « IA ce mois ».
+- [ ] Limite de dépense mensuelle posée dans la console Anthropic.
+- [ ] Chiffres réels de la page « Usage » de Convex après un mois, pour le calcul des frais.
+- [ ] Limites gratuites de Groq confirmées dans la console Groq.
+- [ ] Choix confirmé pour la famille de PA : sans plafond IA (la revue proposait un filet à 20 USD).
+
+**Traduction allemande**
+- [ ] Relecture par une personne de langue maternelle allemande (app, page d'accueil, e-mails),
+  en particulier « Kühli », « Batzen », « Tour de Suisse », « Jeden. Einzelnen. Tag. ».
+- [ ] Dictée en allemand avec une vraie voix.
+- [ ] Page d'accueil en allemand vue sur ordinateur, écran d'invitation en allemand.
+- [ ] Traduction automatique du catalogue en production (première coche « Deutsch »).
+
+**Téléphones réels**
+- [ ] Fenêtre « Ajouter à l'écran d'accueil » sur un vrai iPhone (Safari) et un vrai Android
+  (Chrome) : vue seulement sur un téléphone simulé.
+- [ ] Parcours d'inscription complet sur un vrai téléphone, page Stripe comprise.
+
+**Lots encore à faire** : e-mails (S3b), actions en libre-service (S3c), guide de bienvenue
+client (S3d), page d'accueil (S4), pages légales (S5), statistiques (S6b), essai complet (S7).
+
+**Ménage** : familles de test locales « Test Stripe » et « Rochat Test », et leurs abonnements
+de test chez Stripe.
+
 ## Lots
 
 | Lot | Contenu | Fichiers principaux |
