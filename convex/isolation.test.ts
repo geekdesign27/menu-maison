@@ -243,6 +243,7 @@ describe("reads stay within the family", () => {
       await s.t.query(api.templates.list, { token }),
       await s.t.query(api.stats.overview, { token, today: "2026-10-25" }),
       await s.t.query(api.homeStock.list, { token }),
+      await s.t.query(api.onboarding.facts, { token }),
     ];
     // Each id of family A is looked for as it is, whatever its format
     const json = JSON.stringify(results);
@@ -863,6 +864,22 @@ describe("writes on another family's ids are refused", () => {
     ).rejects.toThrow("introuvable");
   });
 
+  it("the guide switch and the end of the tour stay in the caller's family", async () => {
+    const before = await snapshotA();
+    await s.t.mutation(api.onboarding.setEnabled, { token: s.b.token, enabled: true });
+    await s.t.mutation(api.onboarding.finish, { token: s.b.token });
+    expect(await snapshotA()).toEqual(before);
+    // Family A's likes, wishes, meals and checks are not counted for B
+    expect(await s.t.query(api.onboarding.facts, { token: s.b.token })).toEqual({
+      hasPhoto: false,
+      likes: 0,
+      wishes: 0,
+      mealsAdded: 0,
+      itemsChecked: 0,
+      statusesSet: 0,
+    });
+  });
+
   // Public functions without a cross-family case, and why
   const noCase: Record<string, string> = {
     "access.login": "signs in by family link name, pseudo and password",
@@ -901,6 +918,9 @@ describe("writes on another family's ids are refused", () => {
       "external page or text, against the caller's catalog (family-scoped internal query)",
     "recipeImport.transcribe": "audio upload of the caller, deleted after use",
     "openFoodFacts.search": "public Open Food Facts search, no family data",
+    "onboarding.facts": "covered by the read test",
+    "onboarding.finish": "patches the caller only (covered: own family test)",
+    "onboarding.setEnabled": "settings and members of the caller's family only (covered: own family test)",
   };
 
   it("every public function is covered or explained", async () => {
