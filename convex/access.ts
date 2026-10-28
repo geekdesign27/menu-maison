@@ -11,7 +11,9 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import {
+  assertAdmin,
   readSession,
+  requireMemberWriter,
   SESSION_DAYS,
   sha256,
 } from "./lib";
@@ -26,10 +28,12 @@ import {
   normalizeName,
   passwordProblem,
   randomToken,
+  slugFromName,
   verifyPassword,
 } from "./domain/auth";
 
-const INVITE_DAYS = 14;
+const INVITE_DAYS = 14; // first sign-in
+const RESET_DAYS = 2; // forgotten password: the link may linger in a chat
 const WRONG = "Pseudo ou mot de passe incorrect.";
 
 async function openSession(ctx: MutationCtx, member: Doc<"members">) {
@@ -54,7 +58,7 @@ async function revokeSessions(ctx: MutationCtx, memberId: Id<"members">) {
 }
 
 /** One-time link token for a member to choose a password (first sign-in or reset). */
-export async function createInvite(ctx: MutationCtx, member: Doc<"members">) {
+export async function createInvite(ctx: MutationCtx, member: Doc<"members">, days = INVITE_DAYS) {
   if (!member.familyId) throw new ConvexError("Profil sans famille.");
   // A new link replaces any older one
   const old = await ctx.db
@@ -69,20 +73,18 @@ export async function createInvite(ctx: MutationCtx, member: Doc<"members">) {
     familyId: member.familyId,
     memberId: member._id,
     token: await sha256(token),
-    expiresAt: Date.now() + INVITE_DAYS * 24 * 3600 * 1000,
+    expiresAt: Date.now() + days * 24 * 3600 * 1000,
   });
   return token;
 }
 
-/** Family shown on the sign-in screen of its link, or null. */
+/** Family shown on the sign-in screen of its link (or of its name typed by hand), or null. */
 export const family = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const family = await ctx.db
       .query("families")
-      .withIndex("by_slug", (q) =>
-        q.eq("slug", normalizeName(slug).slice(0, 30)),
-      )
+      .withIndex("by_slug", (q) => q.eq("slug", slugFromName(slug)))
       .unique();
     return family && !family.suspended
       ? { name: family.name, slug: family.slug }
@@ -170,8 +172,9 @@ export const login = action({
   handler: async (
     ctx,
     args,
-  ): Promise<{ ok: true; token: string } | { ok: false; error: string }> => {
-    const slug = normalizeName(args.family).slice(0, 30);
+  ): Promise<{ ok: true; token: string; slug: string } | { ok: false; error: string }> => {
+    // The family name typed by hand works as well as the link name
+    const slug = slugFromName(args.family);
     const username = normalizeName(args.username).slice(0, 30);
     if (!slug || !username || !args.password || args.password.length > 200)
       return { ok: false, error: WRONG };
@@ -184,7 +187,7 @@ export const login = action({
     const ok = await verifyPassword(args.password, target.passwordHash ?? DECOY_HASH);
     if (!ok || !target.memberId) return { ok: false, error: WRONG };
     const token = await ctx.runMutation(internal.access.finishLogin, { key, memberId: target.memberId });
-    return token ? { ok: true, token } : { ok: false, error: WRONG };
+    return token ? { ok: true, token, slug } : { ok: false, error: WRONG };
   },
 });
 
@@ -252,46 +255,89 @@ export const checkInvite = internalQuery({
   args: { link: v.string() },
   handler: async (ctx, { link }) => {
     const found = await findInvite(ctx.db, link);
-    return found ? { family: [found.family.name, found.family.slug] } : null;
+    return found
+      ? { avoid: [found.member.username ?? "", found.family.name, found.family.slug] }
+      : null;
   },
 });
 
+const EXPIRED_LINK = "Ce lien n'est plus valable. Demande-en un nouveau à l'admin de ta famille.";
+
 export const redeemInvite = internalMutation({
-  args: { link: v.string(), username: v.string(), passwordHash: v.string() },
-  handler: async (ctx, { link, username, passwordHash }) => {
+  args: { link: v.string(), passwordHash: v.string() },
+  handler: async (ctx, { link, passwordHash }) => {
     const found = await findInvite(ctx.db, link);
-    if (!found) throw new ConvexError("Ce lien n'est plus valable. Demande-en un nouveau.");
+    if (!found) throw new ConvexError(EXPIRED_LINK);
     const { invite, member } = found;
-    const taken = await ctx.db
-      .query("members")
-      .withIndex("by_family_username", (q) => q.eq("familyId", member.familyId).eq("username", username))
-      .unique();
-    if (taken && taken._id !== member._id) throw new ConvexError(`Le pseudo « ${username} » est déjà pris dans la famille.`);
-    await ctx.db.patch(member._id, { username, passwordHash, role: member.role ?? "membre" });
+    if (!member.username) throw new ConvexError("Ce profil n'a pas encore de pseudo. Demande à l'admin de ta famille.");
+    await ctx.db.patch(member._id, { passwordHash, role: member.role ?? "membre" });
     await ctx.db.delete(invite._id);
     // A new password signs out the other devices of this member
     await revokeSessions(ctx, member._id);
-    return openSession(ctx, { ...member, username, passwordHash });
+    return openSession(ctx, { ...member, passwordHash });
   },
 });
 
-/** Chooses pseudo and password from an invitation link, then signs in. */
+/** Chooses a password from an invitation link (the pseudo is set by the admin), then signs in. */
 export const activate = action({
-  args: { link: v.string(), username: v.string(), password: v.string() },
+  args: { link: v.string(), password: v.string() },
   handler: async (ctx, args): Promise<{ token: string }> => {
-    const username = normalizeName(args.username);
-    const nameIssue = nameProblem(username, "Le pseudo");
-    if (nameIssue) throw new ConvexError(nameIssue);
     // The link is checked before the costly hashing, within the global limit
     const slot = await ctx.runMutation(internal.access.beginAttempt, {});
     if (!slot.allowed) throw new ConvexError(tooMany(slot.retryAt));
     const invite = await ctx.runQuery(internal.access.checkInvite, { link: args.link });
-    if (!invite) throw new ConvexError("Ce lien n'est plus valable. Demande-en un nouveau.");
-    const problem = passwordProblem(args.password, [username, ...invite.family]);
+    if (!invite) throw new ConvexError(EXPIRED_LINK);
+    const problem = passwordProblem(args.password, invite.avoid);
     if (problem) throw new ConvexError(problem);
     const passwordHash = await hashPassword(args.password);
-    const token = await ctx.runMutation(internal.access.redeemInvite, { link: args.link, username, passwordHash });
+    const token = await ctx.runMutation(internal.access.redeemInvite, { link: args.link, passwordHash });
     return { token };
+  },
+});
+
+/** The super-admin's access is managed by the super-admin only, not by a family admin. */
+function assertCanManage(me: Doc<"members">, member: Doc<"members">) {
+  if (member.superadmin && !me.superadmin)
+    throw new ConvexError("L'accès de ce profil se gère avec le super-admin.");
+}
+
+/** Admin: sets the pseudo of a family member (unique within the family). */
+export const setUsername = mutation({
+  args: { token: v.string(), id: v.id("members"), username: v.string() },
+  handler: async (ctx, args) => {
+    const me = await requireMemberWriter(ctx, args.token);
+    assertAdmin(me);
+    const member = await me.db.own(args.id, "Profil introuvable.");
+    assertCanManage(me.member, member);
+    const username = normalizeName(args.username);
+    const problem = nameProblem(username, "Le pseudo");
+    if (problem) throw new ConvexError(problem);
+    const taken = await me.db
+      .index("members", "by_family_username", (q) => q.eq("username", username))
+      .unique();
+    if (taken && taken._id !== member._id)
+      throw new ConvexError(`Le pseudo « ${username} » est déjà pris dans la famille.`);
+    await me.db.patch(member._id, { username });
+    return username;
+  },
+});
+
+/**
+ * Admin: a one-time link for a member to choose a password, for a first
+ * sign-in or a forgotten password. The member's devices are signed out.
+ */
+export const resetLink = mutation({
+  args: { token: v.string(), id: v.id("members") },
+  handler: async (ctx, args) => {
+    const me = await requireMemberWriter(ctx, args.token);
+    assertAdmin(me);
+    const member = await me.db.own(args.id, "Profil introuvable.");
+    // Resetting oneself would sign this phone out: another admin does it
+    if (member._id === me.member._id)
+      throw new ConvexError("Pour ton propre accès, demande à un autre admin de la famille.");
+    assertCanManage(me.member, member);
+    if (!member.username) throw new ConvexError("Choisis d'abord un pseudo pour ce profil.");
+    return createInvite(ctx, member, member.passwordHash ? RESET_DAYS : INVITE_DAYS);
   },
 });
 

@@ -8,9 +8,9 @@ Serveurs gérés par Portly (projet `menu-maison`) :
 - `menu-maison/web` : Vite sur http://localhost:5190
 
 Backend local : une famille de test se crée avec
-`CONVEX_AGENT_MODE=anonymous npx convex run families:create '{"name":"Famille Test","admin":"Test"}'`,
-puis on ouvre `http://localhost:5190/#/activer/<invite>` pour choisir pseudo et mot de passe.
-Le code de production est différent et n'est jamais écrit dans le dépôt.
+`CONVEX_AGENT_MODE=anonymous npx convex run families:create '{"name":"Test","admin":"Test"}'`,
+puis on ouvre `http://localhost:5190/#/activer/<invite>` pour choisir son mot de passe (le
+pseudo est renvoyé par la commande).
 
 Lecture des tickets et import de recettes : clé Anthropic `ANTHROPIC_API_KEY` dans l'environnement Convex, jamais
 dans le dépôt. Copier la clé puis, sans la taper :

@@ -8,6 +8,7 @@ import { errorMessage } from "../../lib/format";
 import { PhotoTooHeavy, uploadPhoto } from "../../lib/image";
 import { Avatar, Button, cx, Sheet, TextInput } from "../ui";
 import { EmojiField } from "./EmojiField";
+import { MemberAccess } from "./MemberAccess";
 
 const MEMBER_COLORS = [
   "#A8C8E8",
@@ -182,6 +183,7 @@ export function MemberSheet({
             ))}
           </div>
         </div>
+        {member && <MemberAccess member={member} />}
       </div>
     </Sheet>
   );

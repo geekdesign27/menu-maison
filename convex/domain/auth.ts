@@ -32,15 +32,23 @@ export function nameProblem(
 }
 
 /** French reason why a password is refused, or null when it is fine. */
-export function passwordProblem(password: string, avoid: string[] = []): string | null {
+export function passwordProblem(
+  password: string,
+  avoid: string[] = [],
+): string | null {
   if (password.length < MIN_PASSWORD_LENGTH)
     return `Le mot de passe doit faire au moins ${MIN_PASSWORD_LENGTH} caractères.`;
   if (password.length > MAX_PASSWORD_LENGTH) return "Mot de passe trop long.";
   // The pseudo and the family name are known to others: not in the password
   const plain = normalizeName(password);
-  if (avoid.some((word) => word.length >= 3 && plain.includes(normalizeName(word))))
+  if (
+    avoid.some(
+      (word) => word.length >= 3 && plain.includes(normalizeName(word)),
+    )
+  )
     return "Le mot de passe ne doit contenir ni ton pseudo ni le nom de la famille.";
-  if (COMMON.has(plain)) return "Ce mot de passe est trop courant, choisis-en un autre.";
+  if (COMMON.has(plain))
+    return "Ce mot de passe est trop courant, choisis-en un autre.";
   return null;
 }
 
@@ -71,9 +79,20 @@ export function slugFromName(name: string): string {
     .slice(0, 30);
 }
 
+/** Pseudo proposed from a first name: « Pierre-Alain » → « pierre-alain ». */
+export function pseudoFromName(name: string): string {
+  const pseudo = normalizeName(name)
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9._-]/g, "")
+    .replace(/^[._-]+/, "")
+    .slice(0, 30);
+  return nameProblem(pseudo, "Le pseudo") ? "membre" : pseudo;
+}
+
 const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-const fromHex = (hex: string) => Uint8Array.from((hex.match(/../g) ?? []).map((h) => parseInt(h, 16)));
+const fromHex = (hex: string) =>
+  Uint8Array.from((hex.match(/../g) ?? []).map((h) => parseInt(h, 16)));
 
 async function pbkdf2(
   password: string,
@@ -100,7 +119,9 @@ export async function hashPassword(
   password: string,
   iterations = ITERATIONS,
 ): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(new ArrayBuffer(SALT_BYTES)));
+  const salt = crypto.getRandomValues(
+    new Uint8Array(new ArrayBuffer(SALT_BYTES)),
+  );
   return `pbkdf2-sha256$${iterations}$${toHex(salt)}$${toHex(await pbkdf2(password, salt, iterations))}`;
 }
 
@@ -153,7 +174,11 @@ export interface Limit {
 }
 
 /** 5 tries on one pseudo within 10 minutes, then 5 minutes of pause. */
-export const PER_NAME: Limit = { max: 5, windowMs: 10 * 60_000, lockMs: 5 * 60_000 };
+export const PER_NAME: Limit = {
+  max: 5,
+  windowMs: 10 * 60_000,
+  lockMs: 5 * 60_000,
+};
 /** The whole deployment: hashing is costly, 30 sign-ins or activations a minute at most. */
 export const GLOBAL: Limit = { max: 30, windowMs: 60_000, lockMs: 60_000 };
 
@@ -167,16 +192,25 @@ export function reserveAttempt(
   now: number,
   limit: Limit,
 ): { allowed: boolean; retryAt: number; next: Guard } {
-  if (guard && guard.lockedUntil > now) return { allowed: false, retryAt: guard.lockedUntil, next: guard };
+  if (guard && guard.lockedUntil > now)
+    return { allowed: false, retryAt: guard.lockedUntil, next: guard };
   const inWindow = !!guard && now - guard.lastFailureAt < limit.windowMs;
   const attempts = (inWindow ? guard.failures : 0) + 1;
   if (attempts > limit.max) {
     const lockedUntil = now + limit.lockMs;
-    return { allowed: false, retryAt: lockedUntil, next: { failures: 0, lastFailureAt: now, lockedUntil } };
+    return {
+      allowed: false,
+      retryAt: lockedUntil,
+      next: { failures: 0, lastFailureAt: now, lockedUntil },
+    };
   }
   return {
     allowed: true,
     retryAt: 0,
-    next: { failures: attempts, lastFailureAt: inWindow ? guard.lastFailureAt : now, lockedUntil: 0 },
+    next: {
+      failures: attempts,
+      lastFailureAt: inWindow ? guard.lastFailureAt : now,
+      lockedUntil: 0,
+    },
   };
 }

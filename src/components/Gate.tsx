@@ -130,7 +130,7 @@ function LoginScreen({
         password,
       });
       if (res.ok) {
-        rememberedFamily.set(knownFamily?.slug ?? slug.trim().toLowerCase());
+        rememberedFamily.set(res.slug);
         onToken(res.token);
       } else setError(res.error);
     } catch (err) {
@@ -159,7 +159,7 @@ function LoginScreen({
             autoCorrect="off"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="Le nom donné dans ton lien, par exemple dupont"
+            placeholder="Le nom de ta famille, par exemple Dupont"
           />
         )}
         <TextInput
@@ -209,7 +209,6 @@ function InviteScreen({
 }) {
   const info = useQuery(api.access.inviteInfo, { link });
   const activate = useAction(api.access.activate);
-  const [username, setUsername] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [again, setAgain] = useState("");
   const [error, setError] = useState("");
@@ -235,8 +234,6 @@ function InviteScreen({
       </Screen>
     );
 
-  const pseudo = username ?? info.username ?? "";
-
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (password !== again) {
@@ -246,7 +243,7 @@ function InviteScreen({
     setBusy(true);
     setError("");
     try {
-      const { token } = await activate({ link, username: pseudo, password });
+      const { token } = await activate({ link, password });
       rememberedFamily.set(info!.slug);
       onToken(token);
     } catch (err) {
@@ -262,17 +259,29 @@ function InviteScreen({
       <h2 className="mb-1 text-center text-xl font-black">
         Bienvenue {info.name} !
       </h2>
-      <p className="mb-6 text-center text-[15px] text-muted">
-        Choisis ton pseudo et ton mot de passe.
-      </p>
+      {info.username ? (
+        <div className="mb-6 rounded-3xl bg-white p-4 text-center shadow-sm">
+          <p className="text-[15px] font-semibold text-muted">Ton pseudo</p>
+          <p className="text-3xl font-black tracking-tight">{info.username}</p>
+          <p className="mt-1 text-[15px] text-muted">
+            Avec ta famille « {info.family} », il te servira à te connecter.
+          </p>
+        </div>
+      ) : (
+        <ErrorBox>
+          Ton profil n'a pas encore de pseudo. Demande à l'admin de ta famille
+          de t'en choisir un, puis un nouveau lien.
+        </ErrorBox>
+      )}
       <form onSubmit={submit} className="space-y-4">
-        <TextInput
-          label="Pseudo"
+        {/* Lets the phone's password manager save the pair */}
+        <input
+          type="text"
+          name="username"
           autoComplete="username"
-          autoCapitalize="none"
-          autoCorrect="off"
-          value={pseudo}
-          onChange={(e) => setUsername(e.target.value)}
+          value={info.username ?? ""}
+          readOnly
+          hidden
         />
         <TextInput
           label={`Mot de passe (${MIN_PASSWORD_LENGTH} caractères au moins)`}
@@ -292,7 +301,7 @@ function InviteScreen({
         <Button
           type="submit"
           size="lg"
-          disabled={busy || !pseudo.trim() || !password || !again}
+          disabled={busy || !info.username || !password || !again}
         >
           {busy ? "Enregistrement…" : "C'est parti"}
         </Button>

@@ -2,8 +2,10 @@
 
 État : validé par PA le 2026-10-27. Lot D en production (menumaison.ch). Lot A1 en
 production le 2026-10-28 : famille Schütz migrée (456 documents, aucun sans famille),
-sauvegarde dans `backups/prod-avant-familles-2026-10-28.zip`. Reste l'étape 3 de la
-migration (`familyId` obligatoire) une fois les comptes activés.
+sauvegarde dans `backups/prod-avant-familles-2026-10-28.zip`. Étape 3 (`familyId`
+obligatoire) déployée le même jour. Lot A2 en partie : l'admin choisit les pseudos, crée
+les liens d'activation et de mot de passe oublié, et nomme la famille (qui donne le lien).
+Reste de A2 : rôle admin ou membre réglable, changer son propre mot de passe.
 
 ## Décisions de PA (2026-10-27)
 

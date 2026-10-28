@@ -5,6 +5,7 @@ import {
   nameProblem,
   normalizeName,
   passwordProblem,
+  pseudoFromName,
   PER_NAME,
   reserveAttempt,
   randomToken,
@@ -26,14 +27,25 @@ describe("names", () => {
   });
   it("proposes a family link name", () => {
     expect(slugFromName("Famille Schütz")).toBe("schutz");
+    expect(slugFromName("Schütz")).toBe("schutz");
     expect(slugFromName("Les Dupont-Morel")).toBe("les-dupont-morel");
+  });
+  it("proposes a pseudo from a first name", () => {
+    expect(pseudoFromName("Pierre-Alain")).toBe("pierre-alain");
+    expect(pseudoFromName("Zoé Marie")).toBe("zoe-marie");
+    expect(pseudoFromName("Ö")).toBe("membre"); // too short
+    expect(pseudoFromName("🐻")).toBe("membre");
   });
 });
 
 describe("passwords", () => {
   it("refuses passwords with the pseudo, the family or too common", () => {
-    expect(passwordProblem("clara2015!", ["clara", "Famille Schütz"])).toMatch("ni ton pseudo");
-    expect(passwordProblem("vive-schutz-2026", ["pa", "schutz"])).toMatch("ni ton pseudo");
+    expect(passwordProblem("clara2015!", ["clara", "Famille Schütz"])).toMatch(
+      "ni ton pseudo",
+    );
+    expect(passwordProblem("vive-schutz-2026", ["pa", "schutz"])).toMatch(
+      "ni ton pseudo",
+    );
     expect(passwordProblem("pa-est-content", ["pa"])).toBeNull(); // too short a word to matter
     expect(passwordProblem("MotDePasse")).toMatch("trop courant");
   });
@@ -88,12 +100,15 @@ describe("attempt limits", () => {
     expect(later.allowed).toBe(false);
     expect(later.next.lockedUntil).toBe(sixth.next.lockedUntil);
     // Free again after the pause
-    expect(reserveAttempt(later.next, sixth.retryAt + 1, PER_NAME).allowed).toBe(true);
+    expect(
+      reserveAttempt(later.next, sixth.retryAt + 1, PER_NAME).allowed,
+    ).toBe(true);
   });
 
   it("forgets attempts older than the window", () => {
     let guard = null as ReturnType<typeof reserveAttempt>["next"] | null;
-    for (let i = 0; i < 5; i++) guard = reserveAttempt(guard, t0, PER_NAME).next;
+    for (let i = 0; i < 5; i++)
+      guard = reserveAttempt(guard, t0, PER_NAME).next;
     const next = reserveAttempt(guard, t0 + PER_NAME.windowMs + 1, PER_NAME);
     expect(next.allowed).toBe(true);
     expect(next.next.failures).toBe(1);

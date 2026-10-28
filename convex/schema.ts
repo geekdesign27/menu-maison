@@ -336,7 +336,7 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_member", ["memberId"]),
 
-  /** Brute-force guard per sign-in name: « <familyId>:<username> ». */
+  /** Brute-force guard per sign-in name: « <family link name>:<username> ». */
   loginGuards: defineTable({
     key: v.string(),
     failures: v.number(),

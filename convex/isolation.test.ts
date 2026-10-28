@@ -283,6 +283,23 @@ describe("writes on another family's ids are refused", () => {
         }),
     ],
     [
+      "access.setUsername",
+      () =>
+        s.t.mutation(api.access.setUsername, {
+          token: s.b.token,
+          id: s.a.memberId,
+          username: "pirate",
+        }),
+    ],
+    [
+      "access.resetLink",
+      () =>
+        s.t.mutation(api.access.resetLink, {
+          token: s.b.token,
+          id: s.a.memberId,
+        }),
+    ],
+    [
       "catalog.setMemberPhoto",
       () =>
         s.t.mutation(api.catalog.setMemberPhoto, {
@@ -787,6 +804,7 @@ describe("writes on another family's ids are refused", () => {
     "access.family": "public name of a family link, by design",
     "access.inviteInfo": "reads only the invitation of its link",
     "access.activate": "uses only the invitation of its link",
+    "families.rename": "renames the caller's own family only (tested in access.test.ts)",
     "catalog.base": "covered by the read test",
     "catalog.addMember": "inserts into the caller's family only",
     "catalog.addAisle":

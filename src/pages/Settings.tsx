@@ -1,12 +1,14 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "convex/react";
-import { ChevronRight, LogOut, Plus } from "lucide-react";
+import { ChevronRight, LogOut, Plus, Share2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { DAY_NAMES } from "../../convex/domain/dates";
 import { useBase, useSession, type Base } from "../lib/session";
-import { useRun } from "../lib/toast";
+import { useRun, useToast } from "../lib/toast";
+import { errorMessage } from "../lib/format";
+import { appUrl, shareLink } from "../lib/share";
 import { BackButton } from "../components/Layout";
 import {
   Avatar,
@@ -17,6 +19,7 @@ import {
   Page,
   SectionTitle,
   Stepper,
+  TextInput,
 } from "../components/ui";
 import { ChainMark } from "../components/shopping/chains";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
@@ -62,6 +65,8 @@ function SettingsContent({ base }: { base: Base }) {
 
   return (
     <>
+      <FamilySection />
+
       <SectionTitle>Profils</SectionTitle>
       <Card className="overflow-hidden">
         <ul className="divide-y divide-line">
@@ -242,7 +247,7 @@ function SettingsContent({ base }: { base: Base }) {
         open={confirmLogout}
         onClose={() => setConfirmLogout(false)}
         title="Déconnecter ce téléphone ?"
-        text="Il faudra saisir à nouveau le code famille pour retrouver les menus et la liste de courses."
+        text="Il faudra saisir à nouveau ton pseudo et ton mot de passe pour retrouver les menus et la liste de courses."
         confirmLabel="Déconnecter"
         danger
         onConfirm={async () => {
@@ -250,6 +255,68 @@ function SettingsContent({ base }: { base: Base }) {
           setToken("");
         }}
       />
+    </>
+  );
+}
+
+/** Family name, which also gives the sign-in link; only admins rename it. */
+function FamilySection() {
+  const { token, account } = useSession();
+  const run = useRun();
+  const toast = useToast();
+  const rename = useMutation(api.families.rename);
+  const [name, setName] = useState(account?.family.name ?? "");
+  if (!account) return null;
+  const isAdmin = account.role === "admin";
+  const link = appUrl(`/f/${account.family.slug}`);
+
+  const save = async () => {
+    if (!name.trim() || name.trim() === account.family.name) {
+      setName(account.family.name);
+      return;
+    }
+    const next = await run(() => rename({ token, name }), "Nom de la famille enregistré");
+    setName(next?.name ?? account.family.name);
+  };
+
+  const share = async () => {
+    try {
+      const done = await shareLink(link, `Menu Maison, famille ${account.family.name} : connecte-toi avec ton pseudo et ton mot de passe.`);
+      if (done === "copied") toast("Lien copié, colle-le dans un message.");
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
+
+  return (
+    <>
+      <SectionTitle>Famille</SectionTitle>
+      <Card className="grid gap-3 p-4">
+        {isAdmin ? (
+          <TextInput
+            label="Nom de la famille"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={save}
+          />
+        ) : (
+          <p className="text-[17px] font-black">{account.family.name}</p>
+        )}
+        <div>
+          <span className="block text-[15px] font-bold">Lien de connexion</span>
+          <span className="block break-all text-[15px] text-muted">
+            {link.replace(/^https?:\/\//, "")}
+          </span>
+          {isAdmin && (
+            <span className="mt-1 block text-[15px] text-muted">
+              Il suit le nom de la famille : changer le nom change le lien.
+            </span>
+          )}
+        </div>
+        <Button variant="secondary" onClick={share}>
+          <Share2 size={20} /> Partager le lien
+        </Button>
+      </Card>
     </>
   );
 }

@@ -101,16 +101,25 @@ Serveurs de dev via Portly.
   famille, minuscules sans accent ; `members.passwordHash`, PBKDF2-SHA256 600 000
   itérations, sel par compte). Rôles `admin` / `membre`, `superadmin` pour PA. Un profil sans
   pseudo (petit enfant) ne se connecte pas.
-- **Connexion** : lien de la famille `menumaison.ch/#/f/<famille>` (mémorisé sur le
-  téléphone), pseudo, mot de passe → action `access.login` → jeton de session (365 jours,
-  empreinte SHA-256 seule en base). 5 échecs en 10 min sur un même pseudo : blocage 10 min
+- **Nom de la famille** : choisi par l'admin dans Réglages (`families.rename`), il donne
+  aussi le lien de connexion : « Schütz » → `menumaison.ch/#/f/schutz` (`slugFromName`).
+  Renommer change le lien ; les téléphones connectés le sont toujours et retiennent le
+  nouveau. Le nom est unique entre les familles.
+- **Connexion** : lien de la famille (mémorisé sur le téléphone) ou nom de la famille tapé à
+  la main (« Schütz », « Famille Schütz » ou « schutz »), pseudo, mot de passe → action
+  `access.login` → jeton de session (365 jours, empreinte SHA-256 seule en base). 5 échecs
+  en 10 min sur un même pseudo : blocage 5 min ; 30 essais par minute pour tout le site
   (`loginGuards`). Message identique pour pseudo inconnu et mauvais mot de passe.
-- **Invitation** : lien unique `#/activer/<jeton>` (14 jours, `invites`) pour choisir pseudo
-  et mot de passe ; il remplace l'ancien lien et déconnecte les autres appareils du membre.
+- **Pseudo** : choisi par l'admin dans la fiche du membre (Réglages, Profils, section
+  « Accès », `access.setUsername`) ; le membre le voit sans pouvoir le changer.
+- **Lien d'activation ou de mot de passe oublié** : l'admin le crée dans la même section
+  (`access.resetLink`) et l'envoie par message. Lien unique `#/activer/<jeton>` (14 jours,
+  `invites`) pour choisir son mot de passe ; il remplace l'ancien lien et déconnecte les
+  autres appareils du membre. Pas pour soi-même : un autre admin le fait.
 - Famille suspendue (`families.suspended`) : plus de connexion ni de session valide.
 - Création d'une famille (en attendant l'écran super-admin) :
-  `npx convex run families:create '{"name":"Famille Dupont","admin":"Marc"}'` renvoie le
-  jeton d'invitation de l'admin.
+  `npx convex run families:create '{"name":"Dupont","admin":"Marc"}'` renvoie le pseudo de
+  l'admin (tiré du prénom, ou `username`) et son jeton d'invitation.
 - Urgences : `access:revokeAll` (déconnecte tout le monde), `access:resetGuards`.
   Sessions et invitations expirées purgées chaque nuit (`crons.ts`).
 - Police Nunito hébergée dans l'app (pas d'appel à Google). CSP stricte dans le build de production.
