@@ -284,6 +284,29 @@ describe("roles and look", () => {
     expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({ role: "membre" });
   });
 
+  it("French for everyone, German for a profile set by an admin or by the member", async () => {
+    const { t, admin, kid } = await setup();
+    const tk = await tokens(t);
+    expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({ lang: "fr" });
+    await t.mutation(api.access.setLang, { token: tk.admin, id: kid, lang: "de" });
+    expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({ lang: "de" });
+    // Only for oneself when not admin
+    await expect(
+      t.mutation(api.access.setLang, { token: tk.kid, id: admin, lang: "de" }),
+    ).rejects.toThrow("admins");
+    await t.mutation(api.access.setLang, { token: tk.kid, id: kid, lang: "fr" });
+    expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({ lang: "fr" });
+    expect((await t.run((ctx) => ctx.db.get(kid)))!.lang).toBeUndefined();
+    // The super-admin's language is theirs
+    await t.run((ctx) => ctx.db.patch(admin, { superadmin: true }));
+    await t.mutation(api.access.setRole, { token: tk.admin, id: kid, role: "admin" });
+    await expect(
+      t.mutation(api.access.setLang, { token: tk.kid, id: admin, lang: "de" }),
+    ).rejects.toThrow("super-admin");
+    await t.mutation(api.access.setLang, { token: tk.admin, id: admin, lang: "de" });
+    expect(await t.query(api.access.check, { token: tk.admin })).toMatchObject({ lang: "de" });
+  });
+
   it("the family look is chosen by an admin and reaches every phone", async () => {
     const { t } = await setup();
     const tk = await tokens(t);

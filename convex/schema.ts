@@ -74,6 +74,8 @@ export const fontValidator = v.union(
   v.literal("atkinson"),
 );
 export const roleValidator = v.union(v.literal("admin"), v.literal("membre"));
+// Language of the app for one profile; French for everyone unless set
+export const langValidator = v.union(v.literal("fr"), v.literal("de"));
 // « pas mangé »: cooked, not eaten (the dish goes to the fridge);
 // « pas cuisiné »: never cooked (bought ingredients stay at home, see homeStock)
 export const mealStatusValidator = v.union(
@@ -108,6 +110,7 @@ export default defineSchema({
     passwordHash: v.optional(v.string()), // "pbkdf2-sha256$<iterations>$<salt>$<hash>"
     role: v.optional(roleValidator),
     superadmin: v.optional(v.boolean()), // manages every family (PA)
+    lang: v.optional(langValidator), // set by an admin or the member; absent = French
     // Welcome tour finished or skipped; 0 = account older than the guide (see domain/onboarding)
     onboardingDoneAt: v.optional(v.number()),
   })

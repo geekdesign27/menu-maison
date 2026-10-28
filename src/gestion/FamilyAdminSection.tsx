@@ -64,6 +64,13 @@ export function FamilyAdminSection() {
         ),
     },
     {
+      key: "lang",
+      label: "Langue",
+      sort: (m) => (m.lang === "de" ? 1 : 0),
+      render: (m) =>
+        m.lang === "de" ? <Badge tone="carrot">Deutsch</Badge> : "Français",
+    },
+    {
       key: "access",
       label: "Accès",
       sort: (m) => (m.hasPassword ? 0 : m.username ? 1 : 2),
@@ -138,9 +145,10 @@ function GuideSection({ enabled }: { enabled: boolean }) {
       <div>
         <h2 className="text-xl font-black">Guide pour les nouveaux</h2>
         <p className="text-[15px] text-muted">
-          À sa première connexion, un nouveau membre voit une carte de bienvenue, un tour de
-          l'app en 1 minute et, dans Plus, ses « Premiers pas ». Les comptes déjà
-          activés ne le voient pas, chacun peut le relancer dans Plus.
+          À sa première connexion, un nouveau membre voit une carte de
+          bienvenue, un tour de l'app en 1 minute et, dans Plus, ses « Premiers
+          pas ». Les comptes déjà activés ne le voient pas, chacun peut le
+          relancer dans Plus.
         </p>
       </div>
       <div className="max-w-xl rounded-2xl bg-paper p-4 ring-1 ring-line">
@@ -153,7 +161,11 @@ function GuideSection({ enabled }: { enabled: boolean }) {
             )
           }
           label="Guide pour les nouveaux"
-          hint={enabled ? "Activé" : "Coupé : l'app reste comme avant pour tout le monde"}
+          hint={
+            enabled
+              ? "Activé"
+              : "Coupé : l'app reste comme avant pour tout le monde"
+          }
         />
       </div>
     </section>

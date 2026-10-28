@@ -347,6 +347,15 @@ describe("writes on another family's ids are refused", () => {
         }),
     ],
     [
+      "access.setLang",
+      () =>
+        s.t.mutation(api.access.setLang, {
+          token: s.b.token,
+          id: s.a.memberId,
+          lang: "de",
+        }),
+    ],
+    [
       "access.resetLink",
       () =>
         s.t.mutation(api.access.resetLink, {

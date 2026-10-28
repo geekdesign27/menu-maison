@@ -14,6 +14,7 @@ import type * as claude from "../claude.js";
 import type * as crons from "../crons.js";
 import type * as domain_auth from "../domain/auth.js";
 import type * as domain_dates from "../domain/dates.js";
+import type * as domain_lang from "../domain/lang.js";
 import type * as domain_leftovers from "../domain/leftovers.js";
 import type * as domain_onboarding from "../domain/onboarding.js";
 import type * as domain_openFoodFacts from "../domain/openFoodFacts.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   "domain/auth": typeof domain_auth;
   "domain/dates": typeof domain_dates;
+  "domain/lang": typeof domain_lang;
   "domain/leftovers": typeof domain_leftovers;
   "domain/onboarding": typeof domain_onboarding;
   "domain/openFoodFacts": typeof domain_openFoodFacts;

@@ -74,11 +74,17 @@ describe("daysBetween", () => {
   });
 });
 
-describe("French formats", () => {
+describe("day formats, French and German", () => {
   it("formats long and short days", () => {
     expect(formatDayLong("2026-10-24")).toBe("samedi 24 octobre");
     expect(formatDayLong("2026-11-01")).toBe("dimanche 1er novembre");
     expect(formatDayShort("2026-10-24")).toBe("sam. 24");
+    expect(formatDayLong("2026-10-24", "de")).toBe("Samstag, 24. Oktober");
+    expect(formatDayLong("2026-11-01", "de")).toBe("Sonntag, 1. November");
+    expect(formatDayShort("2026-10-24", "de")).toBe("Sa. 24.");
+    expect(formatDateRange("2026-10-24", "2026-10-30", "de")).toBe("24. bis 30. Oktober");
+    expect(formatDateRange("2026-10-31", "2026-11-06", "de")).toBe("31. Oktober bis 6. November");
+    expect(formatDateRange("2026-12-26", "2027-01-01", "de")).toBe("26. Dezember 2026 bis 1. Januar 2027");
   });
 
   it("formats ranges", () => {

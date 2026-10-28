@@ -10,7 +10,7 @@ import {
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
-import { roleValidator } from "./schema";
+import { langValidator, roleValidator } from "./schema";
 import {
   assertAdmin,
   familyDb,
@@ -213,6 +213,7 @@ export const check = query({
       username: member.username ?? null,
       role: member.role ?? "membre",
       superadmin: member.superadmin === true,
+      lang: member.lang ?? "fr",
       family: { name: family.name, slug: family.slug },
       // Applied as soon as the phone opens, before the rest of the data
       look: { theme: settings.theme ?? "carotte", font: settings.font ?? "nunito" },
@@ -345,6 +346,21 @@ export const setRole = mutation({
       throw new ConvexError("Tu ne peux pas changer ton propre rôle : demande à un autre admin.");
     assertCanManage(me.member, member);
     await me.db.patch(member._id, { role: args.role });
+  },
+});
+
+/** Language of the app for a profile: the member themself, or an admin of the family. */
+export const setLang = mutation({
+  args: { token: v.string(), id: v.id("members"), lang: langValidator },
+  handler: async (ctx, args) => {
+    const me = await requireMemberWriter(ctx, args.token);
+    const member = await me.db.own(args.id, "Profil introuvable.");
+    if (member._id !== me.member._id) {
+      assertAdmin(me);
+      assertCanManage(me.member, member);
+    }
+    // French is the default: nothing stored for it
+    await me.db.patch(member._id, { lang: args.lang === "fr" ? undefined : args.lang });
   },
 });
 

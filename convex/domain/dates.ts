@@ -1,5 +1,7 @@
 // Calendar helpers on plain "YYYY-MM-DD" strings, computed in UTC on the date only.
 
+import type { Lang } from "./lang";
+
 const DAY_MS = 86_400_000;
 
 export const DAY_NAMES = [
@@ -25,6 +27,23 @@ const MONTH_NAMES = [
   "octobre",
   "novembre",
   "décembre",
+];
+
+const DAY_NAMES_DE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+const DAY_SHORT_DE = ["So.", "Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa."];
+const MONTH_NAMES_DE = [
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
 ];
 
 /** Parses "YYYY-MM-DD" into UTC milliseconds at midnight. */
@@ -91,26 +110,35 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((toUtcMs(b) - toUtcMs(a)) / DAY_MS);
 }
 
-/** « samedi 24 octobre » */
-export function formatDayLong(date: string): string {
+/** « samedi 24 octobre », « Samstag, 24. Oktober » */
+export function formatDayLong(date: string, lang: Lang = "fr"): string {
   const { month, day } = parts(date);
+  if (lang === "de") return `${DAY_NAMES_DE[dayOfWeek(date)]}, ${day}. ${MONTH_NAMES_DE[month]}`;
   return `${DAY_NAMES[dayOfWeek(date)]} ${dayNumber(day)} ${MONTH_NAMES[month]}`;
 }
 
-/** « sam. 24 » */
-export function formatDayShort(date: string): string {
-  return `${DAY_SHORT[dayOfWeek(date)]} ${dayNumber(parts(date).day)}`;
+/** « sam. 24 », « Sa. 24. » */
+export function formatDayShort(date: string, lang: Lang = "fr"): string {
+  const { day } = parts(date);
+  if (lang === "de") return `${DAY_SHORT_DE[dayOfWeek(date)]} ${day}.`;
+  return `${DAY_SHORT[dayOfWeek(date)]} ${dayNumber(day)}`;
 }
 
-/** « 24 au 30 octobre », « 31 octobre au 6 novembre », years added only when they differ. */
-export function formatDateRange(start: string, end: string): string {
+/**
+ * « 24 au 30 octobre », « 31 octobre au 6 novembre », years added only when they
+ * differ. In German: « 24. bis 30. Oktober ».
+ */
+export function formatDateRange(start: string, end: string, lang: Lang = "fr"): string {
   const s = parts(start);
   const e = parts(end);
-  const endText = `${dayNumber(e.day)} ${MONTH_NAMES[e.month]}`;
+  const months = lang === "de" ? MONTH_NAMES_DE : MONTH_NAMES;
+  const num = (d: number) => (lang === "de" ? `${d}.` : dayNumber(d));
+  const to = lang === "de" ? "bis" : "au";
+  const endText = `${num(e.day)} ${months[e.month]}`;
   if (s.year !== e.year) {
-    return `${dayNumber(s.day)} ${MONTH_NAMES[s.month]} ${s.year} au ${endText} ${e.year}`;
+    return `${num(s.day)} ${months[s.month]} ${s.year} ${to} ${endText} ${e.year}`;
   }
   if (s.month !== e.month)
-    return `${dayNumber(s.day)} ${MONTH_NAMES[s.month]} au ${endText}`;
-  return `${dayNumber(s.day)} au ${endText}`;
+    return `${num(s.day)} ${months[s.month]} ${to} ${endText}`;
+  return `${num(s.day)} ${to} ${endText}`;
 }

@@ -132,6 +132,16 @@ Serveurs de dev via Portly.
   téléchargée (`src/lib/look.ts`). Couleurs du kit d'identité v1 ; contraste au-dessus de 4,5:1
   dans les trois thèmes (boutons Carotte en #C1511C, l'orange vif #E97537 reste pour le
   logo). Captures : `docs/themes/`.
+- **Langue** (demande de PA, 2026-10-28) : le français pour tout le monde ; un admin coche
+  « Deutsch » sur un profil de sa famille (fiche du profil, colonne « Langue » dans Gestion,
+  Famille), chacun peut aussi la cocher pour lui-même (`access.setLang`, `members.lang`,
+  rien de stocké pour le français). `access.check` renvoie `lang` ; la page passe en `de-CH`.
+  Textes dans `src/i18n/fr.ts` (référence) et `src/i18n/de.ts`, que TypeScript oblige à être
+  complet ; allemand de Suisse (« ss », jamais « ß »), vérifié par un test. Dates :
+  `formatDayLong`, `formatDayShort`, `formatDateRange` prennent la langue. Lot 1 (socle) :
+  seuls les onglets et la coche sont traduits ; les écrans suivent écran par écran (lot 2),
+  puis les messages du serveur, le catalogue bilingue des ingrédients et rayons, l'IA et la
+  dictée, la page d'accueil avec un sélecteur FR | DE (captures gardées en français).
 - **Guide pour les nouveaux** (depuis le 2026-10-28) : carte de bienvenue, tour en bulles
   (driver.js) et checklist « Premiers pas » dans Plus, pour les comptes activés après sa mise
   en route. Interrupteur des admins dans Gestion, Famille (`settings.onboarding`, activé pour

@@ -11,8 +11,14 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { FAMILY_KEY, readStored as read, TOKEN_KEY, writeStored as write } from "./device";
+import {
+  FAMILY_KEY,
+  readStored as read,
+  TOKEN_KEY,
+  writeStored as write,
+} from "./device";
 import { applyLook, rememberLook } from "./look";
+import { localeOf } from "../../convex/domain/lang";
 
 /** Family link name remembered on this phone, so the sign-in screen knows the family. */
 export const rememberedFamily = {
@@ -53,7 +59,10 @@ const SessionContext = createContext<SessionValue | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [stored, setStored] = useState(() => read(TOKEN_KEY));
   const [expired, setExpired] = useState(false);
-  const account = useQuery(api.access.check, stored ? { token: stored } : "skip");
+  const account = useQuery(
+    api.access.check,
+    stored ? { token: stored } : "skip",
+  );
 
   // Phones already signed in before this existed ask too, once per launch
   useEffect(() => {
@@ -88,6 +97,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     rememberLook({ theme, font });
   }, [theme, font]);
 
+  // Screen readers and the browser's spelling follow the member's language
+  const lang = account?.lang ?? "fr";
+  useEffect(() => {
+    document.documentElement.lang = localeOf(lang);
+  }, [lang]);
+
   const ready = !!stored && !!account;
   const value = useMemo(
     () => ({
@@ -100,7 +115,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }),
     [ready, stored, account, expired, setToken],
   );
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }
 
 export function useSession() {
