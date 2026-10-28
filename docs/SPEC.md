@@ -154,6 +154,16 @@ Serveurs de dev via Portly.
 - **Restes / frigo** : un repas « pas mangé » ou avec `leftoverPortions > 0` apparaît dans
   « Frigo » avec date limite = `cookedOn + recipe.fridgeDays`. États : bon, à manger
   aujourd'hui, périmé.
+- **Pas cuisiné** (statut `pas cuisiné`, différent de « pas mangé » qui veut dire cuisiné
+  mais pas mangé) : le plat reste visible, barré, et sort de la liste de courses (ce qui
+  n'était pas acheté disparaît). À l'annulation (`meals.markNotCooked`), les ingrédients
+  déjà cochés sur la liste de sa semaine sont proposés comme « déjà à la maison » ; ceux
+  gardés vont dans `homeStock` et s'affichent dans le Frigo, « À utiliser », avec des idées
+  de recettes qui les utilisent et « Utilisé ou jeté ». Pas de date de péremption : l'app
+  dit seulement depuis quand, la famille juge. Sur la liste de courses, un ingrédient à la
+  maison est signalé (« Peut-être à la maison… ») mais jamais retiré. Les restes planifiés
+  depuis ce plat sont retirés. « Prévu » le remet au menu et reprend ses ingrédients.
+  Pour cuisiner le plat un autre jour : « Déplacer ».
 - **Liste de courses** : calculée en direct depuis les repas de la semaine (quantité par
   personne × personnes, unités normalisées g/ml/pc, additionnées par ingrédient), plus les
   articles libres. Triée par rayon selon le magasin choisi (ordre + exceptions).

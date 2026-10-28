@@ -74,6 +74,14 @@ export const fontValidator = v.union(
   v.literal("atkinson"),
 );
 export const roleValidator = v.union(v.literal("admin"), v.literal("membre"));
+// « pas mangé »: cooked, not eaten (the dish goes to the fridge);
+// « pas cuisiné »: never cooked (bought ingredients stay at home, see homeStock)
+export const mealStatusValidator = v.union(
+  v.literal("prévu"),
+  v.literal("mangé"),
+  v.literal("pas mangé"),
+  v.literal("pas cuisiné"),
+);
 
 const familyId = v.id("families");
 
@@ -194,11 +202,7 @@ export default defineSchema({
     cookedOn: v.string(), // YYYY-MM-DD, day it is prepared
     // Leftover meals reuse food already cooked: never added to the shopping list
     fromLeftoverOf: v.optional(v.id("meals")),
-    status: v.union(
-      v.literal("prévu"),
-      v.literal("mangé"),
-      v.literal("pas mangé"),
-    ),
+    status: mealStatusValidator,
     // Portions left in the fridge after this meal (0 = nothing left)
     leftoverPortions: v.number(),
   })
@@ -273,6 +277,22 @@ export default defineSchema({
   })
     .index("by_family", ["familyId"])
     .index("by_family_period", ["familyId", "periodStart"]),
+
+  /**
+   * Ingredients bought for a dish that was not cooked, still at home
+   * (« À utiliser » in the fridge). No expiry date: the family judges.
+   */
+  homeStock: defineTable({
+    familyId,
+    ingredientId: v.id("ingredients"),
+    qty: v.number(),
+    unit: unitValidator, // base unit: g, ml, pc…
+    since: v.string(), // YYYY-MM-DD, day the dish was planned
+    fromMealId: v.optional(v.id("meals")),
+    fromName: v.optional(v.string()), // name of the cancelled dish
+  })
+    .index("by_family", ["familyId"])
+    .index("by_family_ingredient", ["familyId", "ingredientId"]),
 
   /** "Envies": dishes someone feels like eating soon. */
   wishes: defineTable({

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
+  Ban,
   CalendarDays,
   CalendarPlus,
   Check,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { formatDayLong } from "../../../convex/domain/dates";
+import { formatQty } from "../../../convex/domain/quantities";
 import { useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
 import { plural } from "../../lib/format";
@@ -22,7 +24,7 @@ import { Field, SLOT_OPTIONS } from "./controls";
 import { capitalize, SLOT_LABEL, type Slot, type WeekMeal } from "./data";
 import { PlanLeftoverSheet } from "./PlanLeftoverSheet";
 
-type StatusChoice = "prévu" | "mangé" | "pas mangé" | "reste";
+type StatusChoice = "prévu" | "mangé" | "pas mangé" | "pas cuisiné" | "reste";
 
 function currentChoice(meal: WeekMeal): StatusChoice {
   if (meal.status === "mangé" && meal.leftoverPortions > 0) return "reste";
@@ -73,6 +75,7 @@ function MealActions({
     meal.leftoverPortions > 0 ? meal.leftoverPortions : 1,
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [askNotCooked, setAskNotCooked] = useState(false);
   const choice = currentChoice(meal);
 
   const changePersons = (n: number) => {
@@ -107,6 +110,7 @@ function MealActions({
       tone: "bg-carrot text-white",
       onClick: () => {
         setAskPortions(false);
+        setAskNotCooked(false);
         void status("prévu");
       },
     },
@@ -117,6 +121,7 @@ function MealActions({
       tone: "bg-herb text-white",
       onClick: () => {
         setAskPortions(false);
+        setAskNotCooked(false);
         void status("mangé", 0, "Bon appétit !");
       },
     },
@@ -127,6 +132,7 @@ function MealActions({
       tone: "bg-berry text-white",
       onClick: () => {
         setAskPortions(false);
+        setAskNotCooked(false);
         void status("pas mangé", undefined, "Le plat est au frigo");
       },
     },
@@ -135,8 +141,26 @@ function MealActions({
       label: "Il en reste",
       icon: Refrigerator,
       tone: "bg-sun text-ink",
-      onClick: () => setAskPortions(true),
+      onClick: () => {
+        setAskNotCooked(false);
+        setAskPortions(true);
+      },
     },
+    // Leftovers are never cooked: only a dish of its own can be « pas cuisiné »
+    ...(meal.fromLeftoverOf
+      ? []
+      : [
+          {
+            value: "pas cuisiné" as const,
+            label: "Pas cuisiné",
+            icon: Ban,
+            tone: "bg-muted text-white",
+            onClick: () => {
+              setAskPortions(false);
+              setAskNotCooked(true);
+            },
+          },
+        ]),
   ];
 
   return (
@@ -175,16 +199,24 @@ function MealActions({
         <Stepper label="Portions" value={persons} onChange={changePersons} />
       </div>
       {meal.leftoverPortions > 0 && !meal.fromLeftoverOf && (
-        <Button variant="herb" size="lg" className="mt-2" onClick={() => setPlanningLeftovers(true)}>
+        <Button
+          variant="herb"
+          size="lg"
+          className="mt-2"
+          onClick={() => setPlanningLeftovers(true)}
+        >
           <CalendarPlus size={20} />
-          Planifier les restes ({plural(meal.leftoverPortions, "portion", "portions")})
+          Planifier les restes (
+          {plural(meal.leftoverPortions, "portion", "portions")})
         </Button>
       )}
       {meal.recipe && !meal.fromLeftoverOf && meal.status === "prévu" && (
         <div className="mt-2 flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-paper p-4 ring-1 ring-line">
           <div>
             <div className="font-extrabold">En plus pour le frigo</div>
-            <div className="text-[15px] text-muted">Achetées avec, au frigo une fois cuisinées</div>
+            <div className="text-[15px] text-muted">
+              Achetées avec, au frigo une fois cuisinées
+            </div>
           </div>
           <Stepper
             label="Portions en plus pour le frigo"
@@ -197,9 +229,11 @@ function MealActions({
 
       <Field label="Statut">
         <div className="grid grid-cols-2 gap-2">
-          {STATUSES.map((s) => {
+          {STATUSES.map((s, i) => {
             const active =
-              choice === s.value || (s.value === "reste" && askPortions);
+              choice === s.value ||
+              (s.value === "reste" && askPortions) ||
+              (s.value === "pas cuisiné" && askNotCooked);
             const Icon = s.icon;
             return (
               <button
@@ -210,6 +244,10 @@ function MealActions({
                 className={cx(
                   "flex min-h-14 items-center justify-center gap-2 rounded-2xl px-3 font-extrabold transition active:scale-[0.98]",
                   active ? s.tone : "bg-paper ring-1 ring-line",
+                  // An odd last choice takes the whole row
+                  i === STATUSES.length - 1 &&
+                    STATUSES.length % 2 === 1 &&
+                    "col-span-2",
                 )}
               >
                 <Icon size={20} aria-hidden />
@@ -247,11 +285,23 @@ function MealActions({
             </Button>
           </div>
         )}
-        {!askPortions && meal.leftoverPortions > 0 && meal.status !== "prévu" && (
+        {askNotCooked && meal.status !== "pas cuisiné" && (
+          <NotCookedPanel meal={meal} onDone={() => setAskNotCooked(false)} />
+        )}
+        {meal.status === "pas cuisiné" && (
           <p className="mt-2 text-[15px] font-semibold text-muted">
-            {plural(meal.leftoverPortions, "portion", "portions")} au frigo.
+            Pas cuisiné : retiré de la liste de courses. Les ingrédients gardés
+            sont dans le Frigo, «{"\u00a0"}À utiliser{"\u00a0"}». «{"\u00a0"}
+            Prévu{"\u00a0"}» le remet au menu.
           </p>
         )}
+        {!askPortions &&
+          meal.leftoverPortions > 0 &&
+          meal.status !== "prévu" && (
+            <p className="mt-2 text-[15px] font-semibold text-muted">
+              {plural(meal.leftoverPortions, "portion", "portions")} au frigo.
+            </p>
+          )}
       </Field>
 
       <Field label="Déplacer">
@@ -295,7 +345,128 @@ function MealActions({
           Retirer du menu
         </Button>
       )}
-      <PlanLeftoverSheet source={planningLeftovers ? meal : null} onClose={() => setPlanningLeftovers(false)} />
+      <PlanLeftoverSheet
+        source={planningLeftovers ? meal : null}
+        onClose={() => setPlanningLeftovers(false)}
+      />
+    </div>
+  );
+}
+
+/**
+ * « Pas cuisiné »: the dish leaves the shopping list; the ingredients already
+ * bought (checked on the list) are proposed as staying at home.
+ */
+function NotCookedPanel({
+  meal,
+  onDone,
+}: {
+  meal: WeekMeal;
+  onDone: () => void;
+}) {
+  const { token } = useSession();
+  const run = useRun();
+  const preview = useQuery(api.meals.notCookedPreview, { token, id: meal._id });
+  const markNotCooked = useMutation(api.meals.markNotCooked);
+  const [kept, setKept] = useState<Set<string> | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Bought ones are kept by default, once the preview is there
+  useEffect(() => {
+    if (preview && kept === null)
+      setKept(
+        new Set(
+          preview.items
+            .filter((i) => i.bought)
+            .map((i) => `${i.ingredientId}:${i.unit}`),
+        ),
+      );
+  }, [preview, kept]);
+
+  if (!preview || !kept)
+    return <p className="mt-3 text-[15px] text-muted">Chargement…</p>;
+  const toggle = (key: string) =>
+    setKept((k) => {
+      const next = new Set(k);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const confirm = async () => {
+    setBusy(true);
+    const keep = preview.items
+      .filter((i) => kept.has(`${i.ingredientId}:${i.unit}`))
+      .map((i) => ({ ingredientId: i.ingredientId, qty: i.qty, unit: i.unit }));
+    const done = await run(
+      () => markNotCooked({ token, id: meal._id, keep }),
+      keep.length
+        ? `Retiré de la liste. ${plural(keep.length, "ingrédient", "ingrédients")} à utiliser dans le Frigo.`
+        : "Retiré de la liste de courses.",
+    );
+    setBusy(false);
+    if (done !== undefined) onDone();
+  };
+
+  return (
+    <div className="mt-3 grid gap-3 rounded-[var(--radius-card)] bg-line/40 p-4">
+      <p className="text-[15px]">
+        Le plat sort de la liste de courses : ce qui n'est pas encore acheté
+        disparaît. Pour le cuisiner un autre jour, change plutôt le jour dans «
+        {"\u00a0"}Déplacer{"\u00a0"}», plus bas.
+      </p>
+      {preview.items.length > 0 && (
+        <div>
+          <p className="mb-1 font-extrabold">Déjà à la maison</p>
+          <p className="mb-2 text-[15px] text-muted">
+            Coche ce qui a été acheté : ça ira dans le Frigo, «{"\u00a0"}À
+            utiliser{"\u00a0"}».
+          </p>
+          <ul className="grid gap-1.5">
+            {preview.items.map((i) => {
+              const key = `${i.ingredientId}:${i.unit}`;
+              const on = kept.has(key);
+              return (
+                <li key={key}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    onClick={() => toggle(key)}
+                    className={cx(
+                      "flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left ring-1 transition",
+                      on ? "bg-herb-soft ring-herb" : "bg-paper ring-line",
+                    )}
+                  >
+                    <span
+                      className={cx(
+                        "flex size-6 shrink-0 items-center justify-center rounded-md ring-2",
+                        on ? "bg-herb text-white ring-herb" : "ring-line",
+                      )}
+                    >
+                      {on && <Check size={16} strokeWidth={3} />}
+                    </span>
+                    <span className="min-w-0 flex-1 font-bold">{i.name}</span>
+                    <span className="shrink-0 text-[15px] text-muted">
+                      {formatQty(i.qty, i.unit)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      {preview.leftoversPlanned > 0 && (
+        <p className="text-[15px] font-bold text-berry">
+          {preview.leftoversPlanned > 1
+            ? `${preview.leftoversPlanned} repas de restes prévus avec ce plat seront retirés du menu.`
+            : "Le repas de restes prévu avec ce plat sera retiré du menu."}
+        </p>
+      )}
+      <Button size="lg" onClick={confirm} disabled={busy}>
+        <Ban size={20} /> {busy ? "Un instant…" : "Pas cuisiné, on l'enlève"}
+      </Button>
     </div>
   );
 }

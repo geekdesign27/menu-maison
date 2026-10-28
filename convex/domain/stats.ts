@@ -5,7 +5,7 @@ export interface MealLite {
   recipeId?: string;
   date: string;
   cookedOn: string;
-  status: "prévu" | "mangé" | "pas mangé";
+  status: "prévu" | "mangé" | "pas mangé" | "pas cuisiné";
   fromLeftoverOf?: string;
 }
 
@@ -19,7 +19,8 @@ export interface RecipeStat {
 
 // Meals that count as a real serving of a dish.
 function isServed(meal: MealLite): meal is MealLite & { recipeId: string } {
-  return !!meal.recipeId && meal.status !== "pas mangé" && !meal.fromLeftoverOf;
+  // A dish not cooked, or not eaten, does not count as served
+  return !!meal.recipeId && meal.status !== "pas mangé" && meal.status !== "pas cuisiné" && !meal.fromLeftoverOf;
 }
 
 /**

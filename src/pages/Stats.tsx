@@ -62,6 +62,7 @@ export function StatsPage() {
           (m) =>
             m.recipeId &&
             m.status !== "pas mangé" &&
+            m.status !== "pas cuisiné" &&
             !m.fromLeftoverOf &&
             m.date <= today &&
             m.cookedOn >= start,

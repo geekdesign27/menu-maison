@@ -124,11 +124,23 @@ async function setup() {
       },
     ],
   });
+  // Family A has an ingredient at home from a dish it did not cook
+  const stockId = await t.run((ctx) =>
+    ctx.db.insert("homeStock", {
+      familyId: a.familyId,
+      ingredientId: ingredient._id,
+      qty: 450,
+      unit: "g",
+      since: DATE,
+      fromName: recipe.name,
+    }),
+  );
   return {
     t,
     a,
     b,
     ids: {
+      stockId,
       mealId,
       wishId,
       extraId,
@@ -170,6 +182,7 @@ async function idsOfA() {
       "chainPrices",
       "receiptAliases",
       "settings",
+      "homeStock",
     ] as const) {
       for (const row of await ctx.db.query(table).collect())
         if (row.familyId === s.a.familyId) ids.add(row._id);
@@ -198,6 +211,7 @@ async function snapshotA() {
       "chainPrices",
       "receiptAliases",
       "settings",
+      "homeStock",
     ] as const) {
       out[table] = (await ctx.db.query(table).collect()).filter(
         (r) => r.familyId === s.a.familyId,
@@ -228,6 +242,7 @@ describe("reads stay within the family", () => {
       await s.t.query(api.wishes.list, { token }),
       await s.t.query(api.templates.list, { token }),
       await s.t.query(api.stats.overview, { token, today: "2026-10-25" }),
+      await s.t.query(api.homeStock.list, { token }),
     ];
     // Each id of family A is looked for as it is, whatever its format
     const json = JSON.stringify(results);
@@ -290,6 +305,36 @@ describe("writes on another family's ids are refused", () => {
           id: s.a.memberId,
           username: "pirate",
         }),
+    ],
+    [
+      "meals.notCookedPreview",
+      () => s.t.query(api.meals.notCookedPreview, { token: s.b.token, id: s.ids.mealId }),
+    ],
+    [
+      "meals.markNotCooked",
+      () => s.t.mutation(api.meals.markNotCooked, { token: s.b.token, id: s.ids.mealId, keep: [] }),
+    ],
+    [
+      "meals.markNotCooked (keeps another family's ingredient)",
+      async () => {
+        const recipes = await s.t.query(api.recipes.list, { token: s.b.token });
+        const own = await s.t.mutation(api.meals.add, {
+          token: s.b.token,
+          date: DATE,
+          slot: "midi",
+          recipeId: recipes[0]._id,
+          persons: 2,
+        });
+        return s.t.mutation(api.meals.markNotCooked, {
+          token: s.b.token,
+          id: own,
+          keep: [{ ingredientId: s.ids.ingredient._id, qty: 100, unit: "g" }],
+        });
+      },
+    ],
+    [
+      "homeStock.remove",
+      () => s.t.mutation(api.homeStock.remove, { token: s.b.token, id: s.ids.stockId }),
     ],
     [
       "access.setRole",
@@ -849,6 +894,7 @@ describe("writes on another family's ids are refused", () => {
     "stats.overview": "covered by the read test",
     "templates.list": "covered by the read test",
     "wishes.list": "covered by the read test",
+    "homeStock.list": "covered by the read test",
     "receipts.read":
       "reads a photo with Claude against the caller's catalog (family-scoped internal query)",
     "recipeImport.read":

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { CalendarPlus, Info, Trash } from "lucide-react";
+import { Link } from "react-router-dom";
+import { CalendarPlus, Check, ChevronRight, Info, Trash } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import { formatDayLong } from "../../convex/domain/dates";
+import { formatDayLong, formatDayShort } from "../../convex/domain/dates";
 import { useSession } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { useRun } from "../lib/toast";
@@ -16,6 +17,7 @@ import {
   EmptyState,
   Loading,
   Page,
+  SectionTitle,
 } from "../components/ui";
 
 type FridgeRow = FunctionReturnType<typeof api.meals.fridge>[number];
@@ -37,10 +39,14 @@ export function FridgePage() {
   const { token } = useSession();
   const { today } = useWeek();
   const rows = useQuery(api.meals.fridge, token ? { token, today } : "skip");
+  const stock = useQuery(api.homeStock.list, token ? { token } : "skip");
   const [planning, setPlanning] = useState<FridgeRow | null>(null);
+  const hasStock = !!stock && stock.items.length > 0;
 
   return (
     <Page title="Frigo" subtitle="Les restes à manger">
+      {hasStock && <HomeStock stock={stock} />}
+      {hasStock && <SectionTitle>Restes</SectionTitle>}
       {rows === undefined ? (
         <Loading label="Ouverture du frigo" />
       ) : rows.length === 0 ? (
@@ -121,5 +127,80 @@ function FridgeCard({ row, onPlan }: { row: FridgeRow; onPlan: () => void }) {
         </Button>
       </div>
     </Card>
+  );
+}
+
+type Stock = FunctionReturnType<typeof api.homeStock.list>;
+
+/** Ingredients bought for a dish that was not cooked, and recipes to use them up. */
+function HomeStock({ stock }: { stock: Stock }) {
+  const { token } = useSession();
+  const run = useRun();
+  const remove = useMutation(api.homeStock.remove);
+  return (
+    <>
+      <SectionTitle>À utiliser</SectionTitle>
+      <Card className="overflow-hidden">
+        <ul className="divide-y divide-line">
+          {stock.items.map((i) => (
+            <li key={i._id} className="flex items-center gap-3 p-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-extrabold">
+                  {i.name}{" "}
+                  <span className="font-semibold text-muted">
+                    · {i.display}
+                  </span>
+                </div>
+                <div className="text-[15px] text-muted">
+                  Depuis le {formatDayShort(i.since)}
+                  {i.from ? `, plat « ${i.from} » pas cuisiné` : ""}
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  run(() => remove({ token, id: i._id }), `${i.name} retiré`)
+                }
+              >
+                <Check size={18} /> Utilisé ou jeté
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+      {stock.ideas.length > 0 && (
+        <>
+          <p className="mt-4 mb-2 text-[15px] font-bold text-muted">
+            Des idées pour les utiliser
+          </p>
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-line">
+              {stock.ideas.map((r) => (
+                <li key={r._id}>
+                  <Link
+                    to={`/recette/${r._id}`}
+                    className="flex min-h-14 items-center gap-3 px-3 py-2"
+                  >
+                    <span className="text-3xl" aria-hidden>
+                      {r.emoji}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-extrabold">
+                        {r.name}
+                      </span>
+                      <span className="block truncate text-[15px] text-muted">
+                        avec {r.uses.join(", ").toLowerCase()}
+                      </span>
+                    </span>
+                    <ChevronRight size={20} className="shrink-0 text-muted" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </>
+      )}
+    </>
   );
 }

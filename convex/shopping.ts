@@ -3,7 +3,8 @@ import { ConvexError, v } from "convex/values";
 import { assertDate, assertPositive, requireMember, requireMemberWriter, cleanText, loadChainPrices } from "./lib";
 import { unitValidator } from "./schema";
 import { addDays } from "./domain/dates";
-import { buildShoppingList } from "./domain/shopping";
+import { buildShoppingList, MEAL_NOT_COOKED, type HomeStockNote } from "./domain/shopping";
+import { formatQty } from "./domain/quantities";
 
 /** Shopping list of the planning week starting at `start`, ordered for the chosen store. */
 export const list = query({
@@ -16,7 +17,7 @@ export const list = query({
     const { db } = await requireMember(ctx, token);
     assertDate(start);
     const end = addDays(start, 6);
-    const [eaten, ingredients, aisles, extras, checks, skips] = await Promise.all([
+    const [eaten, ingredients, aisles, extras, checks, skips, stock] = await Promise.all([
       // One extra day: next week's first lunch may be cooked on this week's last evening
       db.index("meals", "by_family_date", (q) => q.gte("date", start).lte("date", addDays(start, 7)))
         .collect(),
@@ -28,7 +29,12 @@ export const list = query({
         .collect(),
       db.index("stockSkips", "by_family_period", (q) => q.eq("periodStart", start))
         .collect(),
+      db.query("homeStock").collect(),
     ]);
+    // Bought for a dish that was not cooked: flagged on the list, never removed from it
+    const homeStock: Record<string, HomeStockNote[]> = {};
+    for (const s of stock)
+      (homeStock[s.ingredientId] ??= []).push({ display: formatQty(s.qty, s.unit), since: s.since, from: s.fromName });
     const meals = eaten.filter((m) => m.cookedOn >= start && m.cookedOn <= end);
     const chainPrices = await loadChainPrices(db);
     const store = storeId ? await db.get(storeId) : null;
@@ -49,6 +55,7 @@ export const list = query({
         extraPortions: m.extraPortions,
         fromLeftoverOf: m.fromLeftoverOf,
         cookedOn: m.cookedOn,
+        status: m.status,
       })),
       period: { start, end },
       recipes,
@@ -93,6 +100,7 @@ export const list = query({
       ),
       checks: Object.fromEntries(checks.map((c) => [c.itemKey, c.checked])),
       skipped: skips.map((s) => s.itemKey),
+      homeStock,
     });
     const checkedBy = Object.fromEntries(
       checks.filter((c) => c.checked).map((c) => [c.itemKey, c.checkedBy]),
@@ -100,7 +108,7 @@ export const list = query({
     return {
       ...list,
       checkedBy,
-      mealCount: meals.filter((m) => m.recipeId && !m.fromLeftoverOf).length,
+      mealCount: meals.filter((m) => m.recipeId && !m.fromLeftoverOf && m.status !== MEAL_NOT_COOKED).length,
     };
   },
 });

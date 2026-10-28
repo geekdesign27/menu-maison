@@ -15,6 +15,7 @@ export function MealPill({
   const ahead = daysBetween(meal.cookedOn, meal.date);
   const eaten = meal.status === "mangé";
   const notEaten = meal.status === "pas mangé";
+  const notCooked = meal.status === "pas cuisiné";
   return (
     <button
       type="button"
@@ -23,6 +24,7 @@ export function MealPill({
         "flex min-h-14 w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition active:scale-[0.99]",
         eaten && "bg-herb-soft",
         notEaten && "bg-berry-soft/70",
+        notCooked && "bg-line/50",
         meal.status === "prévu" && "bg-cream ring-1 ring-line",
       )}
     >
@@ -33,7 +35,7 @@ export function MealPill({
         <span
           className={cx(
             "block truncate text-[16px] font-extrabold",
-            notEaten && "text-muted line-through decoration-2",
+            (notEaten || notCooked) && "text-muted line-through decoration-2",
           )}
         >
           {name}
@@ -80,6 +82,11 @@ export function MealPill({
       {notEaten && (
         <span className="shrink-0 text-[13px] font-extrabold text-berry">
           pas mangé
+        </span>
+      )}
+      {notCooked && (
+        <span className="shrink-0 text-[13px] font-extrabold text-muted">
+          pas cuisiné
         </span>
       )}
     </button>

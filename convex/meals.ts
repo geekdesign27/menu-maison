@@ -2,9 +2,14 @@ import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { assertDate, assertInt, requireMember, requireMemberWriter, cleanText, type FamilyDb } from "./lib";
-import { slotValidator } from "./schema";
+import { mealStatusValidator, slotValidator } from "./schema";
 import { addDays, dayOfWeek, daysBetween } from "./domain/dates";
 import { leftoverStatus } from "./domain/leftovers";
+import { MEAL_NOT_COOKED, mealNeeds } from "./domain/shopping";
+import type { FamilyWriter } from "./lib";
+import { getSettings } from "./lib";
+import { unitValidator } from "./schema";
+import { weekStart } from "./domain/dates";
 
 function assertPersons(n: number) {
   assertInt(n, 1, 30, "Nombre de personnes");
@@ -160,17 +165,17 @@ export const setStatus = mutation({
   args: {
     token: v.string(),
     id: v.id("meals"),
-    status: v.union(
-      v.literal("prévu"),
-      v.literal("mangé"),
-      v.literal("pas mangé"),
-    ),
+    status: mealStatusValidator,
     leftoverPortions: v.optional(v.number()),
   },
   handler: async (ctx, { token, id, status, leftoverPortions }) => {
     const { db } = await requireMemberWriter(ctx, token);
     const meal = await db.get(id);
     if (!meal) throw new ConvexError("Repas introuvable.");
+    if (status === MEAL_NOT_COOKED)
+      throw new ConvexError("Pour un plat pas cuisiné, passe par « Pas cuisiné » sur le plat.");
+    // Back from « pas cuisiné »: what it had left at home is used again by the dish
+    if (meal.status === MEAL_NOT_COOKED) await dropHomeStockOf(db, meal._id);
     if (leftoverPortions !== undefined) assertInt(leftoverPortions, 0, 60, "Portions restantes");
     // A dish not eaten goes to the fridge whole, with the extra portions cooked for later
     const extra = meal.extraPortions ?? 0;
@@ -200,6 +205,84 @@ export const remove = mutation({
     await db.delete(id);
   },
 });
+
+async function dropHomeStockOf(db: FamilyWriter, mealId: Id<"meals">) {
+  for (const s of await db.query("homeStock").collect())
+    if (s.fromMealId === mealId) await db.delete(s._id);
+}
+
+/** Checks of the shopping week a dish was cooked in: what was already bought for it. */
+async function checksFor(db: FamilyDb, meal: Doc<"meals">) {
+  const { shoppingDay } = await getSettings(db);
+  const start = weekStart(meal.cookedOn, shoppingDay);
+  const checks = await db.index("shoppingChecks", "by_family_period", (q) => q.eq("periodStart", start)).collect();
+  return Object.fromEntries(checks.map((c) => [c.itemKey, c.checked]));
+}
+
+/**
+ * Before cancelling a dish: its ingredients, with those already bought (checked
+ * on the list) proposed as staying at home.
+ */
+export const notCookedPreview = query({
+  args: { token: v.string(), id: v.id("meals") },
+  handler: async (ctx, { token, id }) => {
+    const { db } = await requireMember(ctx, token);
+    const meal = await db.own(id, "Repas introuvable.");
+    const recipe = meal.recipeId ? await db.get(meal.recipeId) : null;
+    if (!recipe || meal.fromLeftoverOf) return { items: [], leftoversPlanned: 0 };
+    const needs = mealNeeds(meal, recipe.items, await checksFor(db, meal));
+    const items = [];
+    for (const n of needs) {
+      const ing = await db.get(n.ingredientId as Id<"ingredients">);
+      if (ing) items.push({ ...n, ingredientId: ing._id, name: ing.name, pantry: ing.pantry ?? false });
+    }
+    const later = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 30));
+    return {
+      items: items.sort((a, b) => Number(b.bought) - Number(a.bought) || a.name.localeCompare(b.name, "fr")),
+      leftoversPlanned: later.filter((m) => m.fromLeftoverOf === meal._id && m.status === "prévu").length,
+    };
+  },
+});
+
+/**
+ * The dish was not cooked: it leaves the shopping list, the ingredients
+ * already bought stay at home (« À utiliser »), and the leftovers planned from
+ * it are withdrawn since they will never exist.
+ */
+export const markNotCooked = mutation({
+  args: {
+    token: v.string(),
+    id: v.id("meals"),
+    keep: v.array(v.object({ ingredientId: v.id("ingredients"), qty: v.number(), unit: unitValidator })),
+  },
+  handler: async (ctx, { token, id, keep }) => {
+    const { db } = await requireMemberWriter(ctx, token);
+    const meal = await db.own(id, "Repas introuvable.");
+    if (meal.fromLeftoverOf) throw new ConvexError("Des restes ne se cuisinent pas : retire-les du menu.");
+    if (keep.length > 60) throw new ConvexError("Trop d'ingrédients.");
+    await db.ownAll(keep.map((k) => k.ingredientId), "Ingrédient introuvable.");
+    for (const k of keep) assertPositiveQty(k.qty);
+    const recipe = meal.recipeId ? await db.get(meal.recipeId) : null;
+    await dropHomeStockOf(db, meal._id);
+    for (const k of keep)
+      await db.insert("homeStock", {
+        ingredientId: k.ingredientId,
+        qty: k.qty,
+        unit: k.unit,
+        since: meal.cookedOn,
+        fromMealId: meal._id,
+        fromName: recipe?.name ?? meal.title,
+      });
+    const later = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 30));
+    for (const m of later)
+      if (m.fromLeftoverOf === meal._id && m.status === "prévu") await db.delete(m._id);
+    await db.patch(id, { status: MEAL_NOT_COOKED, leftoverPortions: 0 });
+  },
+});
+
+function assertPositiveQty(qty: number) {
+  if (!Number.isFinite(qty) || qty <= 0 || qty > 100_000) throw new ConvexError("Quantité invalide.");
+}
 
 /** Leftovers in the fridge, with how long they keep. */
 export const fridge = query({

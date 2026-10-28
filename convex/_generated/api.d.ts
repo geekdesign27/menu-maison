@@ -26,6 +26,7 @@ import type * as domain_stats from "../domain/stats.js";
 import type * as domain_tags from "../domain/tags.js";
 import type * as domain_text from "../domain/text.js";
 import type * as families from "../families.js";
+import type * as homeStock from "../homeStock.js";
 import type * as lib from "../lib.js";
 import type * as meals from "../meals.js";
 import type * as openFoodFacts from "../openFoodFacts.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   "domain/tags": typeof domain_tags;
   "domain/text": typeof domain_text;
   families: typeof families;
+  homeStock: typeof homeStock;
   lib: typeof lib;
   meals: typeof meals;
   openFoodFacts: typeof openFoodFacts;

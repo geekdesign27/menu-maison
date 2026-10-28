@@ -1,3 +1,4 @@
+import { formatDayShort } from "../../../convex/domain/dates";
 import { useRef } from "react";
 import { Check, MoreHorizontal } from "lucide-react";
 import type { ShoppingItem } from "../../../convex/domain/shopping";
@@ -81,6 +82,13 @@ export function ShoppingRow({
               {item.recipes.join(", ")}
             </span>
           )}
+          {item.homeStock?.map((h, i) => (
+            <span key={i} className="block text-[15px] font-bold text-herb">
+              Peut-être à la maison : {h.display}
+              {h.from ? `, du plat « ${h.from} »` : ""} pas cuisiné le{" "}
+              {formatDayShort(h.since)}
+            </span>
+          ))}
         </span>
         {item.display && (
           <span

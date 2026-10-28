@@ -4,6 +4,7 @@ import {
   buildShoppingList,
   effectivePrice,
   ingredientCost,
+  mealNeeds,
   orderAisles,
   recipeCost,
   roundChf,
@@ -517,5 +518,52 @@ describe("chain prices read on receipts", () => {
     const items = list.sections.flatMap((s) => s.items);
     expect(items.find((i) => i.label === "Spaghetti")?.costChf).toBe(0.6);
     expect(items.find((i) => i.label === "Papier toilette")?.costChf).toBe(39.8); // 2 × 19.89, rounded to 5 centimes
+  });
+});
+
+describe("dishes not cooked", () => {
+  it("drop out of the shopping list", () => {
+    const list = buildShoppingList(
+      input({
+        meals: [
+          { _id: "m1", recipeId: "curry", persons: 3, status: "pas cuisiné" },
+          { _id: "m2", recipeId: "curry", persons: 2 },
+        ],
+      }),
+    );
+    expect(findItem(list, "ing:poulet:g")?.qty).toBe(300);
+    const onlyCancelled = buildShoppingList(
+      input({ meals: [{ _id: "m1", recipeId: "curry", persons: 3, status: "pas cuisiné" }] }),
+    );
+    expect(onlyCancelled.total).toBe(0);
+  });
+
+  it("flag what may already be at home, without removing it", () => {
+    const list = buildShoppingList(
+      input({
+        meals: [{ _id: "m2", recipeId: "curry", persons: 2 }],
+        homeStock: { poulet: [{ display: "450 g", since: "2026-10-24", from: "Wok de légumes" }] },
+      }),
+    );
+    const poulet = findItem(list, "ing:poulet:g");
+    expect(poulet?.qty).toBe(300);
+    expect(poulet?.homeStock).toEqual([{ display: "450 g", since: "2026-10-24", from: "Wok de légumes" }]);
+    expect(findItem(list, "ing:riz:g")?.homeStock).toBeUndefined();
+  });
+
+  it("know what a dish needs and what was already bought", () => {
+    const needs = mealNeeds({ persons: 3 }, recipes.curry.items, { "ing:poulet:g": true });
+    expect(needs).toEqual([
+      { ingredientId: "poulet", qty: 450, unit: "g", bought: true },
+      { ingredientId: "riz", qty: 240, unit: "g", bought: false },
+      { ingredientId: "oignon", qty: 1.5, unit: "pc", bought: false },
+    ]);
+    // Extra portions for the fridge were bought too; kg and g add up
+    expect(mealNeeds({ persons: 2, extraPortions: 1 }, recipes.poeleeRiz.items, {})[0]).toEqual({
+      ingredientId: "riz",
+      qty: 300,
+      unit: "g",
+      bought: false,
+    });
   });
 });

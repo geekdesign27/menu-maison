@@ -31,6 +31,7 @@ export interface ShoppingInput {
     extraPortions?: number; // portions cooked on top, for the fridge: bought too
     fromLeftoverOf?: string;
     cookedOn?: string;
+    status?: string; // « pas cuisiné »: cancelled, nothing to buy for it any more
   }[];
   /** Shopping period: a dish is bought for the week it is cooked in, not eaten in. */
   period?: { start: string; end: string };
@@ -78,6 +79,15 @@ export interface ShoppingInput {
   checks: Record<string, boolean>; // itemKey → checked
   /** Item keys the family already has at home this week: kept out of the list. */
   skipped?: string[];
+  /** Ingredients bought for a cancelled dish, still at home (« À utiliser »). */
+  homeStock?: Record<string, HomeStockNote[]>;
+}
+
+/** What is still at home from a cancelled dish, shown on the matching list item. */
+export interface HomeStockNote {
+  display: string; // « 450 g »
+  since: string; // YYYY-MM-DD, day the dish was cancelled for
+  from?: string; // name of the cancelled dish
 }
 
 export interface ShoppingItem {
@@ -97,6 +107,8 @@ export interface ShoppingItem {
   packDetail?: string; // « ≈ 14 tranches »: what the recipes need, shown under the label
   onlyChains?: string[];
   imageUrl?: string; // photo of the exact product, to recognise it on the shelf
+  /** Maybe at home already: bought for a dish that was not cooked. Left for the family to judge. */
+  homeStock?: HomeStockNote[];
 }
 
 export interface ShoppingSection {
@@ -115,6 +127,30 @@ export interface ShoppingList {
   costChf: number;
   /** Already at home: not counted, shown apart so they can be put back. */
   skipped: ShoppingItem[];
+}
+
+/** Status of a dish that was not cooked: it drops out of the list, its bought ingredients stay at home. */
+export const MEAL_NOT_COOKED = "pas cuisiné";
+
+/**
+ * What a dish needs, per ingredient (in base units), and whether it was
+ * already bought: its item is checked on the list of the week it was cooked in.
+ */
+export function mealNeeds(
+  meal: { persons: number; extraPortions?: number },
+  items: { ingredientId: string; qtyPerPerson: number; unit: Unit }[],
+  checks: Record<string, boolean>,
+): { ingredientId: string; qty: number; unit: BaseUnit; bought: boolean }[] {
+  const portions = meal.persons + (meal.extraPortions ?? 0);
+  const needs = new Map<string, { ingredientId: string; qty: number; unit: BaseUnit; bought: boolean }>();
+  for (const item of items) {
+    const base = toBase(item.qtyPerPerson * portions, item.unit);
+    const key = ingredientItemKey(item.ingredientId, base.unit);
+    const entry = needs.get(key) ?? { ingredientId: item.ingredientId, qty: 0, unit: base.unit, bought: checks[key] ?? false };
+    entry.qty = Math.round((entry.qty + base.qty) * 1000) / 1000;
+    needs.set(key, entry);
+  }
+  return [...needs.values()];
 }
 
 /** Label and emoji of the catch-all section (extras without a known aisle). */
@@ -236,7 +272,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
     { ingredientId: string; unit: BaseUnit; qty: number; recipes: Set<string> }
   >();
   for (const meal of input.meals) {
-    if (!meal.recipeId || meal.fromLeftoverOf) continue;
+    if (!meal.recipeId || meal.fromLeftoverOf || meal.status === MEAL_NOT_COOKED) continue;
     if (input.period && meal.cookedOn && (meal.cookedOn < input.period.start || meal.cookedOn > input.period.end)) continue;
     const recipe = input.recipes[meal.recipeId];
     if (!recipe) continue;
@@ -302,6 +338,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       pantry: ing.pantry ?? false,
       onlyChains: ing.onlyChains?.length ? ing.onlyChains : undefined,
       imageUrl: ing.imageUrl ?? undefined,
+      homeStock: input.homeStock?.[entry.ingredientId],
     };
     if (skippedKeys.has(key)) skipped.push(item);
     else push(overrides.get(entry.ingredientId) ?? ing.aisleId, item);
