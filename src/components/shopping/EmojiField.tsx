@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cx, TextInput } from "../ui";
+import { useT } from "../../i18n/useT";
 
 /** Emoji suggestions plus a free field for any other emoji. */
 export function EmojiField({
@@ -11,18 +12,21 @@ export function EmojiField({
   suggestions: string[];
   onChange: (emoji: string) => void;
 }) {
+  const { t } = useT();
   const [custom, setCustom] = useState(
     suggestions.includes(value) ? "" : value,
   );
   return (
     <div>
-      <span className="mb-1 block text-[15px] font-bold">Emoji</span>
+      <span className="mb-1 block text-[15px] font-bold">
+        {t("common.emoji.label")}
+      </span>
       <div className="flex flex-wrap gap-2">
         {suggestions.map((e) => (
           <button
             key={e}
             type="button"
-            aria-label={`Emoji ${e}`}
+            aria-label={t("common.emoji.option", { emoji: e })}
             aria-pressed={value === e}
             onClick={() => {
               setCustom("");
@@ -44,8 +48,8 @@ export function EmojiField({
         value={custom}
         onChange={(e) => setCustom(e.target.value)}
         onBlur={() => custom.trim() && onChange(custom.trim())}
-        placeholder="Ou tape un autre emoji"
-        aria-label="Autre emoji"
+        placeholder={t("common.emoji.otherPlaceholder")}
+        aria-label={t("common.emoji.other")}
       />
     </div>
   );

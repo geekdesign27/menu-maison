@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { Button, ErrorBox } from "./ui";
+import { useT } from "../i18n/useT";
 
 function isSessionError(error: Error) {
   return error.message.includes("Session expirée");
@@ -31,15 +32,18 @@ export class ErrorBoundary extends Component<
   render() {
     if (!this.state.error) return this.props.children;
     if (isSessionError(this.state.error)) return null;
-    return (
-      <div className="mx-auto max-w-md space-y-4 p-6 pt-16">
-        <ErrorBox>
-          Cet écran a rencontré un problème. Tes données sont en sécurité.
-        </ErrorBox>
-        <Button size="lg" onClick={() => window.location.reload()}>
-          Recharger l'app
-        </Button>
-      </div>
-    );
+    return <CrashScreen />;
   }
+}
+
+function CrashScreen() {
+  const { t } = useT();
+  return (
+    <div className="mx-auto max-w-md space-y-4 p-6 pt-16">
+      <ErrorBox>{t("common.crash.text")}</ErrorBox>
+      <Button size="lg" onClick={() => window.location.reload()}>
+        {t("common.crash.reload")}
+      </Button>
+    </div>
+  );
 }

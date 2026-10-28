@@ -1,4 +1,5 @@
 import type { Doc } from "../../convex/_generated/dataModel";
+import type { MessageKey } from "../i18n";
 
 export type Theme = NonNullable<Doc<"settings">["theme"]>;
 export type Font = NonNullable<Doc<"settings">["font"]>;
@@ -7,27 +8,39 @@ export interface Look {
   font: Font;
 }
 
+// `label` and `description` are the French texts (landing page); screens of
+// the app show `t(labelKey)` and `t(descriptionKey)` in the member's language.
+// Type-only key imports: this module loads before the app, without dictionaries.
+
 /** The family themes, with the colours shown in their preview (see index.css). */
 export const THEMES: {
   id: Theme;
   label: string;
   description: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
   swatch: string[];
 }[] = [
   {
     id: "carotte",
+    labelKey: "common.theme.carotte",
+    descriptionKey: "common.theme.carotteText",
     label: "Carotte",
     description: "Orange chaleureux, l'original",
     swatch: ["#fff7ee", "#c1511c", "#fde9db", "#2f8a57"],
   },
   {
     id: "sauge",
+    labelKey: "common.theme.sauge",
+    descriptionKey: "common.theme.saugeText",
     label: "Sauge",
     description: "Vert doux et frais",
     swatch: ["#f4f7f1", "#3d7a53", "#e0eee2", "#2a7a84"],
   },
   {
     id: "myrtille",
+    labelKey: "common.theme.myrtille",
+    descriptionKey: "common.theme.myrtilleText",
     label: "Myrtille",
     description: "Bleu-violet profond",
     swatch: ["#f7f6fd", "#5848c6", "#e8e5fa", "#2f8a57"],
@@ -39,11 +52,13 @@ export const FONTS: {
   id: Font;
   label: string;
   description: string;
+  descriptionKey: MessageKey;
   family: string;
   load: () => Promise<unknown>;
 }[] = [
   {
     id: "nunito",
+    descriptionKey: "common.font.nunitoText",
     label: "Nunito",
     description: "Ronde et douce, l'originale",
     family: "Nunito Variable",
@@ -51,6 +66,7 @@ export const FONTS: {
   },
   {
     id: "quicksand",
+    descriptionKey: "common.font.quicksandText",
     label: "Quicksand",
     description: "Légère et arrondie",
     family: "Quicksand Variable",
@@ -58,6 +74,7 @@ export const FONTS: {
   },
   {
     id: "lexend",
+    descriptionKey: "common.font.lexendText",
     label: "Lexend",
     description: "Nette, pensée pour la lecture",
     family: "Lexend Variable",
@@ -65,6 +82,7 @@ export const FONTS: {
   },
   {
     id: "atkinson",
+    descriptionKey: "common.font.atkinsonText",
     label: "Atkinson Hyperlegible",
     description: "La plus lisible, lettres bien distinctes",
     family: "Atkinson Hyperlegible Next Variable",

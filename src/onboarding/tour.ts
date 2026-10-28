@@ -3,6 +3,8 @@
 import { driver, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import "./onboarding.css";
+import type { Lang } from "../../convex/domain/lang";
+import { translate } from "../i18n";
 import type { TourStep } from "./steps";
 
 const OPEN_SHEETS = '[role="dialog"][aria-modal="true"]';
@@ -60,12 +62,16 @@ export function runTour({
   navigate,
   currentPath,
   onEnd,
+  lang = "fr",
 }: {
   steps: TourStep[];
   navigate: (to: string) => void;
   currentPath: () => string;
   onEnd: () => void;
+  /** Language of the tour's own buttons. */
+  lang?: Lang;
 }): () => void {
+  const t = (key: Parameters<typeof translate>[1]) => translate(lang, key);
   let drv: Driver | null = null;
   let stopped = false;
   // Unmounted by React (not ended by the user): the tour is not counted as done
@@ -116,11 +122,11 @@ export function runTour({
     })),
     popoverClass: "mm-tour",
     showProgress: true,
-    progressText: "{{current}} sur {{total}}",
+    progressText: t("common.tour.progress"),
     showButtons: ["next", "close"],
-    nextBtnText: "Suivant",
-    doneBtnText: "Terminer",
-    closeBtnLabel: "Passer le guide",
+    nextBtnText: t("common.tour.next"),
+    doneBtnText: t("common.tour.done"),
+    closeBtnLabel: t("common.tour.closeLabel"),
     // The user reads, the tour taps: no accidental tap on the screen behind
     disableActiveInteraction: true,
     overlayClickBehavior: "none",
@@ -134,7 +140,7 @@ export function runTour({
       const skip = document.createElement("button");
       skip.type = "button";
       skip.className = "mm-tour-skip";
-      skip.textContent = "Passer";
+      skip.textContent = t("common.tour.skip");
       skip.addEventListener("click", () => drv?.destroy());
       popover.footer.prepend(skip);
     },
@@ -142,7 +148,8 @@ export function runTour({
       void goTo((index ?? 0) + 1).catch(() => drv?.destroy()),
     // Late images or data can still shift the screen: place the bubble again
     onHighlighted: () => {
-      for (const ms of [400, 1200]) setTimeout(() => drv?.isActive() && drv.refresh(), ms);
+      for (const ms of [400, 1200])
+        setTimeout(() => drv?.isActive() && drv.refresh(), ms);
     },
     onDestroyed: () => {
       stopped = true;

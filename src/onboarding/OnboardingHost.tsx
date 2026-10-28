@@ -8,6 +8,7 @@ import { useRun } from "../lib/toast";
 import { Button, Sheet } from "../components/ui";
 import { tourSteps } from "./steps";
 import { runTour } from "./tour";
+import { useT } from "../i18n/useT";
 
 export default function OnboardingHost({ welcome }: { welcome: boolean }) {
   const { token, account } = useSession();
@@ -16,6 +17,7 @@ export default function OnboardingHost({ welcome }: { welcome: boolean }) {
   const location = useLocation();
   const finish = useMutation(api.onboarding.finish);
   const run = useRun();
+  const { t, lang } = useT();
   const [phase, setPhase] = useState<"welcome" | "tour" | "done">(
     welcome ? "welcome" : "tour",
   );
@@ -35,7 +37,9 @@ export default function OnboardingHost({ welcome }: { welcome: boolean }) {
       steps: tourSteps(
         account?.role === "admin",
         window.matchMedia("(min-width: 1024px)").matches,
+        lang,
       ),
+      lang,
       // Replace: after the tour, « Retour » does not walk back through its screens
       navigate: (to) => navigate(to, { replace: true }),
       currentPath: () => path.current,
@@ -49,14 +53,14 @@ export default function OnboardingHost({ welcome }: { welcome: boolean }) {
     <Sheet
       open
       onClose={end}
-      title="Bienvenue"
+      title={t("common.welcome.title")}
       footer={
         <div className="grid gap-2 pb-3">
           <Button size="lg" onClick={() => setPhase("tour")}>
-            Commencer
+            {t("common.welcome.start")}
           </Button>
           <Button variant="ghost" onClick={end}>
-            Plus tard
+            {t("common.welcome.later")}
           </Button>
         </div>
       }
@@ -66,14 +70,13 @@ export default function OnboardingHost({ welcome }: { welcome: boolean }) {
           👋
         </div>
         <p className="text-lg font-black">
-          {me ? `Salut ${me.name} !` : "Salut !"}
+          {me
+            ? t("common.welcome.hiName", { name: me.name })
+            : t("common.welcome.hi")}
         </p>
-        <p className="mt-1 text-muted">
-          1 minute pour faire le tour ? On te montre où poser un plat, où sont
-          les courses, le frigo et les recettes.
-        </p>
+        <p className="mt-1 text-muted">{t("common.welcome.pitch")}</p>
         <p className="mt-3 text-[15px] text-muted">
-          Tu pourras le revoir quand tu veux : Plus, « Revoir le guide ».
+          {t("common.welcome.replayHint")}
         </p>
       </div>
     </Sheet>
