@@ -11,32 +11,14 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { FAMILY_KEY, readStored as read, TOKEN_KEY, writeStored as write } from "./device";
 import { applyLook, rememberLook } from "./look";
-
-const TOKEN_KEY = "mm.token";
-const FAMILY_KEY = "mm.family";
 
 /** Family link name remembered on this phone, so the sign-in screen knows the family. */
 export const rememberedFamily = {
   get: () => read(FAMILY_KEY),
   set: (slug: string) => write(FAMILY_KEY, slug),
 };
-
-function read(key: string) {
-  try {
-    return localStorage.getItem(key) ?? "";
-  } catch {
-    return "";
-  }
-}
-function write(key: string, value: string) {
-  try {
-    if (value) localStorage.setItem(key, value);
-    else localStorage.removeItem(key);
-  } catch {
-    // Private mode: the session simply lasts as long as the tab
-  }
-}
 
 /**
  * Asks the browser to keep this site's storage (device token, chosen profile)

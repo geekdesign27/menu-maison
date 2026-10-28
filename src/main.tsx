@@ -1,150 +1,54 @@
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ConvexProvider } from "convex/react";
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import "@fontsource-variable/nunito";
 import "./index.css";
-import { convex, convexConfigured } from "./lib/convex";
-import { applyRememberedLook } from "./lib/look";
-import { SessionProvider } from "./lib/session";
-import { ToastProvider } from "./lib/toast";
-import { WeekProvider } from "./lib/week";
-import { Gate } from "./components/Gate";
-import { Layout } from "./components/Layout";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { ErrorBox } from "./components/ui";
-import { WeekPage } from "./pages/Week";
-import { ShoppingPage } from "./pages/Shopping";
-import { RecipesPage } from "./pages/Recipes";
-import { RecipeDetailPage } from "./pages/RecipeDetail";
-import { RecipeEditorPage } from "./pages/RecipeEditor";
-import { RecipeImportPage } from "./pages/RecipeImport";
-import { FridgePage } from "./pages/Fridge";
-import { MorePage } from "./pages/More";
-import { WishesPage } from "./pages/Wishes";
-import { TemplatesPage } from "./pages/Templates";
-import { StatsPage } from "./pages/Stats";
-import { StoresPage } from "./pages/Stores";
-import { StoreEditorPage } from "./pages/StoreEditor";
-import { SettingsPage } from "./pages/Settings";
-import { ProductsPage } from "./pages/Products";
-import { ReceiptScanPage } from "./pages/ReceiptScan";
-import { GestionLayout } from "./gestion/GestionLayout";
-import { RecipesSection } from "./gestion/RecipesSection";
-import { ProductsSection } from "./gestion/ProductsSection";
-import { AislesSection } from "./gestion/AislesSection";
-import { StoresSection } from "./gestion/StoresSection";
-import { FamiliesSection } from "./gestion/FamiliesSection";
-import { FamilyAdminSection } from "./gestion/FamilyAdminSection";
-import { OnboardingGate } from "./onboarding";
+import { hasStoredToken } from "./lib/device";
+import { applyLook, applyRememberedLook, DEFAULT_LOOK } from "./lib/look";
+import { entryFor, LANDING_TITLE, type Entry } from "./landing/entry";
 
-// The family colours and font, before the first paint
-applyRememberedLook();
+// Loaded apart: a visitor of the landing page never downloads the app (Convex,
+// every screen), and a family phone never downloads the landing page.
+const App = lazy(() => import("./App").then((m) => ({ default: m.App })));
+const Landing = lazy(() => import("./landing/Landing").then((m) => ({ default: m.Landing })));
 
-function App() {
-  if (!convexConfigured) {
-    return (
-      <main className="p-4">
-        <ErrorBox>
-          Configuration manquante : VITE_CONVEX_URL n'est pas défini.
-        </ErrorBox>
-      </main>
-    );
+function currentEntry(): Entry {
+  return entryFor(window.location.hash, hasStoredToken());
+}
+
+/** Colours, font and tab title of the surface, before it is drawn. */
+function prepare(entry: Entry) {
+  if (entry === "landing") {
+    // The public face stays Carotte and Nunito, whatever look this phone remembers
+    applyLook(DEFAULT_LOOK);
+    document.title = LANDING_TITLE;
+  } else {
+    applyRememberedLook();
+    document.title = "Menu Maison";
   }
-  return (
-    <ConvexProvider client={convex}>
-      <SessionProvider>
-        <ToastProvider>
-          <ErrorBoundary>
-            <Gate>
-              <WeekProvider>
-                <HashRouter>
-                  <OnboardingGate />
-                  <Routes>
-                    <Route path="/gestion" element={<GestionLayout />}>
-                      <Route
-                        index
-                        element={<Navigate to="recettes" replace />}
-                      />
-                      <Route path="recettes" element={<RecipesSection />} />
-                      <Route
-                        path="recette/nouvelle"
-                        element={<RecipeEditorPage />}
-                      />
-                      <Route
-                        path="recette/importer"
-                        element={<RecipeImportPage />}
-                      />
-                      <Route
-                        path="recette/:id/modifier"
-                        element={<RecipeEditorPage />}
-                      />
-                      <Route path="produits" element={<ProductsSection />} />
-                      <Route path="rayons" element={<AislesSection />} />
-                      <Route path="magasins" element={<StoresSection />} />
-                      <Route path="magasin/:id" element={<StoreEditorPage />} />
-                      <Route path="famille" element={<FamilyAdminSection />} />
-                      <Route path="super-admin" element={<FamiliesSection />} />
-                      <Route
-                        path="familles"
-                        element={<Navigate to="/gestion/super-admin" replace />}
-                      />
-                      <Route
-                        path="*"
-                        element={<Navigate to="recettes" replace />}
-                      />
-                    </Route>
-                    <Route element={<Layout />}>
-                      <Route path="/" element={<WeekPage />} />
-                      <Route path="/courses" element={<ShoppingPage />} />
-                      <Route
-                        path="/courses/ticket"
-                        element={<ReceiptScanPage />}
-                      />
-                      <Route path="/recettes" element={<RecipesPage />} />
-                      <Route
-                        path="/recette/nouvelle"
-                        element={<RecipeEditorPage />}
-                      />
-                      <Route
-                        path="/recette/importer"
-                        element={<RecipeImportPage />}
-                      />
-                      <Route
-                        path="/recette/:id"
-                        element={<RecipeDetailPage />}
-                      />
-                      <Route
-                        path="/recette/:id/modifier"
-                        element={<RecipeEditorPage />}
-                      />
-                      <Route path="/frigo" element={<FridgePage />} />
-                      <Route path="/plus" element={<MorePage />} />
-                      <Route path="/envies" element={<WishesPage />} />
-                      <Route path="/menus-types" element={<TemplatesPage />} />
-                      <Route path="/stats" element={<StatsPage />} />
-                      <Route path="/magasins" element={<StoresPage />} />
-                      <Route
-                        path="/magasin/:id"
-                        element={<StoreEditorPage />}
-                      />
-                      <Route path="/produits" element={<ProductsPage />} />
-                      <Route path="/reglages" element={<SettingsPage />} />
-                      <Route path="*" element={<WeekPage />} />
-                    </Route>
-                  </Routes>
-                </HashRouter>
-              </WeekProvider>
-            </Gate>
-          </ErrorBoundary>
-        </ToastProvider>
-      </SessionProvider>
-    </ConvexProvider>
-  );
+}
+
+function Root() {
+  const [entry, setEntry] = useState(currentEntry);
+  const first = useRef(true);
+
+  useEffect(() => {
+    const onChange = () => setEntry(currentEntry());
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+
+  useLayoutEffect(() => {
+    prepare(entry);
+    // From the landing page to the sign-in screen (and back): start at the top
+    if (!first.current) window.scrollTo(0, 0);
+    first.current = false;
+  }, [entry]);
+
+  return <Suspense fallback={null}>{entry === "landing" ? <Landing /> : <App />}</Suspense>;
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 );

@@ -29,7 +29,8 @@
  * the accent and dark accent on its soft tint are above 4.5:1 in all three
  * (Carotte buttons use #c1511c, the bright #e97537 is kept for the logo).
  */
-html[data-theme="sauge"] {
+/* Also usable on any element: the landing page previews the three themes side by side */
+[data-theme="sauge"] {
   --color-cream: #f4f7f1;
   --color-line: #dde6d8;
   --color-ink: #212a22;
@@ -43,7 +44,7 @@ html[data-theme="sauge"] {
   --color-herb-soft: #dcf0f2;
 }
 
-html[data-theme="myrtille"] {
+[data-theme="myrtille"] {
   --color-cream: #f7f6fd;
   --color-line: #e3e0f2;
   --color-ink: #23213a;

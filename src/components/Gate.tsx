@@ -6,6 +6,7 @@ import { rememberedFamily, useSession } from "../lib/session";
 import { errorMessage } from "../lib/format";
 import { Button, ErrorBox, Loading, TextInput } from "./ui";
 import { AppIcon } from "./Logo";
+import { NO_INVITE_HASH } from "../landing/entry";
 
 /**
  * Sign-in links live in the address, before the app's own routes:
@@ -192,6 +193,14 @@ function LoginScreen({
         Partager, puis « Sur l'écran d'accueil »). Mot de passe oublié : demande
         un nouveau lien à l'admin de ta famille.
       </p>
+      {!knownFamily && (
+        <a
+          href={NO_INVITE_HASH}
+          className="mx-auto mt-2 inline-flex min-h-11 items-center px-3 text-[15px] font-bold text-carrot-dark underline underline-offset-4"
+        >
+          Je n'ai pas de compte
+        </a>
+      )}
     </Screen>
   );
 }
