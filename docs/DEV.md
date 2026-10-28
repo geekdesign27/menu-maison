@@ -40,6 +40,12 @@ affiché va dans `STRIPE_WEBHOOK_SECRET`). En production, l'adresse du webhook e
 et `customer.subscription.*`. Sans clé, l'inscription répond « Le paiement n'est pas encore
 configuré. » : rien n'est créé.
 
+E-mails (Resend, `convex/email.ts`, modèles dans `convex/domain/emails.ts`) : clé
+`RESEND_API_KEY`, expéditeur `EMAIL_FROM` (par défaut `Menu Maison <bonjour@menumaison.ch>`,
+domaine menumaison.ch à vérifier dans Resend avec ses enregistrements DNS chez Infomaniak),
+alertes à PA vers `ADMIN_ALERT_EMAIL`. Sans clé, rien ne part (journal `emailLog` en
+« skipped »). Aperçu de chaque e-mail, en français et en allemand : Super admin, section E-mails.
+
 Chaque nouvelle famille reçoit le catalogue de départ (`seedFamily`) : rayons, ingrédients
 avec prix estimés, recettes à découvrir, 5 magasins autour de Fribourg, articles habituels.
 

@@ -15,6 +15,12 @@ crons.daily(
   internal.billing.purgeStale,
 );
 
+crons.daily(
+  "trial ending reminders",
+  { hourUTC: 8, minuteUTC: 0 },
+  internal.billing.trialReminders,
+);
+
 crons.hourly(
   "purge unused dictations",
   { minuteUTC: 20 },

@@ -19,6 +19,7 @@ import {
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { DataTable, type Column } from "./DataTable";
 import { GestionHeader } from "./GestionLayout";
+import { EmailPreviews } from "./EmailPreviews";
 
 type Family = FunctionReturnType<typeof api.superadmin.families>[number];
 
@@ -148,6 +149,9 @@ export function FamiliesSection() {
           openLabel={(f) => `Ouvrir ${f.name}`}
           initialSort={{ key: "createdAt", direction: "asc" }}
         />
+      </div>
+      <div className="max-w-5xl px-6 pb-10">
+        <EmailPreviews />
       </div>
       {creating && <CreateFamilySheet onClose={() => setCreating(false)} />}
       {open && <FamilySheet family={open} onClose={() => setOpenId(null)} />}

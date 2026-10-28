@@ -25,7 +25,7 @@ export async function sha256(text: string) {
 // aiUsage: written by convex/aiBudget.ts only, never through a family writer
 export type FamilyTable = Exclude<
   TableNames,
-  "families" | "sessions" | "loginGuards" | "invites" | "aiUsage" | "signups" | "stripeEvents"
+  "families" | "sessions" | "loginGuards" | "invites" | "aiUsage" | "signups" | "stripeEvents" | "emailLog"
 >;
 
 /**

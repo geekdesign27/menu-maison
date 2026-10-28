@@ -6,6 +6,7 @@ import { createFamily } from "./families";
 import { isUnlimited, usageOf } from "./aiBudget";
 import { capsOf } from "./domain/aiBudget";
 import { accessOf, isOffered } from "./domain/billing";
+import { EMAIL_KINDS, renderEmail } from "./domain/emails";
 import { assertInt, assertPositive } from "./lib";
 
 /**
@@ -187,5 +188,41 @@ export const setOffered = mutation({
     if (familyId === me.familyId) throw new ConvexError("Ta famille reste offerte.");
     if (!(await ctx.db.get(familyId))) throw new ConvexError("Famille introuvable.");
     await ctx.db.patch(familyId, { offered });
+  },
+});
+
+/**
+ * Every e-mail rendered with example data, for PA to check before any real
+ * one leaves, and whether sending is set up (never the keys themselves).
+ */
+export const emailPreviews = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await requireSuperadmin(ctx, token);
+    const site = "https://menumaison.ch";
+    const sample = {
+      familyName: "Dupont",
+      adminName: "Marc",
+      date: "",
+      link: `${site}/#/bienvenue?session_id=cs_test_exemple&k=${"0".repeat(64)}`,
+      loginLink: `${site}/#/f/dupont`,
+      email: "marc@exemple.ch",
+      subscribers: 12,
+    };
+    const day = { fr: "mercredi 4 novembre", de: "Mittwoch, 4. November" } as const;
+    return {
+      ready: {
+        resend: !!process.env.RESEND_API_KEY,
+        from: process.env.EMAIL_FROM ?? "Menu Maison <bonjour@menumaison.ch>",
+        alerts: !!process.env.ADMIN_ALERT_EMAIL,
+      },
+      emails: EMAIL_KINDS.flatMap((kind) =>
+        (["fr", "de"] as const).map((lang) => ({
+          kind,
+          lang,
+          ...renderEmail(kind, { ...sample, date: day[lang], lang }, lang),
+        })),
+      ),
+    };
   },
 });

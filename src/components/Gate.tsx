@@ -24,7 +24,9 @@ function readLink() {
   const invite =
     hash.match(/^#\/activer\/([0-9a-f]{64})\/?$/i)?.[1]?.toLowerCase() ?? null;
   const signup = /^#\/essai\/?$/.test(hash);
-  const welcome = hash.match(/^#\/bienvenue\?session_id=(cs_(?:test|live)_[A-Za-z0-9]+)$/)?.[1] ?? null;
+  // From Stripe (« session_id ») or from the welcome e-mail (« &k= », its own secret)
+  const back = hash.match(/^#\/bienvenue\?session_id=(cs_(?:test|live)_[A-Za-z0-9]+)(?:&k=([0-9a-f]{64}))?$/);
+  const welcome = back ? { sessionId: back[1], emailKey: back[2] ?? null } : null;
   return { family, invite, signup, welcome };
 }
 
@@ -59,7 +61,8 @@ export function Gate({ children }: { children: ReactNode }) {
   if (checking) return <Loading label={t("gate.opening")} />;
   // Sign-up and Stripe's return, whether this phone is signed in or not
   if (link.signup) return <SignupScreen />;
-  if (link.welcome) return <WelcomeScreen sessionId={link.welcome} />;
+  if (link.welcome)
+    return <WelcomeScreen sessionId={link.welcome.sessionId} emailKey={link.welcome.emailKey} />;
   if (link.invite && !token)
     return (
       <InviteScreen

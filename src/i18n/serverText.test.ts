@@ -9,7 +9,8 @@ import { nameProblem, passwordProblem } from "../../convex/domain/auth";
 import { packContentProblem } from "../../convex/domain/receipts";
 
 const ROOT = join(__dirname, "../../convex");
-const SKIPPED_FILES = /\.test\.ts$|^seed|^schema\.ts$/;
+// emails.ts: e-mails carry their own French and German texts (domain/emails.test.ts)
+const SKIPPED_FILES = /\.test\.ts$|^seed|^schema\.ts$|^emails\.ts$/;
 
 /** The server's source files: functions and pure domain. */
 function sources() {

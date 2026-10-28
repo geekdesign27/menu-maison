@@ -135,9 +135,20 @@ export default defineSchema({
     lang: v.union(v.literal("fr"), v.literal("de")),
     // SHA-256 of a secret kept by the browser that signed up: only it gets the admin's first link
     claimHash: v.string(),
+    // SHA-256 of the welcome e-mail's link: the same first link, for 7 days, from the mailbox
+    emailHash: v.optional(v.string()),
     createdAt: v.number(),
     familyId: v.optional(v.id("families")),
   }).index("by_session", ["sessionId"]),
+
+  /** E-mails sent (convex/email.ts): one per key, never the content nor the address. */
+  emailLog: defineTable({
+    key: v.string(),
+    kind: v.string(),
+    familyId: v.optional(v.id("families")),
+    status: v.union(v.literal("queued"), v.literal("sent"), v.literal("failed"), v.literal("skipped")),
+    at: v.number(),
+  }).index("by_key", ["key"]),
 
   /** Stripe events already handled: Stripe may send one twice. */
   stripeEvents: defineTable({

@@ -940,6 +940,7 @@ describe("writes on another family's ids are refused", () => {
     "onboarding.setEnabled": "settings and members of the caller's family only (covered: own family test)",
     "catalogTranslate.missingCount": "counts the caller's family only, admins (catalogTranslate.test.ts)",
     "billing.nameAvailable": "public sign-up form: says whether a family name is free, nothing else",
+    "superadmin.emailPreviews": "example e-mails for the super-admin, no family data (requireSuperadmin)",
     "billing.mine": "the caller's own family's subscription, admins only (billing.test.ts)",
     "stripeNode.startFamilyCheckout": "Checkout for the caller's own family, admins only, family from the session",
     "stripeNode.openPortal": "Stripe portal of the caller's own family's customer, admins only, family from the session",

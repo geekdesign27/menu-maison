@@ -136,14 +136,15 @@ type Claim = Awaited<
  * « #/bienvenue?session_id=… », back from Stripe: checks the payment, then
  * hands over to the screen where the new admin chooses a password.
  */
-export function WelcomeScreen({ sessionId }: { sessionId: string }) {
+export function WelcomeScreen({ sessionId, emailKey }: { sessionId: string; emailKey: string | null }) {
   const { t, lang } = useT();
   const { token } = useSession();
   const claim = useAction(api.stripeNode.claim);
   const [result, setResult] = useState<Claim | null>(null);
   const [error, setError] = useState("");
   const [tries, setTries] = useState(0);
-  const secret = readStored(CLAIM_KEY);
+  // The welcome e-mail's link brings its own secret; otherwise this phone's
+  const secret = emailKey ?? readStored(CLAIM_KEY);
 
   const check = useCallback(async () => {
     setError("");

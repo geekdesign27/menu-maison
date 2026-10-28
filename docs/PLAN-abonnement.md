@@ -172,6 +172,18 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   `https://resolute-squid-776.eu-west-1.convex.site/stripe/webhook`, `STRIPE_PRICE_ID` et
   `STRIPE_PORTAL_CONFIG_ID` live, puis un vrai paiement de 20 CHF remboursé.
 
+**E-mails**
+- [ ] Compte Resend, domaine menumaison.ch vérifié (SPF, DKIM, DMARC chez Infomaniak),
+  `RESEND_API_KEY`, `ADMIN_ALERT_EMAIL` posés en local puis en production.
+- [ ] Chaque e-mail reçu pour de vrai, en français et en allemand, dans Gmail, Outlook et
+  Apple Mail (mode sombre compris) : bienvenue, fin d'essai, confirmé, paiement échoué, résilié.
+- [ ] Lien « Choisir mon mot de passe » de l'e-mail de bienvenue ouvert depuis un autre téléphone.
+- [ ] Les 4 alertes reçues sur ton adresse.
+- [ ] Chez Resend : suivi des clics (click tracking) coupé pour le domaine (le lien de bienvenue
+  contient un jeton) et compte protégé par la double authentification.
+- [ ] Antivirus de messagerie (Microsoft Safe Links…) : vérifier qu'ils ne cassent pas le lien de
+  bienvenue (ils peuvent l'ouvrir avant la personne).
+
 **IA et coûts**
 - [ ] Compteur IA en production : vérifier qu'un premier vrai ticket fait bouger « IA ce mois ».
 - [ ] Limite de dépense mensuelle posée dans la console Anthropic.
@@ -205,7 +217,7 @@ de test chez Stripe.
 | S1 | **Fait le 2026-10-28** (sans UI, inactif tant que les clés manquent). Stripe côté serveur : produit et prix, Checkout, page de retour, webhook signé, statut sur la famille | `schema`, `http.ts`, `billing.ts`, `stripeNode.ts` |
 | S2 | **Fait le 2026-10-28.** Accès selon le statut (offert à part : `families.offered`, les familles sans abonnement sont offertes), écritures et IA coupées en lecture seule, budget d'essai réduit, bandeau, bouton Offrir / Retirer l'offre dans Super admin | `lib.ts`, `domain/billing.ts`, tests |
 | S3 | **Fait le 2026-10-28.** Parcours client : `#/essai`, `#/bienvenue` puis mot de passe, carte Abonnement (Réglages et Gestion), portail Stripe dédié, un seul abonnement par famille | `Gate`, `SignupScreens`, `SubscriptionPanel` |
-| S3b | E-mails HTML de marque (clients et alertes à PA), aperçus dans Super admin | `convex/emails/` |
+| S3b | **Fait le 2026-10-28** (inactif sans clé Resend). E-mails HTML de marque liés à l'abonnement (bienvenue avec lien de 7 jours, fin d'essai, confirmé, paiement échoué, résilié) et 4 alertes à PA, une seule fois chacun, aperçus dans Super admin. Les e-mails de mot de passe et de suppression viennent avec S3c | `domain/emails.ts`, `email.ts` |
 | S3c | Actions en libre-service : mot de passe oublié, e-mail, export, suppression, déconnexion | `access.ts`, `Settings`, `gestion/` |
 | S3d | Guide de bienvenue d'une famille cliente | `onboarding/`, i18n |
 | S4 | Page d'accueil : section Tarif, section Formation, boutons, traductions | `landing/` |

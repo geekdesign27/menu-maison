@@ -349,3 +349,59 @@ describe("one subscription per family, and an offer that stays", () => {
     expect(results).toEqual([true, true, true, true, true, false]);
   });
 });
+
+describe("e-mails of the subscription", () => {
+  const kinds = (t: Awaited<ReturnType<typeof signedUp>>) =>
+    t.run(async (ctx) => (await ctx.db.query("emailLog").collect()).map((e) => e.kind).sort());
+
+  it("welcomes the family and alerts PA once, then follows each change once", async () => {
+    process.env.ADMIN_ALERT_EMAIL = "pa@example.ch";
+    const t = await signedUp();
+    await complete(t);
+    await complete(t);
+    expect(await kinds(t)).toEqual(["adminSignup", "welcome"]);
+
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "active" }));
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "active" }));
+    expect(await kinds(t)).toEqual(["adminConverted", "adminSignup", "confirmed", "welcome"]);
+
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "active", cancelAtPeriodEnd: true }));
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "canceled", cancelAtPeriodEnd: true }));
+    const after = await kinds(t);
+    expect(after.filter((k) => k === "canceled")).toHaveLength(1);
+    expect(after.filter((k) => k === "adminCanceled")).toHaveLength(1);
+  });
+
+  it("tells a failed payment once per failure", async () => {
+    process.env.ADMIN_ALERT_EMAIL = "pa@example.ch";
+    const t = await signedUp();
+    await complete(t, { stripeStatus: "active" });
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "past_due" }));
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "past_due" }));
+    const all = await kinds(t);
+    expect(all.filter((k) => k === "paymentFailed")).toHaveLength(1);
+    expect(all.filter((k) => k === "adminPaymentFailed")).toHaveLength(1);
+  });
+
+  it("opens the admin's first link from the welcome e-mail for 7 days", async () => {
+    const t = await signedUp();
+    await complete(t);
+    // The e-mail's secret is only known through its hash: replace it by a known one
+    const token = "c".repeat(64);
+    await t.run(async (ctx) => {
+      const s = (await ctx.db.query("signups").collect())[0];
+      await ctx.db.patch(s._id, { emailHash: await sha256(token), createdAt: Date.now() - 3 * DAY });
+    });
+    // 3 days later: too late for the browser's secret, still fine for the e-mail
+    expect(await firstLink(t)).toMatchObject({ invite: null });
+    expect((await firstLink(t, token))?.invite).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("reminds 2 days before the end of the trial, once", async () => {
+    const t = await signedUp();
+    await complete(t, { periodEnd: Date.now() + 2 * DAY });
+    await t.mutation(internal.billing.trialReminders, {});
+    await t.mutation(internal.billing.trialReminders, {});
+    expect((await kinds(t)).filter((k) => k === "trialEnding")).toHaveLength(1);
+  });
+});
