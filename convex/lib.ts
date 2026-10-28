@@ -21,7 +21,7 @@ export async function sha256(text: string) {
 }
 
 /** Tables whose rows belong to one family. */
-export type FamilyTable = Exclude<TableNames, "families" | "sessions" | "accessGuard" | "loginGuards" | "invites">;
+export type FamilyTable = Exclude<TableNames, "families" | "sessions" | "loginGuards" | "invites">;
 
 /**
  * The database seen by one family. Every read is limited to the family, every
@@ -101,7 +101,7 @@ async function sessionMember(db: DatabaseReader, token: string) {
     .query("sessions")
     .withIndex("by_token", (q) => q.eq("token", tokenHash))
     .unique();
-  if (!session || session.expiresAt < Date.now() || !session.memberId || !session.familyId) return null;
+  if (!session || session.expiresAt < Date.now()) return null;
   const [member, family] = await Promise.all([db.get(session.memberId), db.get(session.familyId)]);
   // A member removed, moved or without a password any more loses the session
   if (!member || !family || member.familyId !== family._id || !member.passwordHash) return null;

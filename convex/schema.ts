@@ -17,14 +17,26 @@ export const unitValidator = v.union(
   v.literal("tranche"),
 );
 
-export const slotValidator = v.union(v.literal("matin"), v.literal("midi"), v.literal("soir"));
+export const slotValidator = v.union(
+  v.literal("matin"),
+  v.literal("midi"),
+  v.literal("soir"),
+);
 
 /** Data borrowed from an Open Food Facts product; the ingredient itself stays generic. */
 export const offValidator = v.object({
   code: v.string(), // barcode
   productName: v.string(), // for reference only, never shown as a brand to buy
   allergens: v.array(v.string()), // Open Food Facts tags, e.g. "en:gluten"
-  nutriscore: v.optional(v.union(v.literal("a"), v.literal("b"), v.literal("c"), v.literal("d"), v.literal("e"))),
+  nutriscore: v.optional(
+    v.union(
+      v.literal("a"),
+      v.literal("b"),
+      v.literal("c"),
+      v.literal("d"),
+      v.literal("e"),
+    ),
+  ),
   // Per 100 g, or per 100 ml for drinks
   per100: v.optional(
     v.object({
@@ -50,7 +62,11 @@ export const chainValidator = v.union(
   v.literal("Autre"),
 );
 
-export const themeValidator = v.union(v.literal("carotte"), v.literal("sauge"), v.literal("myrtille"));
+export const themeValidator = v.union(
+  v.literal("carotte"),
+  v.literal("sauge"),
+  v.literal("myrtille"),
+);
 export const fontValidator = v.union(
   v.literal("nunito"),
   v.literal("quicksand"),
@@ -59,8 +75,7 @@ export const fontValidator = v.union(
 );
 export const roleValidator = v.union(v.literal("admin"), v.literal("membre"));
 
-// Optional only until the migration to families has run on every deployment
-const familyId = v.optional(v.id("families"));
+const familyId = v.id("families");
 
 export default defineSchema({
   /** One household. Everything else belongs to exactly one family. */
@@ -313,21 +328,13 @@ export default defineSchema({
   /** Device sessions opened by a member (token kept in localStorage). */
   sessions: defineTable({
     token: v.string(), // SHA-256 of the device token, never the token itself
-    memberId: v.optional(v.id("members")), // optional only for sessions older than accounts
+    memberId: v.id("members"),
     familyId,
-    codeHash: v.optional(v.string()), // sessions opened with the former family code, removed by the migration
     createdAt: v.number(),
     expiresAt: v.number(),
   })
     .index("by_token", ["token"])
     .index("by_member", ["memberId"]),
-
-  /** Former brute-force guard on the family code, emptied by the migration. */
-  accessGuard: defineTable({
-    failures: v.number(),
-    lastFailureAt: v.optional(v.number()),
-    lockedUntil: v.number(),
-  }),
 
   /** Brute-force guard per sign-in name: « <familyId>:<username> ». */
   loginGuards: defineTable({

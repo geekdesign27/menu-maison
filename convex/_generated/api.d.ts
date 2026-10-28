@@ -28,7 +28,6 @@ import type * as domain_text from "../domain/text.js";
 import type * as families from "../families.js";
 import type * as lib from "../lib.js";
 import type * as meals from "../meals.js";
-import type * as migrations from "../migrations.js";
 import type * as openFoodFacts from "../openFoodFacts.js";
 import type * as products from "../products.js";
 import type * as receipts from "../receipts.js";
@@ -69,7 +68,6 @@ declare const fullApi: ApiFromModules<{
   families: typeof families;
   lib: typeof lib;
   meals: typeof meals;
-  migrations: typeof migrations;
   openFoodFacts: typeof openFoodFacts;
   products: typeof products;
   receipts: typeof receipts;
