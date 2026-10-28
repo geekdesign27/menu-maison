@@ -95,11 +95,12 @@ export default defineSchema({
     suspended: v.boolean(),
     aiCapUsd: v.optional(v.number()), // monthly Claude budget set by the super-admin (default 2 USD)
     dictationCap: v.optional(v.number()), // monthly dictations set by the super-admin (default 60)
-    // Subscription (convex/billing.ts); absent: created before it, counted as offered
+    // Offered by PA (Super admin); unset: offered when there is no subscription
+    offered: v.optional(v.boolean()),
+    // Subscription from Stripe (convex/billing.ts); absent: created before it or by PA
     billing: v.optional(
       v.object({
         status: v.union(
-          v.literal("comped"),
           v.literal("trialing"),
           v.literal("active"),
           v.literal("past_due"),

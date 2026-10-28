@@ -378,6 +378,10 @@ describe("writes on another family's ids are refused", () => {
       () => s.t.mutation(api.superadmin.setSuspended, { token: s.b.token, familyId: s.a.familyId, suspended: true }),
     ],
     [
+      "superadmin.setOffered",
+      () => s.t.mutation(api.superadmin.setOffered, { token: s.b.token, familyId: s.a.familyId, offered: false }),
+    ],
+    [
       "superadmin.setAiCaps",
       () => s.t.mutation(api.superadmin.setAiCaps, { token: s.b.token, familyId: s.a.familyId, capUsd: 100, dictationCap: 1000 }),
     ],

@@ -12,6 +12,7 @@ import {
 import type { MessageKey } from "../i18n";
 import { useT } from "../i18n/useT";
 import { cx, IconButton } from "./ui";
+import { SubscriptionBanner } from "./SubscriptionBanner";
 
 // `tour` names the tab for the welcome guide, whatever the language
 const TABS: {
@@ -53,6 +54,7 @@ export function Layout() {
   return (
     <>
       <main>
+        <SubscriptionBanner />
         <Outlet />
       </main>
       <nav

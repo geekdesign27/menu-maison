@@ -10,12 +10,8 @@ export const GRACE_DAYS = 7;
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/**
- * Billing state of a family. No state at all: a family created before the
- * subscription (PA's, the friends') counts as offered.
- */
+/** Stripe's state of a family's subscription (whether it is offered is kept apart). */
 export type BillingStatus =
-  | "comped" // offered by PA, never charged
   | "trialing"
   | "active"
   | "past_due" // a renewal failed, Stripe retries
@@ -53,21 +49,41 @@ export function statusFromStripe(stripeStatus: string): BillingStatus {
 
 export type Access = "full" | "grace" | "readonly";
 
+export const READ_ONLY =
+  "L'abonnement de ta famille est terminé : l'app est en lecture seule. L'admin peut le réactiver.";
+
+/**
+ * Whether PA offers the app to the family. `offered` true or false is his
+ * choice in Super admin; unset, a family without subscription (created before
+ * the subscription, or by PA) counts as offered.
+ */
+export function isOffered(family: { offered?: boolean; billing?: Billing }): boolean {
+  return family.offered ?? !family.billing;
+}
+
 /** What a family may do now: everything, everything with a warning, or only read. */
-export function accessOf(billing: Billing | undefined, now: number): Access {
-  if (!billing) return "full";
+export function accessOf(family: { offered?: boolean; billing?: Billing }, now: number): Access {
+  if (isOffered(family)) return "full";
+  const billing = family.billing;
+  if (!billing) return "readonly";
   switch (billing.status) {
-    case "comped":
     case "trialing":
     case "active":
       return "full";
     case "past_due":
-      return now - (billing.pastDueSince ?? now) < GRACE_DAYS * DAY
-        ? "grace"
-        : "readonly";
+      // Without its start (never written by Stripe's updates), no grace
+      return now - (billing.pastDueSince ?? 0) < GRACE_DAYS * DAY ? "grace" : "readonly";
     default:
       return "readonly";
   }
+}
+
+/** AI during the free trial: enough to try the receipts and an import, not to spend PA's keys. */
+export const TRIAL_CAPS = { claudeUsd: 0.3, dictations: 10 } as const;
+
+/** Whether the family is in its free trial (and not offered). */
+export function inTrial(family: { offered?: boolean; billing?: Billing }): boolean {
+  return !isOffered(family) && family.billing?.status === "trialing";
 }
 
 /** Whole days left before `periodEnd` (rounded up), 0 when it is past. */

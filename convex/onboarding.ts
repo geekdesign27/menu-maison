@@ -51,7 +51,8 @@ export const facts = query({
 export const finish = mutation({
   args: { token: v.string(), checklistDone: v.optional(v.boolean()) },
   handler: async (ctx, { token, checklistDone }) => {
-    const { db, member } = await requireMemberWriter(ctx, token);
+    // Closing the guide stays possible in a read-only family
+    const { db, member } = await requireMemberWriter(ctx, token, { evenReadOnly: true });
     // Habitués stay habitués when they replay the guide: no checklist for them
     if (member.onboardingDoneAt === ONBOARDING_HABITUAL) return;
     await db.patch(member._id, {

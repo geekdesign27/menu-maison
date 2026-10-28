@@ -17,6 +17,7 @@ import { askClaude } from "./claude";
 import { assertAdmin, requireMember } from "./lib";
 import { cleanGermanName } from "./domain/lang";
 import { NAMES_DE } from "./seedNamesDe";
+import { accessOf, READ_ONLY } from "./domain/billing";
 
 const TABLES = ["ingredients", "aisles", "staples"] as const;
 type Table = (typeof TABLES)[number];
@@ -78,7 +79,8 @@ async function hasGermanMember(ctx: MutationCtx, familyId: Id<"families">) {
 export async function translateLater(ctx: MutationCtx, familyId: Id<"families">) {
   if (!(await hasGermanMember(ctx, familyId))) return;
   const family = await ctx.db.get(familyId);
-  if (!family) return;
+  // A read-only family's catalogue is not touched
+  if (!family || accessOf(family, Date.now()) === "readonly") return;
   const state = family.germanNames ?? { skipped: [] };
   // One run at a time: it takes every name missing when it starts
   if (state.queuedAt && Date.now() - state.queuedAt < STALE_MS) return;
@@ -210,6 +212,7 @@ export const adminFamily = internalQuery({
   handler: async (ctx, { token }) => {
     const me = await requireMember(ctx, token);
     assertAdmin(me);
+    if (accessOf(me.family, Date.now()) === "readonly") throw new ConvexError(READ_ONLY);
     return me.familyId;
   },
 });

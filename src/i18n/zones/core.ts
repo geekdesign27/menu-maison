@@ -29,6 +29,13 @@ export const fr = {
   "lang.translate": "Traduire maintenant",
   "lang.translated": "{count} noms traduits",
 
+  "billing.trial": "Essai gratuit\u00a0: encore {days} jours, puis 20\u00a0CHF par an.",
+  "billing.trialLastDay": "Essai gratuit\u00a0: dernier jour, puis 20\u00a0CHF par an.",
+  "billing.ending": "Abonnement résilié\u00a0: l'app reste ouverte jusqu'au {date}.",
+  "billing.pastDue": "Le paiement de l'abonnement a échoué. Mets ta carte à jour d'ici le {date}, sinon l'app passera en lecture seule.",
+  "billing.readOnly": "L'abonnement de la famille est terminé\u00a0: l'app est en lecture seule.",
+  "billing.readOnlyAdmin": "L'abonnement de la famille est terminé\u00a0: l'app est en lecture seule jusqu'à ce que tu le réactives.",
+
   "install.title": "Sur ton écran d'accueil",
   "install.why":
     "Ajoute l'app à ton écran d'accueil\u00a0: elle s'ouvre d'un geste, en plein écran, et tu restes connecté.",
@@ -79,6 +86,13 @@ export const de: { [K in keyof typeof fr]: string } = {
   "lang.namesDone": "Alles hat einen deutschen Namen.",
   "lang.translate": "Jetzt übersetzen",
   "lang.translated": "{count} Namen übersetzt",
+
+  "billing.trial": "Gratis-Test: noch {days} Tage, danach 20 CHF pro Jahr.",
+  "billing.trialLastDay": "Gratis-Test: letzter Tag, danach 20 CHF pro Jahr.",
+  "billing.ending": "Abo gekündigt: Die App bleibt bis am {date} offen.",
+  "billing.pastDue": "Die Zahlung für das Abo ist fehlgeschlagen. Aktualisiere deine Karte bis am {date}, sonst ist die App nur noch lesbar.",
+  "billing.readOnly": "Das Abo der Familie ist abgelaufen: Die App ist nur noch lesbar.",
+  "billing.readOnlyAdmin": "Das Abo der Familie ist abgelaufen: Die App ist nur noch lesbar, bis du es wieder aktivierst.",
 
   "install.title": "Auf den Home-Bildschirm",
   "install.why":

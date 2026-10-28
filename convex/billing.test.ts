@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { sha256 } from "./lib";
+import { accessOf } from "./domain/billing";
 
 const modules = import.meta.glob("./**/*.ts");
 const DAY = 24 * 60 * 60 * 1000;
@@ -208,21 +209,18 @@ describe("subscription updates from Stripe", () => {
     ).toBe(false);
   });
 
-  it("keeps an offered family offered, from the webhook and from the return page", async () => {
+  it("keeps an offered family's access, whatever Stripe says", async () => {
     const t = await signedUp();
     await complete(t);
     await t.run(async (ctx) => {
       const f = (await ctx.db.query("families").collect())[0];
-      await ctx.db.patch(f._id, {
-        billing: { ...f.billing!, status: "comped" },
-      });
+      await ctx.db.patch(f._id, { offered: true });
     });
-    await t.mutation(
-      internal.billing.updateSubscription,
-      sub({ stripeStatus: "unpaid" }),
-    );
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "unpaid" }));
     await complete(t, { stripeStatus: "canceled" });
-    expect((await familyOf(t)).billing?.status).toBe("comped");
+    const family = await familyOf(t);
+    expect(family.billing?.status).toBe("canceled");
+    expect(accessOf(family, Date.now())).toBe("full");
   });
 
   it("records each Stripe event once handled", async () => {
@@ -244,5 +242,50 @@ describe("subscription updates from Stripe", () => {
     expect(
       await t.run((ctx) => ctx.db.query("stripeEvents").collect()),
     ).toHaveLength(1);
+  });
+});
+
+describe("what a family may do according to its subscription", () => {
+  async function signedIn() {
+    const t = convexTest(schema, modules);
+    const { familyId } = await t.mutation(internal.families.create, { name: "Dupont", admin: "Marc" });
+    const { hashPassword } = await import("./domain/auth");
+    const passwordHash = await hashPassword("carottes-rapees", 1000);
+    await t.run(async (ctx) => {
+      for (const m of await ctx.db.query("members").collect()) await ctx.db.patch(m._id, { passwordHash });
+    });
+    const r = await t.action(api.access.login, { family: "dupont", username: "marc", password: "carottes-rapees" });
+    if (!r.ok) throw new Error(r.error);
+    const me = await t.query(api.access.check, { token: r.token });
+    return { t, familyId, token: r.token, memberId: me!.memberId };
+  }
+
+  it("lets an ended family read and manage its accounts, not write nor use the AI", async () => {
+    const { t, familyId, token, memberId } = await signedIn();
+    const setFamily = (patch: object) => t.run((ctx) => ctx.db.patch(familyId, patch));
+    await t.mutation(api.staples.create, { token, name: "Bougies" });
+
+    await setFamily({ billing: { status: "canceled" } });
+    await expect(t.mutation(api.staples.create, { token, name: "Allumettes" })).rejects.toThrow("lecture seule");
+    expect(await t.query(internal.aiBudget.problem, { familyId, kind: "claude" })).toMatch(/lecture seule/);
+    // Reading and the account itself stay possible
+    expect((await t.query(api.staples.list, { token, start: "2026-10-24" })).map((s) => s.name)).toContain("Bougies");
+    await t.mutation(api.access.setLang, { token, id: memberId, lang: "de" });
+
+    // Offered again by PA: everything works
+    await setFamily({ offered: true });
+    await t.mutation(api.staples.create, { token, name: "Allumettes" });
+  });
+
+  it("gives a smaller AI budget during the free trial", async () => {
+    const { t, familyId } = await signedIn();
+    await t.run((ctx) => ctx.db.patch(familyId, { billing: { status: "trialing" } }));
+    const reserve = () => t.mutation(internal.aiBudget.reserve, { familyId, kind: "claude" });
+    // 0.30 USD: three reservations of 0.10, then refused
+    for (let n = 0; n < 3; n++) expect(await reserve()).toBeNull();
+    expect(await reserve()).toMatch(/budget IA/);
+    // Paid: the normal budget
+    await t.run((ctx) => ctx.db.patch(familyId, { billing: { status: "active" } }));
+    expect(await reserve()).toBeNull();
   });
 });

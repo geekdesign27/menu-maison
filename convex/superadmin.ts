@@ -5,6 +5,7 @@ import { accessLink } from "./access";
 import { createFamily } from "./families";
 import { isUnlimited, usageOf } from "./aiBudget";
 import { capsOf } from "./domain/aiBudget";
+import { accessOf, isOffered } from "./domain/billing";
 import { assertInt, assertPositive } from "./lib";
 
 /**
@@ -64,6 +65,15 @@ export const families = query({
             })),
           recipes: recipes.filter((r) => !r.archived).length,
           lastSignIn: signIns.length ? Math.max(...signIns) : null,
+          // Subscription: offered, or Stripe's state; the e-mail stays out of the list
+          subscription: {
+            offered: isOffered(f),
+            explicit: f.offered !== undefined,
+            status: f.billing?.status ?? null,
+            periodEnd: f.billing?.periodEnd ?? null,
+            cancelAtPeriodEnd: f.billing?.cancelAtPeriodEnd ?? false,
+            access: accessOf(f, Date.now()),
+          },
           // AI this month (Swiss time) against the family's caps, null: never blocked
           ai: {
             claudeUsd: usage?.claudeUsd ?? 0,
@@ -162,5 +172,20 @@ export const setAiCaps = mutation({
       aiCapUsd: capUsd ?? undefined,
       dictationCap: dictationCap ?? undefined,
     });
+  },
+});
+
+/**
+ * Offers the app to a family (relatives, friends) or withdraws the offer. A
+ * family without subscription then only reads until it subscribes. Not for the
+ * super-admin's own family.
+ */
+export const setOffered = mutation({
+  args: { token: v.string(), familyId: v.id("families"), offered: v.boolean() },
+  handler: async (ctx, { token, familyId, offered }) => {
+    const me = await requireSuperadmin(ctx, token);
+    if (familyId === me.familyId) throw new ConvexError("Ta famille reste offerte.");
+    if (!(await ctx.db.get(familyId))) throw new ConvexError("Famille introuvable.");
+    await ctx.db.patch(familyId, { offered });
   },
 });

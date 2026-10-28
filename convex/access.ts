@@ -219,6 +219,14 @@ export const check = query({
       family: { name: family.name, slug: family.slug },
       // Applied as soon as the phone opens, before the rest of the data
       look: { theme: settings.theme ?? "carotte", font: settings.font ?? "nunito" },
+      // For the trial and end-of-subscription banner (domain/billing.ts decides the access)
+      subscription: {
+        offered: family.offered,
+        status: family.billing?.status ?? null,
+        periodEnd: family.billing?.periodEnd ?? null,
+        cancelAtPeriodEnd: family.billing?.cancelAtPeriodEnd ?? false,
+        pastDueSince: family.billing?.pastDueSince ?? null,
+      },
     };
   },
 });
@@ -319,7 +327,7 @@ function assertCanManage(me: Doc<"members">, member: Doc<"members">) {
 export const setUsername = mutation({
   args: { token: v.string(), id: v.id("members"), username: v.string() },
   handler: async (ctx, args) => {
-    const me = await requireMemberWriter(ctx, args.token);
+    const me = await requireMemberWriter(ctx, args.token, { evenReadOnly: true });
     assertAdmin(me);
     const member = await me.db.own(args.id, "Profil introuvable.");
     assertCanManage(me.member, member);
@@ -340,7 +348,7 @@ export const setUsername = mutation({
 export const setRole = mutation({
   args: { token: v.string(), id: v.id("members"), role: roleValidator },
   handler: async (ctx, args) => {
-    const me = await requireMemberWriter(ctx, args.token);
+    const me = await requireMemberWriter(ctx, args.token, { evenReadOnly: true });
     assertAdmin(me);
     const member = await me.db.own(args.id, "Profil introuvable.");
     // Nobody demotes themselves: the family always keeps an admin
@@ -355,7 +363,7 @@ export const setRole = mutation({
 export const setLang = mutation({
   args: { token: v.string(), id: v.id("members"), lang: langValidator },
   handler: async (ctx, args) => {
-    const me = await requireMemberWriter(ctx, args.token);
+    const me = await requireMemberWriter(ctx, args.token, { evenReadOnly: true });
     const member = await me.db.own(args.id, "Profil introuvable.");
     if (member._id !== me.member._id) {
       assertAdmin(me);
@@ -375,7 +383,7 @@ export const setLang = mutation({
 export const resetLink = mutation({
   args: { token: v.string(), id: v.id("members") },
   handler: async (ctx, args) => {
-    const me = await requireMemberWriter(ctx, args.token);
+    const me = await requireMemberWriter(ctx, args.token, { evenReadOnly: true });
     assertAdmin(me);
     const member = await me.db.own(args.id, "Profil introuvable.");
     // Resetting oneself would sign this phone out: another admin does it

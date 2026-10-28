@@ -107,13 +107,12 @@ interface StripeSubscription {
   cancelAtPeriodEnd?: boolean;
 }
 
-/** Writes Stripe's state on a family; an offered family stays offered, whatever Stripe says. */
+/** Writes Stripe's state on a family (an offered family keeps its access whatever Stripe says). */
 async function applySubscription(
   ctx: MutationCtx,
   family: Doc<"families">,
   sub: StripeSubscription,
 ) {
-  if (family.billing?.status === "comped") return;
   const before = family.billing;
   const status = statusFromStripe(sub.stripeStatus);
   await ctx.db.patch(family._id, {

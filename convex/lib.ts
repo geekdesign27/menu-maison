@@ -3,6 +3,7 @@ import type { NamedTableInfo, Query, WithoutSystemFields } from "convex/server";
 import type { DatabaseReader, DatabaseWriter, MutationCtx, QueryCtx } from "./_generated/server";
 import type { DataModel, Doc, Id, TableNames } from "./_generated/dataModel";
 import { addDays } from "./domain/dates";
+import { accessOf, READ_ONLY } from "./domain/billing";
 import type { ChainPrices } from "./domain/shopping";
 
 export const SESSION_DAYS = 365;
@@ -136,9 +137,18 @@ export async function requireMember(ctx: QueryCtx, token: string) {
   };
 }
 
-/** Same for mutations, with a database that writes into the family. */
-export async function requireMemberWriter(ctx: MutationCtx, token: string) {
+/**
+ * Same for mutations, with a database that writes into the family. A family
+ * whose subscription ended may only read: `evenReadOnly` is for the account
+ * itself (pseudo, role, language, links), which stays manageable.
+ */
+export async function requireMemberWriter(
+  ctx: MutationCtx,
+  token: string,
+  { evenReadOnly = false }: { evenReadOnly?: boolean } = {},
+) {
   const me = await requireMember(ctx, token);
+  if (!evenReadOnly && accessOf(me.family, Date.now()) === "readonly") throw new ConvexError(READ_ONLY);
   return { ...me, db: familyWriter(ctx.db, me.familyId) };
 }
 

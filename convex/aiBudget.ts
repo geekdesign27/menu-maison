@@ -14,6 +14,7 @@ import {
   UNKNOWN_COST_USD,
   type AiKind,
 } from "./domain/aiBudget";
+import { accessOf, READ_ONLY } from "./domain/billing";
 
 const kindValidator = v.union(v.literal("claude"), v.literal("dictation"));
 
@@ -37,6 +38,8 @@ export async function isUnlimited(ctx: QueryCtx, familyId: Id<"families">) {
 async function problemFor(ctx: QueryCtx, familyId: Id<"families">, kind: AiKind) {
   const family = await ctx.db.get(familyId);
   if (!family) return "Famille introuvable.";
+  // A family whose subscription ended has no AI either
+  if (accessOf(family, Date.now()) === "readonly") return READ_ONLY;
   const used = await usageOf(ctx, familyId);
   return budgetProblem(
     kind,

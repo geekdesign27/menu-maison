@@ -213,10 +213,13 @@ const DE: Record<string, string> = {
     "Den Inhalt in Milliliter angeben: 1000 für eine Literflasche.",
 
   // ---------- Subscription
+  "L'abonnement de ta famille est terminé : l'app est en lecture seule. L'admin peut le réactiver.":
+    "Das Abo deiner Familie ist abgelaufen: Die App ist nur noch lesbar. Der Admin kann es wieder aktivieren.",
   "Le paiement n'est pas encore configuré.": "Die Zahlung ist noch nicht eingerichtet.",
   "La page de paiement n'a pas pu s'ouvrir. Réessaie dans un moment.":
     "Die Zahlungsseite konnte nicht geöffnet werden. Versuch es gleich nochmals.",
   "Lien invalide.": "Ungültiger Link.",
+  "Ta famille reste offerte.": "Deine Familie bleibt geschenkt.",
   "Nom trop long.": "Name zu lang.",
   "Trop d'inscriptions en même temps. Réessaie dans quelques minutes.":
     "Zu viele Anmeldungen gleichzeitig. Versuch es in ein paar Minuten nochmals.",

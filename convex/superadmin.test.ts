@@ -51,7 +51,7 @@ describe("super-admin space", () => {
     expect(dupont.lastSignIn).toBeTypeOf("number");
     // Figures, never a family's content or a password hash
     expect(Object.keys(dupont).sort()).toEqual(
-      ["_id", "ai", "createdAt", "isMine", "lastSignIn", "members", "name", "recipes", "slug", "suspended"].sort(),
+      ["_id", "ai", "createdAt", "isMine", "lastSignIn", "members", "name", "recipes", "slug", "subscription", "suspended"].sort(),
     );
     expect(JSON.stringify(list)).not.toContain("pbkdf2");
   });
@@ -106,4 +106,20 @@ describe("super-admin space", () => {
     expect(await t.query(api.access.check, { token: again })).toMatchObject({ username: "marc" });
     expect((await t.query(api.superadmin.families, { token: pa }))[1].recipes).toBeGreaterThan(0);
   });
+
+  it("offers the app to a family or withdraws the offer, never for PA's own family", async () => {
+    const { t, pa, home, friend } = await setup();
+    const status = async () =>
+      (await t.query(api.superadmin.families, { token: pa })).find((f) => f._id === friend.familyId)!.subscription;
+    // Created by PA: offered
+    expect(await status()).toMatchObject({ offered: true, access: "full" });
+    await t.mutation(api.superadmin.setOffered, { token: pa, familyId: friend.familyId, offered: false });
+    expect(await status()).toMatchObject({ offered: false, access: "readonly" });
+    await t.mutation(api.superadmin.setOffered, { token: pa, familyId: friend.familyId, offered: true });
+    expect(await status()).toMatchObject({ offered: true, access: "full" });
+    await expect(
+      t.mutation(api.superadmin.setOffered, { token: pa, familyId: home.familyId, offered: false }),
+    ).rejects.toThrow("reste offerte");
+  });
 });
+

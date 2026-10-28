@@ -10,6 +10,7 @@ import { requireMember, requireMemberWriter, cleanText } from "./lib";
 import { offValidator } from "./schema";
 import { parseOffProduct, type OffHit } from "./domain/openFoodFacts";
 import type { Id } from "./_generated/dataModel";
+import { accessOf, READ_ONLY } from "./domain/billing";
 
 // Open Food Facts asks every client to name itself
 const USER_AGENT =
@@ -89,7 +90,9 @@ export const search = action({
 export const importTarget = internalQuery({
   args: { token: v.string(), id: v.id("ingredients"), code: v.string() },
   handler: async (ctx, { token, id, code }) => {
-    const { db } = await requireMember(ctx, token);
+    const { db, family } = await requireMember(ctx, token);
+    // Before any download: a read-only family would leave a stored photo behind
+    if (accessOf(family, Date.now()) === "readonly") throw new ConvexError(READ_ONLY);
     const ingredient = await db.get(id);
     if (!ingredient) throw new ConvexError("Ingrédient introuvable.");
     const all = await db.query("ingredients").collect();
@@ -174,19 +177,25 @@ export const importProduct = action({
     const imageId = target.hasImage
       ? null
       : await storeImage((blob) => ctx.storage.store(blob), hit.imageUrl);
-    await ctx.runMutation(internal.openFoodFacts.attach, {
-      token,
-      id,
-      off: {
-        code: hit.code,
-        productName: hit.productName,
-        allergens: hit.allergens,
-        nutriscore: hit.nutriscore,
-        per100: hit.per100,
-        fetchedAt: Date.now(),
-      },
-      imageId: imageId ?? undefined,
-    });
+    try {
+      await ctx.runMutation(internal.openFoodFacts.attach, {
+        token,
+        id,
+        off: {
+          code: hit.code,
+          productName: hit.productName,
+          allergens: hit.allergens,
+          nutriscore: hit.nutriscore,
+          per100: hit.per100,
+          fetchedAt: Date.now(),
+        },
+        imageId: imageId ?? undefined,
+      });
+    } catch (e) {
+      // Not attached (deleted meanwhile, subscription ended): the photo goes too
+      if (imageId) await ctx.storage.delete(imageId);
+      throw e;
+    }
     // Returned so an open form can show the photo and keep it when saved
     return { imageId, imageUrl: imageId ? await ctx.storage.getUrl(imageId) : null };
   },

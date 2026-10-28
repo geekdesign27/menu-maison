@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessOf, daysLeft, GRACE_DAYS, numberedFamilyName, signupProblem, statusFromStripe } from "./billing";
+import { accessOf, daysLeft, GRACE_DAYS, inTrial, isOffered, numberedFamilyName, signupProblem, statusFromStripe } from "./billing";
 import { slugFromName } from "./auth";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -21,24 +21,30 @@ describe("subscription of a family", () => {
       expect(statusFromStripe(s)).toBe("canceled");
   });
 
-  it("gives full access to offered, trial and paid families, and to the older ones", () => {
-    expect(accessOf(undefined, NOW)).toBe("full");
-    for (const status of ["comped", "trialing", "active"] as const)
-      expect(accessOf({ status }, NOW)).toBe("full");
+  it("gives full access to offered, trial and paid families", () => {
+    // Created before the subscription: offered
+    expect(accessOf({}, NOW)).toBe("full");
+    expect(accessOf({ offered: true, billing: { status: "canceled" } }, NOW)).toBe("full");
+    for (const status of ["trialing", "active"] as const) expect(accessOf({ billing: { status } }, NOW)).toBe("full");
   });
 
   it("keeps access for a week after a failed renewal, then only reading", () => {
-    expect(
-      accessOf({ status: "past_due", pastDueSince: NOW - 2 * DAY }, NOW),
-    ).toBe("grace");
-    expect(
-      accessOf(
-        { status: "past_due", pastDueSince: NOW - GRACE_DAYS * DAY },
-        NOW,
-      ),
-    ).toBe("readonly");
-    expect(accessOf({ status: "canceled" }, NOW)).toBe("readonly");
-    expect(accessOf({ status: "unpaid" }, NOW)).toBe("readonly");
+    expect(accessOf({ billing: { status: "past_due", pastDueSince: NOW - 2 * DAY } }, NOW)).toBe("grace");
+    expect(accessOf({ billing: { status: "past_due", pastDueSince: NOW - GRACE_DAYS * DAY } }, NOW)).toBe("readonly");
+    expect(accessOf({ billing: { status: "canceled" } }, NOW)).toBe("readonly");
+    expect(accessOf({ billing: { status: "unpaid" } }, NOW)).toBe("readonly");
+    // Offer withdrawn, no subscription yet
+    expect(accessOf({ offered: false }, NOW)).toBe("readonly");
+    // A failed payment without its date gets no endless grace
+    expect(accessOf({ billing: { status: "past_due" } }, NOW)).toBe("readonly");
+  });
+
+  it("tells a free trial from an offered family", () => {
+    expect(inTrial({ billing: { status: "trialing" } })).toBe(true);
+    expect(inTrial({ offered: true, billing: { status: "trialing" } })).toBe(false);
+    expect(inTrial({ billing: { status: "active" } })).toBe(false);
+    expect(isOffered({})).toBe(true);
+    expect(isOffered({ billing: { status: "active" } })).toBe(false);
   });
 
   it("counts the days left of a trial", () => {

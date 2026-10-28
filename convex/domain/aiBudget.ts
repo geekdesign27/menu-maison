@@ -1,5 +1,6 @@
 // AI budget of a family: what Claude and the dictation cost each month, and
 // when a family has used up its share. Pure functions, tested with Vitest.
+import { inTrial, TRIAL_CAPS, type Billing } from "./billing";
 
 /** Claude Opus 5.5 list prices, USD per million tokens (checked 2026-10-28). */
 export const CLAUDE_PRICES = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 } as const;
@@ -59,12 +60,21 @@ export interface Caps {
   dictations: number | null;
 }
 
-/** The family's caps: its own settings, else the defaults; none for the super-admin's family. */
-export function capsOf(family: { aiCapUsd?: number; dictationCap?: number }, unlimited: boolean): Caps {
+/**
+ * The family's caps: its own settings, else the defaults; none for the
+ * super-admin's family; lower ones during a free trial.
+ */
+export function capsOf(
+  family: { aiCapUsd?: number; dictationCap?: number; offered?: boolean; billing?: Billing },
+  unlimited: boolean,
+): Caps {
   if (unlimited) return { claudeUsd: null, dictations: null };
+  const claudeUsd = family.aiCapUsd ?? DEFAULT_CAP_USD;
+  const dictations = family.dictationCap ?? DEFAULT_DICTATION_CAP;
+  if (!inTrial(family)) return { claudeUsd, dictations };
   return {
-    claudeUsd: family.aiCapUsd ?? DEFAULT_CAP_USD,
-    dictations: family.dictationCap ?? DEFAULT_DICTATION_CAP,
+    claudeUsd: Math.min(claudeUsd, TRIAL_CAPS.claudeUsd),
+    dictations: Math.min(dictations, TRIAL_CAPS.dictations),
   };
 }
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { KeyRound, Pause, Play, Plus, Share2 } from "lucide-react";
+import { Gift, KeyRound, Pause, Play, Plus, Share2 } from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import { pseudoFromName } from "../../convex/domain/auth";
@@ -119,12 +119,12 @@ export function FamiliesSection() {
       key: "status",
       label: "Statut",
       sort: (f) => (f.suspended ? 1 : 0),
-      render: (f) =>
-        f.suspended ? (
-          <Badge tone="berry">Suspendue</Badge>
-        ) : (
-          <Badge tone="herb">Active</Badge>
-        ),
+      render: (f) => (
+        <span className="flex flex-col items-start gap-1">
+          {f.suspended ? <Badge tone="berry">Suspendue</Badge> : <Badge tone="herb">Active</Badge>}
+          <SubscriptionBadge family={f} />
+        </span>
+      ),
     },
   ];
 
@@ -363,6 +363,8 @@ function FamilySheet({
           )}
         </section>
 
+        <SubscriptionSection family={family} />
+
         <AiBudget family={family} />
 
         {link && (
@@ -479,6 +481,76 @@ function AiBudget({ family }: { family: Family }) {
           </Button>
         </div>
       )}
+    </section>
+  );
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Offered, trial (days left), paid, failed payment, ended or waiting for a subscription. */
+function SubscriptionBadge({ family }: { family: Family }) {
+  const sub = family.subscription;
+  if (sub.offered) return <Badge tone="carrot">Offerte</Badge>;
+  if (sub.access === "readonly")
+    return <Badge tone="berry">{sub.status ? "Abonnement terminé" : "Sans abonnement"}</Badge>;
+  if (sub.access === "grace") return <Badge tone="sun">Paiement échoué</Badge>;
+  if (sub.status === "trialing") {
+    const days = sub.periodEnd ? Math.max(0, Math.ceil((sub.periodEnd - Date.now()) / DAY_MS)) : 0;
+    return <Badge tone="sun">Essai, {plural(days, "jour", "jours")}</Badge>;
+  }
+  return <Badge tone="herb">{sub.cancelAtPeriodEnd ? "Payante, résiliée" : "Payante"}</Badge>;
+}
+
+/** The family's subscription, and the offer: PA gives the app to relatives and friends. */
+function SubscriptionSection({ family }: { family: Family }) {
+  const { token } = useSession();
+  const run = useRun();
+  const setOffered = useMutation(api.superadmin.setOffered);
+  const [confirm, setConfirm] = useState(false);
+  const sub = family.subscription;
+  const end = sub.periodEnd ? shortDate(sub.periodEnd) : null;
+
+  return (
+    <section className="grid gap-2">
+      <h3 className="text-[17px] font-black">Abonnement</h3>
+      <div className="flex flex-wrap items-center gap-2">
+        <SubscriptionBadge family={family} />
+        {sub.status && (
+          <span className="text-[15px] text-muted">
+            Stripe : {sub.status}
+            {end && `, ${sub.status === "trialing" ? "fin de l'essai" : "échéance"} le ${end}`}
+          </span>
+        )}
+      </div>
+      {family.isMine ? (
+        <p className="text-[15px] text-muted">Ta famille est toujours offerte.</p>
+      ) : sub.offered ? (
+        <Button variant="secondary" onClick={() => setConfirm(true)}>
+          Retirer l'offre
+        </Button>
+      ) : (
+        <Button
+          variant="herb"
+          onClick={() =>
+            void run(() => setOffered({ token, familyId: family._id, offered: true }), `${family.name} : app offerte`)
+          }
+        >
+          <Gift size={20} /> Offrir l'app à cette famille
+        </Button>
+      )}
+      <ConfirmSheet
+        open={confirm}
+        onClose={() => setConfirm(false)}
+        title={`Retirer l'offre de ${family.name} ?`}
+        text={
+          sub.status === "trialing" || sub.status === "active"
+            ? "La famille garde son abonnement Stripe : elle continue de payer et d'utiliser l'app normalement."
+            : "Sans abonnement, la famille passe en lecture seule jusqu'à ce qu'elle s'abonne. Ses données sont gardées."
+        }
+        confirmLabel="Retirer l'offre"
+        danger
+        onConfirm={() => run(() => setOffered({ token, familyId: family._id, offered: false }), "Offre retirée")}
+      />
     </section>
   );
 }
