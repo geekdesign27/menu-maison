@@ -7,6 +7,7 @@ import { useBase, useMe } from "../lib/session";
 import { useTourRequests } from "./replay";
 
 const OnboardingHost = lazy(() => import("./OnboardingHost"));
+const FirstSteps = lazy(() => import("./FirstSteps"));
 
 /** Welcome card at the first sign-in, then the tour; mounted once, beside the routes. */
 export function OnboardingGate() {
@@ -20,6 +21,17 @@ export function OnboardingGate() {
     <Suspense fallback={null}>
       {/* A new key on each « Revoir le guide » starts the tour again */}
       <OnboardingHost key={requests} welcome={welcome && requests === 0} />
+    </Suspense>
+  );
+}
+
+/** « Premiers pas » and « Revoir le guide », in Plus. */
+export function FirstStepsEntry() {
+  const base = useBase();
+  if (!base?.settings.onboarding) return null;
+  return (
+    <Suspense fallback={null}>
+      <FirstSteps />
     </Suspense>
   );
 }

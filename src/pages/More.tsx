@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useMe, useSession } from "../lib/session";
 import { Avatar, Card, Page } from "../components/ui";
+import { FirstStepsEntry } from "../onboarding";
 
 const LINKS = [
   {
@@ -58,6 +59,7 @@ export function MorePage() {
           </div>
         </Card>
       )}
+      <FirstStepsEntry />
       <Link to="/gestion" className="mb-3 hidden md:block">
         <Card className="flex items-center gap-4 bg-carrot-soft p-4">
           <span
