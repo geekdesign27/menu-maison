@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { tagText } from "../i18n";
 import { Link, useNavigate } from "react-router-dom";
 import { CalendarPlus } from "lucide-react";
 import { daysBetween, weekStart } from "../../convex/domain/dates";
@@ -49,7 +50,7 @@ export function StatsPage() {
   const recipes = useRecipes();
   const navigate = useNavigate();
   const overview = useOverview();
-  const { t } = useT();
+  const { t, lang } = useT();
 
   const data = useMemo(() => {
     if (!overview || !recipes || !base) return null;
@@ -290,7 +291,7 @@ export function StatsPage() {
             {data.styles.map(([tag, count]) => (
               <div key={tag} className="space-y-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-extrabold">{tag}</span>
+                  <span className="font-extrabold">{tagText(lang, tag)}</span>
                   <span className="text-[15px] font-bold text-muted tabular-nums">
                     {plural(
                       count,

@@ -448,7 +448,7 @@ export const de: { [K in keyof typeof fr]: string } = {
   "shopping.fridge.emptyTitle": "Der Kühlschrank ist leer",
   "shopping.fridge.emptyText": "Keine Reste mehr. Alles aufgegessen, bravo.",
   "shopping.fridge.help":
-    "Wie kommen Reste hierher? Tippe in der Woche auf ein Gericht und wähle «Nicht gegessen» oder «Es hat Reste». Die Haltbarkeit kommt aus dem Rezept.",
+    "Wie kommen Reste hierher? Tippe in der Woche auf ein Gericht und wähle «Nicht gegessen» oder «Reste übrig». Die Haltbarkeit kommt aus dem Rezept.",
   "shopping.fridge.eatToday": "Heute essen",
   "shopping.fridge.expiredSince": "Abgelaufen seit {date}",
   "shopping.fridge.goodUntil": "Gut bis {date}",

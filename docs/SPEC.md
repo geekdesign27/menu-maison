@@ -138,10 +138,12 @@ Serveurs de dev via Portly.
   rien de stocké pour le français). `access.check` renvoie `lang` ; la page passe en `de-CH`.
   Textes dans `src/i18n/fr.ts` (référence) et `src/i18n/de.ts`, que TypeScript oblige à être
   complet ; allemand de Suisse (« ss », jamais « ß »), vérifié par un test. Dates :
-  `formatDayLong`, `formatDayShort`, `formatDateRange` prennent la langue. Lot 1 (socle) :
-  seuls les onglets et la coche sont traduits ; les écrans suivent écran par écran (lot 2),
-  puis les messages du serveur, le catalogue bilingue des ingrédients et rayons, l'IA et la
-  dictée, la page d'accueil avec un sélecteur FR | DE (captures gardées en français).
+  `formatDayLong`, `formatDayShort`, `formatDateRange`, `formatQty` (point décimal et unités
+  allemandes : Stück, EL, TL, Dose…) prennent la langue. Lot 2 (fait) : tous les écrans de
+  l'app, Gestion et le guide, un fichier de textes par zone (`src/i18n/zones/`), les 16
+  styles de recettes fixes (`tagText`). Restent en français : la connexion, l'onglet Super
+  admin, les messages et quantités calculés par le serveur (lot 3), les données du catalogue
+  (lot 4), la page d'accueil (lot 5, sélecteur FR | DE, captures gardées en français).
 - **Guide pour les nouveaux** (depuis le 2026-10-28) : carte de bienvenue, tour en bulles
   (driver.js) et checklist « Premiers pas » dans Plus, pour les comptes activés après sa mise
   en route. Interrupteur des admins dans Gestion, Famille (`settings.onboarding`, activé pour

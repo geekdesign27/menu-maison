@@ -28,3 +28,17 @@ describe("translations", () => {
         expect(text, key).not.toMatch(/[ß–—]/);
   });
 });
+
+describe("recipe styles", () => {
+  it("translates every fixed style, keeps the rest as typed", async () => {
+    const { TAGS } = await import("../../convex/domain/tags");
+    const { tagText } = await import(".");
+    for (const tag of TAGS) expect(tagText("de", tag), tag).not.toBe("");
+    expect(TAGS.filter((tag) => tagText("de", tag) === tag)).toEqual([
+      "Express",
+    ]);
+    expect(tagText("de", "Végé")).toBe("Vegi");
+    expect(tagText("fr", "Végé")).toBe("Végé");
+    expect(tagText("de", "Maison")).toBe("Maison");
+  });
+});

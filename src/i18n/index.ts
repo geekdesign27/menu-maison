@@ -21,3 +21,28 @@ export function translate(
 }
 
 export const DICTIONARIES = MESSAGES;
+
+// The fixed recipe styles (convex/domain/tags.ts) are stored in French; shown translated
+const TAG_DE: Record<string, string> = {
+  "Petit-déj": "Frühstück",
+  Suisse: "Schweiz",
+  Express: "Express",
+  Familial: "Familie",
+  Healthy: "Gesund",
+  Végé: "Vegi",
+  Réconfort: "Soulfood",
+  Mijoté: "Geschmort",
+  Four: "Ofen",
+  Poisson: "Fisch",
+  Italien: "Italienisch",
+  Asiatique: "Asiatisch",
+  Mexicain: "Mexikanisch",
+  Soupe: "Suppe",
+  Été: "Sommer",
+  Hiver: "Winter",
+};
+
+/** A recipe style in `lang`; anything outside the fixed list is shown as typed. */
+export function tagText(lang: Lang, tag: string): string {
+  return lang === "de" ? (TAG_DE[tag] ?? tag) : tag;
+}

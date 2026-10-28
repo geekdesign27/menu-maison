@@ -55,6 +55,8 @@ export function unitName(unit: Unit, qty = 1, lang: Lang = "fr"): string {
 /** Unit label in a list of choices, where the quantity is unknown: « pièce(s) ». */
 export function unitChoiceLabel(unit: Unit, lang: Lang = "fr"): string {
   const { one, many } = UNIT_NAMES[lang][unit];
+  // German plurals are not made with an « s »: the plural form says it best
+  if (lang === "de") return many;
   return one === many ? one : `${one}(s)`;
 }
 

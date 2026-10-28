@@ -1,4 +1,5 @@
 // Live Convex queries and derived helpers shared by several screens.
+import type { Lang } from "../../convex/domain/lang";
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -50,11 +51,16 @@ export function usePricing() {
     return {
       ready: !!base,
       cost,
-      /** « CHF 2.40 », « env. CHF 2.40 » when a price is missing, null when nothing is priced. */
-      text: (recipe: Pick<RecipeRow, "items">, persons: number) => {
+      /** « CHF 2.40 », « env. CHF 2.40 » (« ca. » in German) when a price is missing, null when nothing is priced. */
+      text: (
+        recipe: Pick<RecipeRow, "items">,
+        persons: number,
+        lang: Lang = "fr",
+      ) => {
         const { total, complete } = cost(recipe, persons);
         if (total === 0 && !complete) return null;
-        return `${complete ? "" : "env. "}${formatChf(total)}`;
+        const about = lang === "de" ? "ca. " : "env. ";
+        return `${complete ? "" : about}${formatChf(total)}`;
       },
     };
   }, [base, ingredients, priceFactor, chain]);

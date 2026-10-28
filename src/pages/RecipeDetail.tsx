@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { tagText } from "../i18n";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation } from "convex/react";
 import {
@@ -93,7 +94,7 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
 
   const pricing = usePricing();
   const factor = store?.priceFactor ?? 1;
-  const totalCost = pricing.text(recipe, count);
+  const totalCost = pricing.text(recipe, count, lang);
   const stat = overview?.stats.find((s) => s.recipeId === recipe._id);
   const editPath = `/recette/${recipe._id}/modifier`;
 
@@ -159,8 +160,8 @@ function RecipeView({ recipe, base }: { recipe: RecipeRow; base: Base }) {
         ) : (
           <Badge tone="berry">{t("recipes.eatRightAway")}</Badge>
         )}
-        {recipe.tags.map((t) => (
-          <Badge key={t}>{t}</Badge>
+        {recipe.tags.map((tag) => (
+          <Badge key={tag}>{tagText(lang, tag)}</Badge>
         ))}
       </div>
 

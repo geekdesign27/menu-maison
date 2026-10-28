@@ -9,3 +9,6 @@ playwright-report
 docs/analyse-planivore/
 promo/
 backups/
+
+# Agent worktrees
+.claude/worktrees/

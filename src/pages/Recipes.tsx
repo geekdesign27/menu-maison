@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { tagText } from "../i18n";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Zap } from "lucide-react";
 import { TAGS } from "../../convex/domain/tags";
@@ -33,7 +34,7 @@ export function RecipesPage() {
   const { memberId } = useSession();
   const pricing = usePricing();
   const toggleLike = useToggleLike();
-  const { t } = useT();
+  const { t, lang } = useT();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
@@ -58,7 +59,12 @@ export function RecipesPage() {
         return false;
       if (!q) return true;
       return searchKey(
-        [r.name, r.description ?? "", ...r.tags].join(" "),
+        [
+          r.name,
+          r.description ?? "",
+          ...r.tags,
+          ...r.tags.map((tag) => tagText(lang, tag)),
+        ].join(" "),
       ).includes(q);
     });
   }, [inView, query, filter]);
@@ -135,7 +141,7 @@ export function RecipesPage() {
               selected={filter === tag}
               onClick={() => setFilter(filter === tag ? null : tag)}
             >
-              {tag}
+              {tagText(lang, tag)}
             </Chip>
           ))}
         </div>
@@ -148,7 +154,7 @@ export function RecipesPage() {
               key={r._id}
               recipe={r}
               members={base.members}
-              cost={pricing.text(r, 1)}
+              cost={pricing.text(r, 1, lang)}
               liked={!!memberId && r.likedBy.includes(memberId)}
               onToggleLike={memberId ? () => toggleLike(r._id) : undefined}
             />

@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { tagText } from "../i18n";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation } from "convex/react";
 import {
@@ -491,7 +492,7 @@ export function RecipeForm({
                     )
                   }
                 >
-                  {tag}
+                  {tagText(lang, tag)}
                 </Chip>
               );
             })}

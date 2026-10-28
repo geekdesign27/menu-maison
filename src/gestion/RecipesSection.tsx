@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { tagText } from "../i18n";
 import { useNavigate } from "react-router-dom";
 import { Heart, Link2, Plus } from "lucide-react";
 import { TAGS } from "../../convex/domain/tags";
@@ -78,7 +79,7 @@ export function RecipesSection() {
       render: (r) => (
         <span className="flex flex-wrap gap-1 whitespace-nowrap">
           {r.tags.map((tag) => (
-            <Badge key={tag}>{tag}</Badge>
+            <Badge key={tag}>{tagText(lang, tag)}</Badge>
           ))}
         </span>
       ),
@@ -103,7 +104,7 @@ export function RecipesSection() {
       align: "right",
       sort: portionCost,
       render: (r) =>
-        pricing.text(r, 1) ?? <span className="text-muted">?</span>,
+        pricing.text(r, 1, lang) ?? <span className="text-muted">?</span>,
     },
     {
       key: "fridge",
@@ -217,7 +218,7 @@ export function RecipesSection() {
             <option value="">{t("admin.recipes.tags")}</option>
             {TAGS.map((tag) => (
               <option key={tag} value={tag}>
-                {tag}
+                {tagText(lang, tag)}
               </option>
             ))}
           </Select>

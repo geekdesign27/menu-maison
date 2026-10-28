@@ -67,11 +67,11 @@ export function ProductsSection() {
       render: (p) => (
         <span>
           <span className={p.priced ? undefined : "text-berry"}>
-            {productPriceText(p)}
+            {productPriceText(p, lang)}
           </span>
-          {receiptPricesText(p) && (
+          {receiptPricesText(p, lang) && (
             <span className="block text-[13px] font-semibold text-herb">
-              {receiptPricesText(p)}
+              {receiptPricesText(p, lang)}
             </span>
           )}
         </span>

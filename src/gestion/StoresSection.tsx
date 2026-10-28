@@ -19,7 +19,7 @@ export function StoresSection() {
   const { token } = useSession();
   const run = useRun();
   const navigate = useNavigate();
-  const { t } = useT();
+  const { t, lang } = useT();
   const updateSettings = useMutation(api.catalog.updateSettings);
   const [adding, setAdding] = useState(false);
   if (!base) return <Loading />;
@@ -49,7 +49,7 @@ export function StoresSection() {
       sort: (s) => s.priceFactor,
       render: (s) => (
         <Badge tone={s.priceFactor < 1 ? "herb" : "neutral"}>
-          {priceLevelText(s.priceFactor)}
+          {priceLevelText(s.priceFactor, lang)}
         </Badge>
       ),
     },

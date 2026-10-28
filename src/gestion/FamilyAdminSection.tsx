@@ -215,7 +215,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
                 !chosen &&
                 void run(
                   () => updateSettings({ token, theme: th.id }),
-                  t("admin.look.theme", { name: th.label }),
+                  t("admin.look.theme", { name: t(th.labelKey) }),
                 )
               }
               className={cx(
@@ -228,7 +228,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
             >
               <span className="flex items-center justify-between">
                 <span className="text-lg font-black text-[#2b2420]">
-                  {th.label}
+                  {t(th.labelKey)}
                 </span>
                 {chosen && (
                   <span
@@ -258,7 +258,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
                 />
               </span>
               <span className="text-[15px] text-[#6b6058]">
-                {th.description}
+                {t(th.descriptionKey)}
               </span>
             </button>
           );
@@ -303,7 +303,9 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
                 className="text-[15px]"
                 style={{ fontFamily: `"${f.family}", sans-serif` }}
               >
-                {t("admin.look.sampleText", { description: f.description })}
+                {t("admin.look.sampleText", {
+                  description: t(f.descriptionKey),
+                })}
               </span>
             </button>
           );
