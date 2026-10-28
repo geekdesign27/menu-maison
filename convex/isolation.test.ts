@@ -299,6 +299,20 @@ describe("writes on another family's ids are refused", () => {
           id: s.a.memberId,
         }),
     ],
+    // A family admin is not the super-admin: the whole space is refused
+    ["superadmin.families", () => s.t.query(api.superadmin.families, { token: s.b.token })],
+    [
+      "superadmin.createOne",
+      () => s.t.mutation(api.superadmin.createOne, { token: s.b.token, name: "Pirates", admin: "Jack" }),
+    ],
+    [
+      "superadmin.adminLink",
+      () => s.t.mutation(api.superadmin.adminLink, { token: s.b.token, memberId: s.a.memberId }),
+    ],
+    [
+      "superadmin.setSuspended",
+      () => s.t.mutation(api.superadmin.setSuspended, { token: s.b.token, familyId: s.a.familyId, suspended: true }),
+    ],
     [
       "catalog.setMemberPhoto",
       () =>

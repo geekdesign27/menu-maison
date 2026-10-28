@@ -78,6 +78,11 @@ export async function createInvite(ctx: MutationCtx, member: Doc<"members">, day
   return token;
 }
 
+/** Link for a member: 48 hours to reset a password, 14 days for a first sign-in. */
+export function accessLink(ctx: MutationCtx, member: Doc<"members">) {
+  return createInvite(ctx, member, member.passwordHash ? RESET_DAYS : INVITE_DAYS);
+}
+
 /** Family shown on the sign-in screen of its link (or of its name typed by hand), or null. */
 export const family = query({
   args: { slug: v.string() },
@@ -337,7 +342,7 @@ export const resetLink = mutation({
       throw new ConvexError("Pour ton propre accès, demande à un autre admin de la famille.");
     assertCanManage(me.member, member);
     if (!member.username) throw new ConvexError("Choisis d'abord un pseudo pour ce profil.");
-    return createInvite(ctx, member, member.passwordHash ? RESET_DAYS : INVITE_DAYS);
+    return accessLink(ctx, member);
   },
 });
 

@@ -6,9 +6,10 @@ import {
   Layers,
   ShoppingBasket,
   Store,
+  Users,
 } from "lucide-react";
 import { GestionContext } from "../lib/paths";
-import { useMe } from "../lib/session";
+import { useMe, useSession } from "../lib/session";
 import { Avatar, cx } from "../components/ui";
 
 const SECTIONS = [
@@ -21,6 +22,11 @@ const SECTIONS = [
 /** Desktop management area: side menu on the left, wide content on the right. */
 export function GestionLayout() {
   const me = useMe();
+  const { account } = useSession();
+  // The families of the whole app: PA's super-admin space
+  const sections = account?.superadmin
+    ? [...SECTIONS, { to: "/gestion/familles", label: "Familles", icon: Users }]
+    : SECTIONS;
   return (
     <GestionContext.Provider value>
       <div className="flex min-h-dvh flex-col md:flex-row">
@@ -45,7 +51,7 @@ export function GestionLayout() {
             aria-label="Gestion"
             className="flex gap-1 overflow-x-auto md:flex-col"
           >
-            {SECTIONS.map(({ to, label, icon: Icon }) => (
+            {sections.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}

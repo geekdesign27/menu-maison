@@ -117,9 +117,15 @@ Serveurs de dev via Portly.
   `invites`) pour choisir son mot de passe ; il remplace l'ancien lien et déconnecte les
   autres appareils du membre. Pas pour soi-même : un autre admin le fait.
 - Famille suspendue (`families.suspended`) : plus de connexion ni de session valide.
-- Création d'une famille (en attendant l'écran super-admin) :
-  `npx convex run families:create '{"name":"Dupont","admin":"Marc"}'` renvoie le pseudo de
-  l'admin (tiré du prénom, ou `username`) et son jeton d'invitation.
+- **Espace super-admin** (PA, `members.superadmin`, posé seulement en base) : onglet
+  « Familles » de `/gestion` (`convex/superadmin.ts`). Liste de toutes les familles avec des
+  chiffres seulement (comptes activés, recettes, dernière connexion, statut), jamais leur
+  contenu. Créer une famille (catalogue de départ copié, admin avec son pseudo et son lien
+  d'activation), nouveau lien pour l'admin d'une autre famille, suspendre ou réactiver une
+  autre famille (appareils déconnectés et liens annulés, données gardées). Chaque fonction vérifie le super-admin côté serveur ; ce
+  sont les seules fonctions qui lisent plusieurs familles.
+- En ligne de commande, même création :
+  `npx convex run families:create '{"name":"Dupont","admin":"Marc"}'`.
 - Urgences : `access:revokeAll` (déconnecte tout le monde), `access:resetGuards`.
   Sessions et invitations expirées purgées chaque nuit (`crons.ts`).
 - Police Nunito hébergée dans l'app (pas d'appel à Google). CSP stricte dans le build de production.

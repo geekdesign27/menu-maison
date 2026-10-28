@@ -33,6 +33,7 @@ import { RecipesSection } from "./gestion/RecipesSection";
 import { ProductsSection } from "./gestion/ProductsSection";
 import { AislesSection } from "./gestion/AislesSection";
 import { StoresSection } from "./gestion/StoresSection";
+import { FamiliesSection } from "./gestion/FamiliesSection";
 
 function App() {
   if (!convexConfigured) {
@@ -63,6 +64,7 @@ function App() {
                       <Route path="rayons" element={<AislesSection />} />
                       <Route path="magasins" element={<StoresSection />} />
                       <Route path="magasin/:id" element={<StoreEditorPage />} />
+                      <Route path="familles" element={<FamiliesSection />} />
                       <Route path="*" element={<Navigate to="recettes" replace />} />
                     </Route>
                     <Route element={<Layout />}>
