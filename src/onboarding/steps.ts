@@ -32,7 +32,7 @@ const MEMBER_STEPS: TourStep[] = [
     open: '[data-tour="slot-meals"] > button:not([data-tour])',
     target: '[data-tour="meal-status"]',
     title: "La fiche du plat",
-    text: "Après le repas : Mangé, Pas mangé, Il en reste ou Pas cuisiné.",
+    text: "Après le repas : Mangé, Pas mangé, Il en reste ou Pas cuisiné.",
   },
   {
     route: "/courses",
@@ -50,7 +50,7 @@ const MEMBER_STEPS: TourStep[] = [
     route: "/recettes",
     target: '[data-tour="recipes"]',
     title: "Les recettes",
-    text: "Dans Découvrir, like ce que tu aimes : ça aide à choisir les plats de la semaine.",
+    text: "Dans Découvrir, like ce que tu aimes : ça aide à choisir les plats de la semaine.",
   },
 ];
 
@@ -59,7 +59,7 @@ const ADMIN_STEPS: TourStep[] = [
     route: "/reglages",
     target: '[data-tour="profiles"]',
     title: "Profils et liens",
-    text: "Ajoute les profils de la famille. Dans la fiche de chacun, section Accès : son pseudo, son rôle et son lien d'activation.",
+    text: "Ajoute les profils de la famille. Dans la fiche de chacun, section Accès : son pseudo, son rôle et son lien d'activation.",
   },
   {
     route: "/reglages",
@@ -81,7 +81,7 @@ function appearanceStep(wide: boolean): TourStep {
     : {
         route: "/plus",
         title: "Apparence",
-        text: "Sur ordinateur, onglet Gestion, Famille : trois thèmes et quatre polices, pour toute la famille.",
+        text: "Sur ordinateur, onglet Gestion, Famille : trois thèmes et quatre polices, pour toute la famille.",
       };
 }
 

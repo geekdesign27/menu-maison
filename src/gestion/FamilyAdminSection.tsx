@@ -139,7 +139,7 @@ function GuideSection({ enabled }: { enabled: boolean }) {
         <h2 className="text-xl font-black">Guide pour les nouveaux</h2>
         <p className="text-[15px] text-muted">
           À sa première connexion, un nouveau membre voit une carte de bienvenue, un tour de
-          l'app en 1 minute et, dans Plus, ses « Premiers pas ». Les comptes déjà
+          l'app en 1 minute et, dans Plus, ses « Premiers pas ». Les comptes déjà
           activés ne le voient pas, chacun peut le relancer dans Plus.
         </p>
       </div>
@@ -153,7 +153,7 @@ function GuideSection({ enabled }: { enabled: boolean }) {
             )
           }
           label="Guide pour les nouveaux"
-          hint={enabled ? "Activé" : "Coupé : l'app reste comme avant pour tout le monde"}
+          hint={enabled ? "Activé" : "Coupé : l'app reste comme avant pour tout le monde"}
         />
       </div>
     </section>

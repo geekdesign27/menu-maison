@@ -65,14 +65,14 @@ export default function OnboardingHost({ welcome }: { welcome: boolean }) {
           👋
         </div>
         <p className="text-lg font-black">
-          {me ? `Salut ${me.name} !` : "Salut !"}
+          {me ? `Salut ${me.name} !` : "Salut !"}
         </p>
         <p className="mt-1 text-muted">
-          1 minute pour faire le tour ? On te montre où poser un plat, où sont
+          1 minute pour faire le tour ? On te montre où poser un plat, où sont
           les courses, le frigo et les recettes.
         </p>
         <p className="mt-3 text-[15px] text-muted">
-          Tu pourras le revoir quand tu veux : Plus, « Revoir le guide ».
+          Tu pourras le revoir quand tu veux : Plus, « Revoir le guide ».
         </p>
       </div>
     </Sheet>

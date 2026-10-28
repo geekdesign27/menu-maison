@@ -19,7 +19,7 @@ const STEP_TEXT: Record<
 > = {
   homeScreen: {
     label: "Ajouter l'app à l'écran d'accueil",
-    hint: "Dans le navigateur : Partager, puis « Sur l'écran d'accueil ».",
+    hint: "Dans le navigateur : Partager, puis « Sur l'écran d'accueil ».",
   },
   photo: {
     label: "Mettre ta photo",
@@ -48,7 +48,7 @@ const STEP_TEXT: Record<
   },
   status: {
     label: "Dire comment s'est passé un plat",
-    hint: "Toucher un plat : Mangé, Pas mangé, Il en reste…",
+    hint: "Toucher un plat : Mangé, Pas mangé, Il en reste…",
     to: "/",
   },
 };
@@ -109,7 +109,7 @@ export default function FirstSteps() {
                         step.done && "text-muted line-through",
                       )}
                     >
-                      <span className="sr-only">{step.done ? "Fait : " : "À faire : "}</span>
+                      <span className="sr-only">{step.done ? "Fait : " : "À faire : "}</span>
                       {text.label}
                       {progress}
                     </span>
@@ -150,7 +150,7 @@ export default function FirstSteps() {
         <span className="min-w-0 flex-1">
           <span className="block text-lg font-black">Revoir le guide</span>
           <span className="block text-[15px] text-muted">
-            Le tour de l'app en 1 minute
+            Le tour de l'app en 1 minute
           </span>
         </span>
         <ChevronRight className="text-muted" />
