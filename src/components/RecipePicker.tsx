@@ -149,7 +149,7 @@ function PickerBody({
 
   return (
     <div className="space-y-3">
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1" data-tour="picker-filters">
         {filters.map((f) => (
           <Chip
             key={f.value}

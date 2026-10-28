@@ -137,7 +137,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
   }, []);
 
   return (
-    <section className="grid gap-4">
+    <section className="grid gap-4" data-tour="look">
       <div>
         <h2 className="text-xl font-black">Apparence</h2>
         <p className="text-[15px] text-muted">

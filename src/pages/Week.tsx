@@ -298,13 +298,14 @@ function DayCard({
                 {SLOT_LABEL[slot]}
               </span>
             </div>
-            <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="min-w-0 flex-1 space-y-1.5" data-tour="slot-meals">
               {list.map((m) => (
                 <MealPill key={m._id} meal={m} onClick={() => onOpen(m._id)} />
               ))}
               {list.length === 0 && (
                 <button
                   type="button"
+                  data-tour="add-meal"
                   onClick={() => onAdd(slot)}
                   className="flex min-h-14 w-full items-center gap-2 rounded-2xl border-2 border-dashed border-line px-3 font-bold text-muted transition active:bg-carrot-soft"
                 >
@@ -316,6 +317,7 @@ function DayCard({
             {list.length > 0 && (
               <IconButton
                 label={`Ajouter un plat (${SLOT_LABEL[slot].toLowerCase()})`}
+                data-tour="add-meal"
                 onClick={() => onAdd(slot)}
                 className="self-center bg-carrot-soft text-carrot-dark"
               >

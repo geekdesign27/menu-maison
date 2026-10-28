@@ -36,6 +36,7 @@ import { AislesSection } from "./gestion/AislesSection";
 import { StoresSection } from "./gestion/StoresSection";
 import { FamiliesSection } from "./gestion/FamiliesSection";
 import { FamilyAdminSection } from "./gestion/FamilyAdminSection";
+import { OnboardingGate } from "./onboarding";
 
 // The family colours and font, before the first paint
 applyRememberedLook();
@@ -58,6 +59,7 @@ function App() {
             <Gate>
               <WeekProvider>
                 <HashRouter>
+                  <OnboardingGate />
                   <Routes>
                     <Route path="/gestion" element={<GestionLayout />}>
                       <Route

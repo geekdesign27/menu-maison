@@ -70,7 +70,7 @@ function SettingsContent({ base }: { base: Base }) {
 
       <SectionTitle>Profils</SectionTitle>
       <Card className="overflow-hidden">
-        <ul className="divide-y divide-line">
+        <ul className="divide-y divide-line" data-tour="profiles">
           {base.members.map((m) => (
             <li key={m._id}>
               <Row
@@ -91,7 +91,7 @@ function SettingsContent({ base }: { base: Base }) {
 
       <SectionTitle>Jour des courses</SectionTitle>
       <Card className="p-4">
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-1.5" data-tour="shopping-day">
           {DAYS.map((d) => (
             <button
               key={d.value}

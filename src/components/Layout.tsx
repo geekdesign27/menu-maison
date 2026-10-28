@@ -36,6 +36,7 @@ export function Layout() {
               <NavLink
                 to={to}
                 end={end}
+                data-tour={`tab-${label.toLowerCase()}`}
                 className={({ isActive }) =>
                   cx(
                     "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[12px] font-extrabold transition",
