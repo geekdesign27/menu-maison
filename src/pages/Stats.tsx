@@ -18,6 +18,7 @@ import {
 } from "../components/ui";
 import { RecipeEmoji } from "../components/RecipeCard";
 import { isLoved, useOverview, useRecipes } from "../lib/queries";
+import { useT } from "../i18n/useT";
 
 const TOP_SIZE = 8;
 const FORGOTTEN_SIZE = 6;
@@ -48,6 +49,7 @@ export function StatsPage() {
   const recipes = useRecipes();
   const navigate = useNavigate();
   const overview = useOverview();
+  const { t } = useT();
 
   const data = useMemo(() => {
     if (!overview || !recipes || !base) return null;
@@ -116,21 +118,23 @@ export function StatsPage() {
 
   if (!data) {
     return (
-      <Page title="Statistiques" back={back}>
-        <Loading label="Calcul des statistiques" />
+      <Page title={t("common.stats.title")} back={back}>
+        <Loading label={t("common.stats.computing")} />
       </Page>
     );
   }
 
   if (!data.hasHistory) {
     return (
-      <Page title="Statistiques" back={back}>
+      <Page title={t("common.stats.title")} back={back}>
         <EmptyState
           emoji="📊"
-          title="Pas encore de statistiques"
-          text="Elles se remplissent au fil des repas. Planifie la semaine et marque les plats comme mangés, on te dira ce que vous mangez souvent et ce qui manque au menu."
+          title={t("common.stats.emptyTitle")}
+          text={t("common.stats.emptyText")}
           action={
-            <Button onClick={() => navigate("/")}>Planifier la semaine</Button>
+            <Button onClick={() => navigate("/")}>
+              {t("common.stats.planWeek")}
+            </Button>
           }
         />
       </Page>
@@ -139,17 +143,22 @@ export function StatsPage() {
 
   const topMax = data.top[0]?.count ?? 1;
   const styleMax = data.styles[0]?.[1] ?? 1;
+  const cooked = (n: number) =>
+    t(n > 1 ? "common.stats.cookedMany" : "common.stats.cookedOne");
 
   return (
-    <Page title="Statistiques" subtitle="Pour varier les menus" back={back}>
+    <Page
+      title={t("common.stats.title")}
+      subtitle={t("common.stats.subtitle")}
+      back={back}
+    >
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-carrot-soft p-4">
           <div className="text-4xl font-black text-carrot-dark tabular-nums">
             {data.thisWeek}
           </div>
           <div className="text-[15px] font-extrabold">
-            {data.thisWeek > 1 ? "plats cuisinés" : "plat cuisiné"} cette
-            semaine
+            {t("common.stats.thisWeek", { dishes: cooked(data.thisWeek) })}
           </div>
         </Card>
         <Card className="bg-herb-soft p-4">
@@ -157,15 +166,14 @@ export function StatsPage() {
             {data.fourWeeks}
           </div>
           <div className="text-[15px] font-extrabold">
-            {data.fourWeeks > 1 ? "plats cuisinés" : "plat cuisiné"} en 4
-            semaines
+            {t("common.stats.fourWeeks", { dishes: cooked(data.fourWeeks) })}
           </div>
         </Card>
       </div>
 
       {data.tooOften.length > 0 && (
         <>
-          <SectionTitle>Plats trop fréquents</SectionTitle>
+          <SectionTitle>{t("common.stats.tooOften")}</SectionTitle>
           <Card className="bg-berry-soft p-4">
             <ul className="space-y-3">
               {data.tooOften.map(({ recipe, count }) => (
@@ -178,15 +186,14 @@ export function StatsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-black">{recipe.name}</div>
                     <div className="text-[15px] font-bold text-berry">
-                      {count} fois en 4 semaines
+                      {t("common.stats.timesIn4Weeks", { count })}
                     </div>
                   </div>
                 </li>
               ))}
             </ul>
             <p className="mt-3 text-[15px] font-bold">
-              Et si on variait un peu{NBSP}? Jette un œil à « Ça fait
-              longtemps » juste en dessous.
+              {t("common.stats.tooOftenHint")}
             </p>
           </Card>
         </>
@@ -194,7 +201,7 @@ export function StatsPage() {
 
       {data.top.length > 0 && (
         <>
-          <SectionTitle>Top des 12 dernières semaines</SectionTitle>
+          <SectionTitle>{t("common.stats.top")}</SectionTitle>
           <Card className="p-4">
             <ol className="space-y-3">
               {data.top.map(({ recipe, count }) => (
@@ -230,7 +237,7 @@ export function StatsPage() {
 
       {data.forgotten.length > 0 && (
         <>
-          <SectionTitle>Ça fait longtemps</SectionTitle>
+          <SectionTitle>{t("common.stats.forgotten")}</SectionTitle>
           <Card className="divide-y divide-line">
             {data.forgotten.map(({ recipe, days }) => (
               <div key={recipe._id} className="flex items-center gap-3 p-3">
@@ -247,8 +254,14 @@ export function StatsPage() {
                     <div className="truncate font-extrabold">{recipe.name}</div>
                     <div className="text-[15px] text-muted">
                       {days === null
-                        ? "Pas au menu depuis plus de 6 mois"
-                        : `Il y a ${plural(days, "jour", "jours")}`}
+                        ? t("common.stats.notFor6Months")
+                        : t("common.stats.ago", {
+                            days: plural(
+                              days,
+                              t("common.stats.dayOne"),
+                              t("common.stats.dayMany"),
+                            ),
+                          })}
                     </div>
                   </div>
                 </Link>
@@ -256,11 +269,13 @@ export function StatsPage() {
                   size="sm"
                   variant="secondary"
                   onClick={() => navigate(`/?plan=${recipe._id}`)}
-                  aria-label={`Planifier ${recipe.name}`}
+                  aria-label={t("common.stats.planRecipe", {
+                    name: recipe.name,
+                  })}
                   className="min-h-11"
                 >
                   <CalendarPlus size={18} />
-                  Planifier
+                  {t("common.stats.plan")}
                 </Button>
               </div>
             ))}
@@ -270,14 +285,18 @@ export function StatsPage() {
 
       {data.styles.length > 0 && (
         <>
-          <SectionTitle>Répartition par style</SectionTitle>
+          <SectionTitle>{t("common.stats.styles")}</SectionTitle>
           <Card className="space-y-3 p-4">
             {data.styles.map(([tag, count]) => (
               <div key={tag} className="space-y-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-extrabold">{tag}</span>
                   <span className="text-[15px] font-bold text-muted tabular-nums">
-                    {plural(count, "plat", "plats")}
+                    {plural(
+                      count,
+                      t("common.stats.dishOne"),
+                      t("common.stats.dishMany"),
+                    )}
                   </span>
                 </div>
                 <Bar value={count} max={styleMax} tone="bg-herb" />
@@ -285,7 +304,7 @@ export function StatsPage() {
             ))}
           </Card>
           <p className="mt-2 px-1 text-[15px] text-muted">
-            Sur 12 semaines. Un plat peut compter dans plusieurs styles.
+            {t("common.stats.stylesNote")}
           </p>
         </>
       )}

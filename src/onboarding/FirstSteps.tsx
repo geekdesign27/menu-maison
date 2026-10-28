@@ -12,45 +12,48 @@ import {
   type FirstStepId,
 } from "../../convex/domain/onboarding";
 import { useBase, useMe, useSession } from "../lib/session";
+import { NBSP } from "../../convex/domain/quantities";
 import { Card, cx } from "../components/ui";
 import { requestTour } from "./replay";
+import { useT } from "../i18n/useT";
+import type { MessageKey } from "../i18n";
 
 const STEP_TEXT: Record<
   FirstStepId,
-  { label: string; hint: string; to?: string }
+  { label: MessageKey; hint: MessageKey; to?: string }
 > = {
   homeScreen: {
-    label: "Ajouter l'app à l'écran d'accueil",
-    hint: "Dans le navigateur : Partager, puis « Sur l'écran d'accueil ».",
+    label: "common.steps.homeScreen",
+    hint: "common.steps.homeScreenHint",
   },
   photo: {
-    label: "Mettre ta photo",
-    hint: "Réglages, puis ton profil.",
+    label: "common.steps.photo",
+    hint: "common.steps.photoHint",
     to: "/reglages",
   },
   likes: {
-    label: "Mettre un cœur à 5 recettes",
-    hint: "Recettes, Découvrir.",
+    label: "common.steps.likes",
+    hint: "common.steps.likesHint",
     to: "/recettes",
   },
   wish: {
-    label: "Noter une envie",
-    hint: "Un plat qui te ferait plaisir.",
+    label: "common.steps.wish",
+    hint: "common.steps.wishHint",
     to: "/envies",
   },
   meal: {
-    label: "Ajouter un plat dans la semaine",
-    hint: "Semaine, « + Ajouter ».",
+    label: "common.steps.meal",
+    hint: "common.steps.mealHint",
     to: "/",
   },
   check: {
-    label: "Cocher un article des courses",
-    hint: "Courses, pendant les achats.",
+    label: "common.steps.check",
+    hint: "common.steps.checkHint",
     to: "/courses",
   },
   status: {
-    label: "Dire comment s'est passé un plat",
-    hint: "Toucher un plat : Mangé, Pas mangé, Il en reste…",
+    label: "common.steps.status",
+    hint: "common.steps.statusHint",
     to: "/",
   },
 };
@@ -68,17 +71,22 @@ export default function FirstSteps() {
   const { token } = useSession();
   const base = useBase();
   const me = useMe();
+  const { t } = useT();
   const finish = useMutation(api.onboarding.finish);
   // Habitués never see the checklist: no need to count their actions
   const habitual = me?.onboardingDoneAt === ONBOARDING_HABITUAL;
-  const facts = useQuery(api.onboarding.facts, token && me && !habitual ? { token } : "skip");
+  const facts = useQuery(
+    api.onboarding.facts,
+    token && me && !habitual ? { token } : "skip",
+  );
   const steps = facts ? firstSteps(facts, homeScreenState()) : [];
   const complete = steps.length > 0 && steps.every((s) => s.done);
 
   // Complete once is complete for good: undoing an action later does not bring it back.
   // A failed save is retried at the next visit; the card is hidden meanwhile.
   useEffect(() => {
-    if (complete && token) void finish({ token, checklistDone: true }).catch(() => undefined);
+    if (complete && token)
+      void finish({ token, checklistDone: true }).catch(() => undefined);
   }, [complete, token, finish]);
 
   if (!base || !me) return null;
@@ -92,9 +100,12 @@ export default function FirstSteps() {
       {visible && (
         <Card className="p-4">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-lg font-black">Premiers pas</h2>
+            <h2 className="text-lg font-black">{t("common.steps.title")}</h2>
             <span className="text-[15px] font-bold text-muted">
-              {doneCount} sur {steps.length}
+              {t("common.steps.count", {
+                done: doneCount,
+                total: steps.length,
+              })}
             </span>
           </div>
           <ul className="mt-2 divide-y divide-line">
@@ -102,7 +113,7 @@ export default function FirstSteps() {
               const text = STEP_TEXT[step.id];
               const progress =
                 step.progress && !step.done && step.progress.count > 0
-                  ? ` (${step.progress.count} sur ${step.progress.goal})`
+                  ? `${NBSP}${t("common.steps.progress", step.progress)}`
                   : "";
               const content = (
                 <>
@@ -122,13 +133,17 @@ export default function FirstSteps() {
                         step.done && "text-muted line-through",
                       )}
                     >
-                      <span className="sr-only">{step.done ? "Fait : " : "À faire : "}</span>
-                      {text.label}
+                      <span className="sr-only">
+                        {t(
+                          step.done ? "common.steps.done" : "common.steps.todo",
+                        )}{" "}
+                      </span>
+                      {t(text.label)}
                       {progress}
                     </span>
                     {!step.done && (
                       <span className="block text-[15px] text-muted">
-                        {text.hint}
+                        {t(text.hint)}
                       </span>
                     )}
                   </span>
@@ -161,9 +176,11 @@ export default function FirstSteps() {
           🧭
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-lg font-black">Revoir le guide</span>
+          <span className="block text-lg font-black">
+            {t("common.steps.replay")}
+          </span>
           <span className="block text-[15px] text-muted">
-            Le tour de l'app en 1 minute
+            {t("common.steps.replayText")}
           </span>
         </span>
         <ChevronRight className="text-muted" />

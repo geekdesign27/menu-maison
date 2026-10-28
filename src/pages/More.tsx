@@ -3,58 +3,71 @@ import { ChevronRight } from "lucide-react";
 import { useMe, useSession } from "../lib/session";
 import { Avatar, Card, Page } from "../components/ui";
 import { FirstStepsEntry } from "../onboarding";
+import { useT } from "../i18n/useT";
+import type { MessageKey } from "../i18n";
 
-const LINKS = [
+const LINKS: {
+  to: string;
+  emoji: string;
+  title: MessageKey;
+  text: MessageKey;
+}[] = [
   {
     to: "/envies",
     emoji: "💭",
-    title: "Envies",
-    text: "Ce qu'on a envie de manger bientôt",
+    title: "common.more.wishes",
+    text: "common.more.wishesText",
   },
   {
     to: "/menus-types",
     emoji: "🗂️",
-    title: "Menus types",
-    text: "Nos semaines habituelles, en un tap",
+    title: "common.more.templates",
+    text: "common.more.templatesText",
   },
   {
     to: "/stats",
     emoji: "📊",
-    title: "Statistiques",
-    text: "Ce qu'on mange, et à quelle fréquence",
+    title: "common.stats.title",
+    text: "common.more.statsText",
   },
   {
     to: "/produits",
     emoji: "🧺",
-    title: "Produits",
-    text: "Ingrédients et articles hors recette : prix, rayon, photo",
+    title: "common.settings.products",
+    text: "common.more.productsText",
   },
   {
     to: "/magasins",
     emoji: "🏪",
-    title: "Magasins",
-    text: "L'ordre des rayons de chaque magasin",
+    title: "common.more.stores",
+    text: "common.more.storesText",
   },
   {
     to: "/reglages",
     emoji: "⚙️",
-    title: "Réglages",
-    text: "Profils, jour des courses, rayons",
+    title: "common.settings.title",
+    text: "common.more.settingsText",
   },
 ];
 
 export function MorePage() {
   const me = useMe();
   const { account } = useSession();
+  const { t } = useT();
   return (
-    <Page title="Plus">
+    <Page title={t("nav.more")}>
       {me && (
         <Card className="mb-4 flex items-center gap-3 p-4">
           <Avatar member={me} size={48} />
           <div className="min-w-0 flex-1">
             <div className="text-lg font-black">{me.name}</div>
             <div className="text-[15px] text-muted">
-              {account ? `${account.family.name}, pseudo ${account.username ?? ""}` : ""}
+              {account
+                ? t("common.more.account", {
+                    family: account.family.name,
+                    username: account.username ?? "",
+                  })
+                : ""}
             </div>
           </div>
         </Card>
@@ -69,9 +82,9 @@ export function MorePage() {
             🖥️
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-black">Gestion sur ordinateur</div>
+            <div className="text-lg font-black">{t("common.more.gestion")}</div>
             <div className="text-[15px] text-muted">
-              Tableaux des recettes, produits, rayons et magasins
+              {t("common.more.gestionText")}
             </div>
           </div>
           <ChevronRight className="text-muted" />
@@ -88,8 +101,8 @@ export function MorePage() {
                 {l.emoji}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-lg font-black">{l.title}</div>
-                <div className="text-[15px] text-muted">{l.text}</div>
+                <div className="text-lg font-black">{t(l.title)}</div>
+                <div className="text-[15px] text-muted">{t(l.text)}</div>
               </div>
               <ChevronRight className="text-muted" />
             </Card>

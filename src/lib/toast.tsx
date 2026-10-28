@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { errorMessage } from "./format";
+import { useT } from "../i18n/useT";
 
 type Kind = "ok" | "error";
 interface Toast {
@@ -63,6 +64,7 @@ export function useToast() {
  */
 export function useRun() {
   const toast = useToast();
+  const { lang } = useT();
   return useCallback(
     async <T,>(
       fn: () => Promise<T>,
@@ -73,10 +75,10 @@ export function useRun() {
         if (success) toast(success);
         return result;
       } catch (e) {
-        toast(errorMessage(e), "error");
+        toast(errorMessage(e, lang), "error");
         return undefined;
       }
     },
-    [toast],
+    [toast, lang],
   );
 }

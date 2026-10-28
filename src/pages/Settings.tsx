@@ -4,7 +4,8 @@ import { useMutation } from "convex/react";
 import { ChevronRight, LogOut, Plus, Share2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { DAY_NAMES } from "../../convex/domain/dates";
+import type { Lang } from "../../convex/domain/lang";
+import { dayName } from "../../convex/domain/dates";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun, useToast } from "../lib/toast";
 import { errorMessage } from "../lib/format";
@@ -22,19 +23,21 @@ import {
   TextInput,
 } from "../components/ui";
 import { ChainMark } from "../components/shopping/chains";
+import { useT } from "../i18n/useT";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { MemberSheet } from "../components/shopping/MemberSheet";
 import { AisleSheet } from "../components/shopping/AisleSheet";
 
 // Monday first, as on a Swiss calendar; values follow Date.getDay()
-const DAYS = [1, 2, 3, 4, 5, 6, 0].map((value) => {
-  const long = DAY_NAMES[value];
-  return {
-    value,
-    long,
-    short: long.charAt(0).toUpperCase() + long.slice(1, 3),
-  };
-});
+const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
+
+/** « Lun », « Mar »… in French; « Mo », « Di »… in German. */
+function dayButtonLabel(weekday: number, lang: Lang) {
+  const long = dayName(weekday, lang);
+  return lang === "de"
+    ? long.slice(0, 2)
+    : long.charAt(0).toUpperCase() + long.slice(1, 3);
+}
 
 type Editing =
   | { kind: "member"; id?: Id<"members"> }
@@ -43,8 +46,12 @@ type Editing =
 
 export function SettingsPage() {
   const base = useBase();
+  const { t } = useT();
   return (
-    <Page title="Réglages" back={<BackButton fallback="/plus" />}>
+    <Page
+      title={t("common.settings.title")}
+      back={<BackButton fallback="/plus" />}
+    >
       {base ? <SettingsContent base={base} /> : <Loading />}
     </Page>
   );
@@ -52,6 +59,7 @@ export function SettingsPage() {
 
 function SettingsContent({ base }: { base: Base }) {
   const { token, setToken } = useSession();
+  const { t, lang } = useT();
   const run = useRun();
   const updateSettings = useMutation(api.catalog.updateSettings);
   const logout = useMutation(api.access.logout);
@@ -60,15 +68,16 @@ function SettingsContent({ base }: { base: Base }) {
   const [newShoppingDay, setNewShoppingDay] = useState<number | null>(null);
 
   const { settings } = base;
-  const shoppingDayName = DAY_NAMES[settings.shoppingDay] ?? "samedi";
+  const shoppingDayName =
+    dayName(settings.shoppingDay, lang) ?? dayName(6, lang);
   const close = () => setEditing(null);
 
   return (
     <>
-      <SectionTitle>Famille</SectionTitle>
+      <SectionTitle>{t("common.settings.family")}</SectionTitle>
       <FamilyNameCard />
 
-      <SectionTitle>Profils</SectionTitle>
+      <SectionTitle>{t("common.settings.profiles")}</SectionTitle>
       <Card className="overflow-hidden">
         <ul className="divide-y divide-line" data-tour="profiles">
           {base.members.map((m) => (
@@ -82,48 +91,47 @@ function SettingsContent({ base }: { base: Base }) {
           ))}
           <li>
             <AddRow
-              label="Ajouter un profil"
+              label={t("common.settings.addProfile")}
               onClick={() => setEditing({ kind: "member" })}
             />
           </li>
         </ul>
       </Card>
 
-      <SectionTitle>Jour des courses</SectionTitle>
+      <SectionTitle>{t("common.settings.shoppingDay")}</SectionTitle>
       <Card className="p-4">
         <div className="grid grid-cols-7 gap-1.5" data-tour="shopping-day">
-          {DAYS.map((d) => (
+          {WEEKDAYS.map((day) => (
             <button
-              key={d.value}
+              key={day}
               type="button"
-              aria-pressed={settings.shoppingDay === d.value}
-              aria-label={d.long}
+              aria-pressed={settings.shoppingDay === day}
+              aria-label={dayName(day, lang)}
               onClick={() =>
-                settings.shoppingDay !== d.value && setNewShoppingDay(d.value)
+                settings.shoppingDay !== day && setNewShoppingDay(day)
               }
               className={
-                settings.shoppingDay === d.value
+                settings.shoppingDay === day
                   ? "min-h-12 rounded-2xl bg-carrot text-[15px] font-black text-white shadow-sm"
                   : "min-h-12 rounded-2xl bg-cream text-[15px] font-extrabold text-ink ring-1 ring-line active:bg-carrot-soft"
               }
             >
-              {d.short}
+              {dayButtonLabel(day, lang)}
             </button>
           ))}
         </div>
         <p className="mt-3 text-[15px] text-muted">
-          La semaine du planning commence le {shoppingDayName} : la liste de
-          courses couvre les sept jours qui suivent.
+          {t("common.settings.shoppingDayHelp", { day: shoppingDayName })}
         </p>
       </Card>
 
-      <SectionTitle>Portions par défaut</SectionTitle>
+      <SectionTitle>{t("common.settings.defaultPortions")}</SectionTitle>
       <Card className="flex items-center gap-3 p-4">
         <p className="min-w-0 flex-1 text-[15px] text-muted">
-          Proposé à chaque nouveau repas planifié.
+          {t("common.settings.defaultPortionsHelp")}
         </p>
         <Stepper
-          label="Portions par défaut"
+          label={t("common.settings.defaultPortions")}
           value={settings.defaultPersons}
           min={1}
           max={12}
@@ -139,15 +147,15 @@ function SettingsContent({ base }: { base: Base }) {
             to="/magasins"
             className="inline-flex min-h-11 items-center gap-1 rounded-2xl px-2 text-[15px] font-extrabold text-carrot-dark active:bg-carrot-soft"
           >
-            Gérer <ChevronRight size={18} />
+            {t("common.settings.manage")} <ChevronRight size={18} />
           </Link>
         }
       >
-        Magasin par défaut
+        {t("common.settings.defaultStore")}
       </SectionTitle>
       {base.stores.length === 0 ? (
         <p className="px-1 text-[15px] text-muted">
-          Aucun magasin pour l'instant.
+          {t("common.settings.noStore")}
         </p>
       ) : (
         <div className="flex flex-wrap gap-2">
@@ -168,7 +176,7 @@ function SettingsContent({ base }: { base: Base }) {
         </div>
       )}
 
-      <SectionTitle>Rayons</SectionTitle>
+      <SectionTitle>{t("common.settings.aisles")}</SectionTitle>
       <Card className="overflow-hidden">
         <ul className="divide-y divide-line">
           {base.aisles.map((a) => (
@@ -186,38 +194,41 @@ function SettingsContent({ base }: { base: Base }) {
           ))}
           <li>
             <AddRow
-              label="Ajouter un rayon"
+              label={t("common.settings.addAisle")}
               onClick={() => setEditing({ kind: "aisle" })}
             />
           </li>
         </ul>
       </Card>
 
-      <SectionTitle>Ingrédients et prix</SectionTitle>
+      <SectionTitle>{t("common.settings.ingredientsAndPrices")}</SectionTitle>
       <Link to="/produits">
         <Card className="flex min-h-14 items-center gap-3 px-4 py-3">
           <span className="text-2xl" aria-hidden>
             🧺
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[17px] font-extrabold">Produits</span>
+            <span className="block text-[17px] font-extrabold">
+              {t("common.settings.products")}
+            </span>
             <span className="block text-[15px] text-muted">
-              {base.ingredients.length} ingrédients, avec leur prix, leur rayon
-              et leur photo
+              {t("common.settings.productsCount", {
+                count: base.ingredients.length,
+              })}
             </span>
           </span>
           <ChevronRight className="shrink-0 text-muted" size={20} />
         </Card>
       </Link>
 
-      <SectionTitle>Ce téléphone</SectionTitle>
+      <SectionTitle>{t("common.settings.thisPhone")}</SectionTitle>
       <div className="grid gap-2">
         <Button
           variant="danger"
           size="lg"
           onClick={() => setConfirmLogout(true)}
         >
-          <LogOut size={20} /> Déconnecter ce téléphone
+          <LogOut size={20} /> {t("common.settings.logout")}
         </Button>
       </div>
 
@@ -236,9 +247,11 @@ function SettingsContent({ base }: { base: Base }) {
       <ConfirmSheet
         open={newShoppingDay !== null}
         onClose={() => setNewShoppingDay(null)}
-        title={`Faire les courses le ${newShoppingDay !== null ? DAY_NAMES[newShoppingDay] : ""} ?`}
-        text="Les coches et les articles ajoutés à la main pour la semaine en cours seront remis à zéro."
-        confirmLabel="Changer le jour"
+        title={t("common.settings.changeDayTitle", {
+          day: newShoppingDay !== null ? dayName(newShoppingDay, lang) : "",
+        })}
+        text={t("common.settings.changeDayText")}
+        confirmLabel={t("common.settings.changeDayConfirm")}
         onConfirm={() =>
           newShoppingDay !== null
             ? run(() => updateSettings({ token, shoppingDay: newShoppingDay }))
@@ -248,9 +261,9 @@ function SettingsContent({ base }: { base: Base }) {
       <ConfirmSheet
         open={confirmLogout}
         onClose={() => setConfirmLogout(false)}
-        title="Déconnecter ce téléphone ?"
-        text="Il faudra saisir à nouveau ton pseudo et ton mot de passe pour retrouver les menus et la liste de courses."
-        confirmLabel="Déconnecter"
+        title={t("common.settings.logoutTitle")}
+        text={t("common.settings.logoutText")}
+        confirmLabel={t("common.settings.logoutConfirm")}
         danger
         onConfirm={async () => {
           await run(() => logout({ token }));
@@ -264,6 +277,7 @@ function SettingsContent({ base }: { base: Base }) {
 /** Family name, which also gives the sign-in link; only admins rename it. */
 export function FamilyNameCard() {
   const { token, account } = useSession();
+  const { t, lang } = useT();
   const run = useRun();
   const toast = useToast();
   const rename = useMutation(api.families.rename);
@@ -279,7 +293,7 @@ export function FamilyNameCard() {
     }
     const next = await run(
       () => rename({ token, name }),
-      "Nom de la famille enregistré",
+      t("common.family.nameSaved"),
     );
     setName(next?.name ?? account.family.name);
   };
@@ -288,11 +302,11 @@ export function FamilyNameCard() {
     try {
       const done = await shareLink(
         link,
-        `Menu Maison, famille ${account.family.name} : connecte-toi avec ton pseudo et ton mot de passe.`,
+        t("common.family.shareText", { family: account.family.name }),
       );
-      if (done === "copied") toast("Lien copié, colle-le dans un message.");
+      if (done === "copied") toast(t("common.linkCopied"));
     } catch (e) {
-      toast(errorMessage(e), "error");
+      toast(errorMessage(e, lang), "error");
     }
   };
 
@@ -300,7 +314,7 @@ export function FamilyNameCard() {
     <Card className="grid gap-3 p-4">
       {isAdmin ? (
         <TextInput
-          label="Nom de la famille"
+          label={t("common.family.name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={save}
@@ -309,18 +323,20 @@ export function FamilyNameCard() {
         <p className="text-[17px] font-black">{account.family.name}</p>
       )}
       <div>
-        <span className="block text-[15px] font-bold">Lien de connexion</span>
+        <span className="block text-[15px] font-bold">
+          {t("common.family.signInLink")}
+        </span>
         <span className="block break-all text-[15px] text-muted">
           {link.replace(/^https?:\/\//, "")}
         </span>
         {isAdmin && (
           <span className="mt-1 block text-[15px] text-muted">
-            Il suit le nom de la famille : changer le nom change le lien.
+            {t("common.family.linkFollowsName")}
           </span>
         )}
       </div>
       <Button variant="secondary" onClick={share}>
-        <Share2 size={20} /> Partager le lien
+        <Share2 size={20} /> {t("common.family.shareLink")}
       </Button>
     </Card>
   );

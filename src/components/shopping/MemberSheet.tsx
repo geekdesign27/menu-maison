@@ -9,6 +9,7 @@ import { PhotoTooHeavy, uploadPhoto } from "../../lib/image";
 import { Avatar, Button, cx, Sheet, TextInput } from "../ui";
 import { EmojiField } from "./EmojiField";
 import { MemberAccess } from "./MemberAccess";
+import { useT } from "../../i18n/useT";
 
 const MEMBER_COLORS = [
   "#A8C8E8",
@@ -49,6 +50,7 @@ export function MemberSheet({
   onClose: () => void;
 }) {
   const { token } = useSession();
+  const { t, lang } = useT();
   const run = useRun();
   const toast = useToast();
   const updateMember = useMutation(api.catalog.updateMember);
@@ -67,11 +69,21 @@ export function MemberSheet({
     if (!member) return;
     setUploading(true);
     try {
-      const photo = await uploadPhoto(file, 400, () => generateUploadUrl({ token }));
-      const ok = await run(() => setPhoto({ token, id: member._id, imageId: photo.id }), "Photo enregistrée");
+      const photo = await uploadPhoto(file, 400, () =>
+        generateUploadUrl({ token }),
+      );
+      const ok = await run(
+        () => setPhoto({ token, id: member._id, imageId: photo.id }),
+        t("common.member.photoSaved"),
+      );
       if (ok !== undefined) setPhotoUrl(photo.previewUrl);
     } catch (e) {
-      toast(e instanceof PhotoTooHeavy ? "Cette photo est trop lourde, essaie une autre." : errorMessage(e), "error");
+      toast(
+        e instanceof PhotoTooHeavy
+          ? t("common.member.photoTooHeavy")
+          : errorMessage(e, lang),
+        "error",
+      );
     } finally {
       setUploading(false);
     }
@@ -92,7 +104,7 @@ export function MemberSheet({
   const create = async () => {
     const id = await run(
       () => addMember({ token, name, emoji, color }),
-      `Bienvenue, ${name.trim()} !`,
+      t("common.member.welcome", { name: name.trim() }),
     );
     if (id) onClose();
   };
@@ -101,32 +113,57 @@ export function MemberSheet({
     <Sheet
       open
       onClose={onClose}
-      title={member ? "Modifier le profil" : "Nouveau profil"}
+      title={t(member ? "common.member.edit" : "common.member.new")}
       footer={
         member ? undefined : (
           <Button size="lg" onClick={create} disabled={!name.trim()}>
-            <Plus size={22} /> Ajouter le profil
+            <Plus size={22} /> {t("common.member.add")}
           </Button>
         )
       }
     >
       <div className="grid gap-5">
         <div className="flex flex-col items-center gap-2 pt-1">
-          <Avatar member={{ name: name || "Profil", emoji, color, imageUrl: photoUrl }} size={88} />
+          <Avatar
+            member={{
+              name: name || t("common.member.placeholderName"),
+              emoji,
+              color,
+              imageUrl: photoUrl,
+            }}
+            size={88}
+          />
           {member && (
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => photoInput.current?.click()} disabled={uploading}>
-                <Camera size={18} /> {uploading ? "Envoi…" : photoUrl ? "Changer la photo" : "Ajouter une photo"}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => photoInput.current?.click()}
+                disabled={uploading}
+              >
+                <Camera size={18} />{" "}
+                {t(
+                  uploading
+                    ? "common.member.uploading"
+                    : photoUrl
+                      ? "common.member.changePhoto"
+                      : "common.member.addPhoto",
+                )}
               </Button>
               {photoUrl && (
                 <Button
                   variant="danger"
                   size="sm"
                   onClick={async () => {
-                    if ((await run(() => setPhoto({ token, id: member._id, imageId: null }))) !== undefined) setPhotoUrl(null);
+                    if (
+                      (await run(() =>
+                        setPhoto({ token, id: member._id, imageId: null }),
+                      )) !== undefined
+                    )
+                      setPhotoUrl(null);
                   }}
                 >
-                  <Trash2 size={18} /> Retirer
+                  <Trash2 size={18} /> {t("common.member.removePhoto")}
                 </Button>
               )}
               <input
@@ -144,7 +181,7 @@ export function MemberSheet({
           )}
         </div>
         <TextInput
-          label="Prénom"
+          label={t("common.member.firstName")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={() => member && name.trim() !== member.name && save({})}
@@ -159,13 +196,15 @@ export function MemberSheet({
           }}
         />
         <div>
-          <span className="mb-1 block text-[15px] font-bold">Couleur</span>
+          <span className="mb-1 block text-[15px] font-bold">
+            {t("common.member.color")}
+          </span>
           <div className="flex flex-wrap gap-3">
             {MEMBER_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
-                aria-label={`Couleur ${c}`}
+                aria-label={t("common.member.colorOption", { color: c })}
                 aria-pressed={color === c}
                 onClick={() => {
                   setColor(c);

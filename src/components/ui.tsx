@@ -1,4 +1,7 @@
 import {
+  createContext,
+  useCallback,
+  useContext,
   useEffect,
   useRef,
   type ButtonHTMLAttributes,
@@ -9,6 +12,34 @@ import {
 import { ChevronDown, Minus, Plus, Search, X } from "lucide-react";
 import type { Member } from "../lib/session";
 import { useInGestion } from "../lib/paths";
+import type { Lang } from "../../convex/domain/lang";
+import { translate, type MessageKey } from "../i18n";
+
+// Language of the shared pieces. A context of its own, not `useT`: the landing
+// page uses them too and must not load the session (Convex). French by default.
+const UiLangContext = createContext<Lang>("fr");
+
+/** Gives the member's language to the shared pieces; set once by the app. */
+export function UiLangProvider({
+  lang,
+  children,
+}: {
+  lang: Lang;
+  children: ReactNode;
+}) {
+  return (
+    <UiLangContext.Provider value={lang}>{children}</UiLangContext.Provider>
+  );
+}
+
+function useUiT() {
+  const lang = useContext(UiLangContext);
+  return useCallback(
+    (key: MessageKey, vars?: Record<string, string | number>) =>
+      translate(lang, key, vars),
+    [lang],
+  );
+}
 
 export function cx(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -223,7 +254,9 @@ export function Avatar({
   size = 32,
   className,
 }: {
-  member: Pick<Member, "name" | "emoji" | "color"> & { imageUrl?: string | null };
+  member: Pick<Member, "name" | "emoji" | "color"> & {
+    imageUrl?: string | null;
+  };
   size?: number;
   className?: string;
 }) {
@@ -242,7 +275,11 @@ export function Avatar({
         fontSize: size * 0.55,
       }}
     >
-      {member.imageUrl ? <img src={member.imageUrl} alt="" className="size-full object-cover" /> : member.emoji}
+      {member.imageUrl ? (
+        <img src={member.imageUrl} alt="" className="size-full object-cover" />
+      ) : (
+        member.emoji
+      )}
     </span>
   );
 }
@@ -260,10 +297,11 @@ export function Stepper({
   max?: number;
   label: string;
 }) {
+  const t = useUiT();
   return (
     <div className="flex items-center gap-1" role="group" aria-label={label}>
       <IconButton
-        label={`Moins (${label})`}
+        label={t("common.less", { label })}
         disabled={value <= min}
         onClick={() => onChange(Math.max(min, value - 1))}
         className="bg-paper ring-1 ring-line"
@@ -277,7 +315,7 @@ export function Stepper({
         {value}
       </span>
       <IconButton
-        label={`Plus (${label})`}
+        label={t("common.more", { label })}
         disabled={value >= max}
         onClick={() => onChange(Math.min(max, value + 1))}
         className="bg-paper ring-1 ring-line"
@@ -350,12 +388,14 @@ export function Select({
 export function SearchInput({
   value,
   onChange,
-  placeholder = "Rechercher",
+  placeholder: placeholderProp,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const t = useUiT();
+  const placeholder = placeholderProp ?? t("common.search");
   return (
     <div className="relative">
       <Search
@@ -373,7 +413,7 @@ export function SearchInput({
       {value && (
         <button
           type="button"
-          aria-label="Effacer la recherche"
+          aria-label={t("common.clearSearch")}
           onClick={() => onChange("")}
           className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-2 text-muted"
         >
@@ -467,6 +507,7 @@ export function Sheet({
   }, [open]);
   // On the desktop management area, sheets open as a side panel on the right
   const side = useInGestion();
+  const t = useUiT();
   if (!open) return null;
   return (
     <div
@@ -480,7 +521,7 @@ export function Sheet({
     >
       <button
         type="button"
-        aria-label="Fermer"
+        aria-label={t("common.close")}
         className="absolute inset-0 bg-ink/40"
         onClick={onClose}
       />
@@ -496,7 +537,7 @@ export function Sheet({
           <h2 className="min-w-0 flex-1 truncate text-xl font-black">
             {title}
           </h2>
-          <IconButton label="Fermer" onClick={onClose}>
+          <IconButton label={t("common.close")} onClick={onClose}>
             <X size={22} />
           </IconButton>
         </div>
@@ -534,14 +575,15 @@ export function EmptyState({
   );
 }
 
-export function Loading({ label = "Chargement" }: { label?: string }) {
+export function Loading({ label }: { label?: string }) {
+  const t = useUiT();
   return (
     <div
       className="flex items-center justify-center gap-3 py-16 text-muted"
       role="status"
     >
       <span className="size-6 animate-spin rounded-full border-[3px] border-carrot border-t-transparent" />
-      <span className="font-bold">{label}…</span>
+      <span className="font-bold">{label ?? t("common.loading")}…</span>
     </div>
   );
 }
