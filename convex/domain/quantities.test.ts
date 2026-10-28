@@ -86,3 +86,17 @@ describe("formatQty", () => {
     expect(formatQty(1, "paquet")).toBe(s("1 paquet"));
   });
 });
+
+describe("German formats", () => {
+  it("uses a decimal point and German unit words", () => {
+    expect(formatNumber(1.25, 2, "de")).toBe("1.25");
+    expect(formatQty(1250, "g", "de")).toBe("1.25 kg");
+    expect(formatQty(2, "pc", "de")).toBe("2 Stück");
+    expect(formatQty(1.5, "cs", "de")).toBe("1.5 EL");
+    expect(formatQty(2, "boîte", "de")).toBe("2 Dosen");
+    expect(formatQty(1, "tranche", "de")).toBe("1 Scheibe");
+    // French unchanged
+    expect(formatQty(2, "boîte")).toBe("2 boîtes");
+    expect(formatQty(1250, "g")).toBe("1,25 kg");
+  });
+});

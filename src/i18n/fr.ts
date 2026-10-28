@@ -1,26 +1,20 @@
-// French texts of the app, the reference: every key must exist in de.ts too
-// (TypeScript refuses the build otherwise). « {name} » is replaced by `t`.
+// French texts of the app, the reference, gathered from the zone files
+// (src/i18n/zones). « {name} » is replaced by `t`.
+import * as core from "./zones/core";
+import * as week from "./zones/week";
+import * as shopping from "./zones/shopping";
+import * as recipes from "./zones/recipes";
+import * as common from "./zones/common";
+import * as admin from "./zones/admin";
 
 export const fr = {
-  "nav.label": "Navigation principale",
-  "nav.week": "Semaine",
-  "nav.shopping": "Courses",
-  "nav.recipes": "Recettes",
-  "nav.fridge": "Frigo",
-  "nav.more": "Plus",
-  "nav.manage": "Gestion",
-  "nav.back": "Retour",
-
-  "lang.title": "Langue",
-  "lang.german": "Deutsch",
-  "lang.germanHelpOther": "L'app s'affiche en allemand pour {name}.",
-  "lang.germanHelpMe": "L'app s'affiche en allemand pour toi.",
-  "lang.nowGerman": "{name}\u00a0: app en allemand",
-  "lang.nowFrench": "{name}\u00a0: app en français",
-  "lang.column": "Langue",
-  "lang.fr": "Français",
-  "lang.de": "Deutsch",
-} as const;
+  ...core.fr,
+  ...week.fr,
+  ...shopping.fr,
+  ...recipes.fr,
+  ...common.fr,
+  ...admin.fr,
+};
 
 export type MessageKey = keyof typeof fr;
 export type Messages = Record<MessageKey, string>;

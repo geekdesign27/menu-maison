@@ -13,7 +13,15 @@ export const DAY_NAMES = [
   "vendredi",
   "samedi",
 ];
-export const DAY_SHORT = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+export const DAY_SHORT = [
+  "dim.",
+  "lun.",
+  "mar.",
+  "mer.",
+  "jeu.",
+  "ven.",
+  "sam.",
+];
 const MONTH_NAMES = [
   "janvier",
   "février",
@@ -29,7 +37,15 @@ const MONTH_NAMES = [
   "décembre",
 ];
 
-const DAY_NAMES_DE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+const DAY_NAMES_DE = [
+  "Sonntag",
+  "Montag",
+  "Dienstag",
+  "Mittwoch",
+  "Donnerstag",
+  "Freitag",
+  "Samstag",
+];
 const DAY_SHORT_DE = ["So.", "Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa."];
 const MONTH_NAMES_DE = [
   "Januar",
@@ -45,6 +61,21 @@ const MONTH_NAMES_DE = [
   "November",
   "Dezember",
 ];
+
+/** « samedi », « Samstag » (0 = Sunday). */
+export function dayName(weekday: number, lang: Lang = "fr"): string {
+  return (lang === "de" ? DAY_NAMES_DE : DAY_NAMES)[weekday];
+}
+
+/** « sam. », « Sa. » (0 = Sunday). */
+export function dayShortName(weekday: number, lang: Lang = "fr"): string {
+  return (lang === "de" ? DAY_SHORT_DE : DAY_SHORT)[weekday];
+}
+
+/** « octobre », « Oktober » (0 = January). */
+export function monthName(month: number, lang: Lang = "fr"): string {
+  return (lang === "de" ? MONTH_NAMES_DE : MONTH_NAMES)[month];
+}
 
 /** Parses "YYYY-MM-DD" into UTC milliseconds at midnight. */
 function toUtcMs(date: string): number {
@@ -113,7 +144,8 @@ export function daysBetween(a: string, b: string): number {
 /** « samedi 24 octobre », « Samstag, 24. Oktober » */
 export function formatDayLong(date: string, lang: Lang = "fr"): string {
   const { month, day } = parts(date);
-  if (lang === "de") return `${DAY_NAMES_DE[dayOfWeek(date)]}, ${day}. ${MONTH_NAMES_DE[month]}`;
+  if (lang === "de")
+    return `${DAY_NAMES_DE[dayOfWeek(date)]}, ${day}. ${MONTH_NAMES_DE[month]}`;
   return `${DAY_NAMES[dayOfWeek(date)]} ${dayNumber(day)} ${MONTH_NAMES[month]}`;
 }
 
@@ -128,7 +160,11 @@ export function formatDayShort(date: string, lang: Lang = "fr"): string {
  * « 24 au 30 octobre », « 31 octobre au 6 novembre », years added only when they
  * differ. In German: « 24. bis 30. Oktober ».
  */
-export function formatDateRange(start: string, end: string, lang: Lang = "fr"): string {
+export function formatDateRange(
+  start: string,
+  end: string,
+  lang: Lang = "fr",
+): string {
   const s = parts(start);
   const e = parts(end);
   const months = lang === "de" ? MONTH_NAMES_DE : MONTH_NAMES;

@@ -1,3 +1,4 @@
+import type { Lang } from "./lang";
 // Units, normalisation and French display of quantities.
 
 export type Unit =
@@ -15,7 +16,20 @@ export type Unit =
   | "tranche";
 
 /** Units in the order they are offered. */
-export const UNITS: Unit[] = ["g", "kg", "ml", "l", "pc", "cs", "cc", "botte", "boîte", "paquet", "pincée", "tranche"];
+export const UNITS: Unit[] = [
+  "g",
+  "kg",
+  "ml",
+  "l",
+  "pc",
+  "cs",
+  "cc",
+  "botte",
+  "boîte",
+  "paquet",
+  "pincée",
+  "tranche",
+];
 
 export type BaseUnit = Exclude<Unit, "kg" | "l">;
 
@@ -46,55 +60,107 @@ export function ceilSafe(value: number): number {
   return Math.ceil(value - EPSILON);
 }
 
-/** Formats a number with a French decimal comma, at most `maxDecimals`, no useless zeros. */
-export function formatNumber(value: number, maxDecimals = 2): string {
+/**
+ * Formats a number, at most `maxDecimals`, no useless zeros: French decimal
+ * comma, decimal point in Swiss German (« 1,25 », « 1.25 »).
+ */
+export function formatNumber(
+  value: number,
+  maxDecimals = 2,
+  lang: Lang = "fr",
+): string {
   const fixed = value.toFixed(maxDecimals);
   const trimmed = maxDecimals > 0 ? fixed.replace(/\.?0+$/, "") : fixed;
-  return trimmed.replace(".", ",");
+  return lang === "de" ? trimmed : trimmed.replace(".", ",");
+}
+
+// Unit words in each language: [one, many]
+const UNIT_WORDS: Record<
+  Lang,
+  Record<
+    "pc" | "cs" | "cc" | "botte" | "boîte" | "paquet" | "pincée" | "tranche",
+    [string, string]
+  >
+> = {
+  fr: {
+    pc: ["pièce", "pièces"],
+    cs: ["c. à s.", "c. à s."],
+    cc: ["c. à c.", "c. à c."],
+    botte: ["botte", "bottes"],
+    boîte: ["boîte", "boîtes"],
+    paquet: ["paquet", "paquets"],
+    pincée: ["pincée", "pincées"],
+    tranche: ["tranche", "tranches"],
+  },
+  de: {
+    pc: ["Stück", "Stück"],
+    cs: ["EL", "EL"],
+    cc: ["TL", "TL"],
+    botte: ["Bund", "Bund"],
+    boîte: ["Dose", "Dosen"],
+    paquet: ["Packung", "Packungen"],
+    pincée: ["Prise", "Prisen"],
+    tranche: ["Scheibe", "Scheiben"],
+  },
+};
+
+/** Word of a counted unit (pièce, EL, Dose…) agreed with `n`, in `lang`. */
+export function unitWord(
+  unit: keyof (typeof UNIT_WORDS)["fr"],
+  n: number,
+  lang: Lang = "fr",
+): string {
+  const [one, many] = UNIT_WORDS[lang][unit];
+  return n > 1 ? many : one;
 }
 
 // Mass or volume: small unit below 1000, large unit (2 decimals max) above.
-function formatMetric(qty: number, small: string, large: string): string {
+function formatMetric(
+  qty: number,
+  small: string,
+  large: string,
+  lang: Lang,
+): string {
   let rounded = qty < 100 ? Math.round(qty) : Math.round(qty / 10) * 10;
   if (qty > 0 && rounded < 1) rounded = 1;
   if (rounded >= 1000)
-    return `${formatNumber(rounded / 1000, 2)}${NBSP}${large}`;
-  return `${formatNumber(rounded, 0)}${NBSP}${small}`;
+    return `${formatNumber(rounded / 1000, 2, lang)}${NBSP}${large}`;
+  return `${formatNumber(rounded, 0, lang)}${NBSP}${small}`;
 }
 
 // Spoons: rounded up to the next half spoon.
-function formatSpoon(qty: number, label: string): string {
+function formatSpoon(qty: number, unit: "cs" | "cc", lang: Lang): string {
   const rounded = qty > 0 ? Math.max(0.5, ceilSafe(qty * 2) / 2) : 0;
-  return `${formatNumber(rounded, 1)}${NBSP}${label}`;
+  return `${formatNumber(rounded, 1, lang)}${NBSP}${unitWord(unit, rounded, lang)}`;
 }
 
 // Countable packaging units: whole number, plural with "s".
-function formatCount(qty: number, singular: string): string {
+function formatCount(
+  qty: number,
+  unit: "pc" | "botte" | "boîte" | "paquet" | "pincée" | "tranche",
+  lang: Lang,
+): string {
   const rounded = qty > 0 ? Math.max(1, ceilSafe(qty)) : 0;
-  return `${rounded}${NBSP}${rounded > 1 ? `${singular}s` : singular}`;
+  return `${rounded}${NBSP}${unitWord(unit, rounded, lang)}`;
 }
 
 /** Human-friendly French display of a quantity (e.g. « 1,25 kg », « 2 c. à s. »). */
-export function formatQty(qty: number, unit: Unit): string {
+export function formatQty(qty: number, unit: Unit, lang: Lang = "fr"): string {
   const base = toBase(qty, unit);
   switch (base.unit) {
     case "g":
-      return formatMetric(base.qty, "g", "kg");
+      return formatMetric(base.qty, "g", "kg", lang);
     case "ml":
-      return formatMetric(base.qty, "ml", "l");
-    case "pc": {
-      const n = base.qty > 0 ? Math.max(1, ceilSafe(base.qty)) : 0;
-      return `${n}${NBSP}${n > 1 ? "pièces" : "pièce"}`;
-    }
+      return formatMetric(base.qty, "ml", "l", lang);
     case "cs":
-      return formatSpoon(base.qty, "c. à s.");
     case "cc":
-      return formatSpoon(base.qty, "c. à c.");
+      return formatSpoon(base.qty, base.unit, lang);
+    case "pc":
     case "botte":
     case "boîte":
     case "paquet":
     case "pincée":
     case "tranche":
-      return formatCount(base.qty, base.unit);
+      return formatCount(base.qty, base.unit, lang);
   }
 }
