@@ -4,6 +4,7 @@ import { Check, MoreHorizontal } from "lucide-react";
 import type { ShoppingItem } from "../../../convex/domain/shopping";
 import type { Member } from "../../lib/session";
 import { Avatar, cx, IconButton } from "../ui";
+import { useT } from "../../i18n/useT";
 
 const LONG_PRESS_MS = 500;
 
@@ -22,6 +23,7 @@ export function ShoppingRow({
   /** Opens the product photo (to buy the right brand or size). */
   onPhoto?: () => void;
 }) {
+  const { t, lang } = useT();
   const timer = useRef<number | undefined>(undefined);
   const longPressed = useRef(false);
 
@@ -84,9 +86,16 @@ export function ShoppingRow({
           )}
           {item.homeStock?.map((h, i) => (
             <span key={i} className="block text-[15px] font-bold text-herb">
-              Peut-être à la maison : {h.display}
-              {h.from ? `, du plat « ${h.from} »` : ""} pas cuisiné le{" "}
-              {formatDayShort(h.since)}
+              {h.from
+                ? t("shopping.maybeHomeFrom", {
+                    qty: h.display,
+                    from: h.from,
+                    date: formatDayShort(h.since, lang),
+                  })
+                : t("shopping.maybeHome", {
+                    qty: h.display,
+                    date: formatDayShort(h.since, lang),
+                  })}
             </span>
           ))}
         </span>
@@ -108,7 +117,7 @@ export function ShoppingRow({
         <button
           type="button"
           onClick={onPhoto}
-          aria-label={`Voir la photo du produit\u00a0: ${item.label}`}
+          aria-label={t("shopping.seePhoto", { label: item.label })}
           className="my-auto mr-1 shrink-0 overflow-hidden rounded-xl ring-1 ring-line active:scale-95"
         >
           <img src={item.imageUrl} alt="" loading="lazy" className={cx("size-11 object-cover", item.checked && "opacity-50")} />
@@ -116,7 +125,11 @@ export function ShoppingRow({
       )}
       {onMore && (
         <IconButton
-          label={item.extra ? `Quantité : ${item.label}` : `Changer le rayon dans ce magasin : ${item.label}`}
+          label={
+            item.extra
+              ? t("shopping.qtyOf", { label: item.label })
+              : t("shopping.changeAisle", { label: item.label })
+          }
           onClick={onMore}
           className="my-auto mr-1 text-muted"
         >

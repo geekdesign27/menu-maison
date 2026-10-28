@@ -10,12 +10,14 @@ import { Button, Chip, IconButton, Sheet, TextInput } from "../ui";
 import { parseAmount, unitChoiceLabel, UNITS } from "../../lib/units";
 import { searchKey } from "../../lib/text";
 import { StaplesSheet, useStaples, useToggleStaple } from "./StaplesSheet";
+import { useT } from "../../i18n/useT";
 
 /** « Ajouter un article… » field, with a sheet for quantity, unit and aisle. */
 export function QuickAdd({ start }: { start: string }) {
   const { token, memberId } = useSession();
   const addExtra = useMutation(api.shopping.addExtra);
   const run = useRun();
+  const { t } = useT();
   const [label, setLabel] = useState("");
   // Quantity typed next to the field, applied to whatever is added (empty: none)
   const [qtyText, setQtyText] = useState("");
@@ -64,13 +66,13 @@ export function QuickAdd({ start }: { start: string }) {
           <TextInput
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="Ajouter un article…"
-            aria-label="Ajouter un article"
+            placeholder={t("shopping.addItemPlaceholder")}
+            aria-label={t("shopping.addItem")}
             enterKeyHint="done"
             className="pr-12 font-bold"
           />
           <IconButton
-            label="Quantité, unité et rayon"
+            label={t("shopping.addOptions")}
             onClick={() => setSheetOpen(true)}
             className="absolute top-1/2 right-0.5 -translate-y-1/2 text-muted"
           >
@@ -81,13 +83,13 @@ export function QuickAdd({ start }: { start: string }) {
           value={qtyText}
           onChange={(e) => setQtyText(e.target.value)}
           inputMode="decimal"
-          placeholder="Qté"
-          aria-label="Quantité de l'article ajouté"
+          placeholder={t("shopping.qtyShort")}
+          aria-label={t("shopping.qtyOfAdded")}
           className="min-h-12 w-16 shrink-0 rounded-2xl bg-paper px-2 text-center font-bold ring-1 ring-line outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-carrot"
         />
         <IconButton
           type="submit"
-          label="Ajouter"
+          label={t("shopping.add")}
           disabled={!label.trim()}
           className="size-12 bg-carrot text-white shadow-sm active:bg-carrot-dark"
         >
@@ -96,7 +98,7 @@ export function QuickAdd({ start }: { start: string }) {
       </form>
 
       {suggestions.length > 0 && (
-        <ul className="mt-2 divide-y divide-line overflow-hidden rounded-2xl bg-paper shadow-md ring-1 ring-line" aria-label="Articles habituels correspondants">
+        <ul className="mt-2 divide-y divide-line overflow-hidden rounded-2xl bg-paper shadow-md ring-1 ring-line" aria-label={t("shopping.matchingStaples")}>
           {suggestions.map((s) => {
             const aisle = base?.aisles.find((a) => a._id === s.aisleId);
             return (
@@ -115,7 +117,7 @@ export function QuickAdd({ start }: { start: string }) {
                   <span className="min-w-0 flex-1 font-bold">{s.name}</span>
                   {s.extraId ? (
                     <span className="flex items-center gap-1 text-[13px] font-bold text-herb">
-                      <Check size={16} /> Sur la liste
+                      <Check size={16} /> {t("shopping.onList")}
                     </span>
                   ) : (
                     <Plus size={20} className="text-carrot-dark" />
@@ -128,7 +130,9 @@ export function QuickAdd({ start }: { start: string }) {
             <li>
               <button type="submit" form="quick-add" className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left text-carrot-dark active:bg-carrot-soft">
                 <Plus size={20} />
-                <span className="font-bold">Nouvel article : « {label.trim()} »</span>
+                <span className="font-bold">
+                  {t("shopping.newItem", { label: label.trim() })}
+                </span>
               </button>
             </li>
           )}
@@ -140,7 +144,7 @@ export function QuickAdd({ start }: { start: string }) {
         onClick={() => setStaplesOpen(true)}
         className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-sun-soft px-4 font-extrabold text-[#6b4d00] active:brightness-95"
       >
-        <Star size={18} /> Articles habituels
+        <Star size={18} /> {t("shopping.staples")}
       </button>
       {staplesOpen && <StaplesSheet start={start} onClose={() => setStaplesOpen(false)} />}
       {sheetOpen && (
@@ -171,6 +175,7 @@ function ExtraSheet({
   const addExtra = useMutation(api.shopping.addExtra);
   const run = useRun();
   const toast = useToast();
+  const { t, lang } = useT();
   const [label, setLabel] = useState(initialLabel);
   const [qtyText, setQtyText] = useState("");
   const [unit, setUnit] = useState<Unit>("pc");
@@ -179,7 +184,7 @@ function ExtraSheet({
   const save = async () => {
     const qty = parseAmount(qtyText);
     if (Number.isNaN(qty)) {
-      toast("La quantité doit être un nombre positif.", "error");
+      toast(t("shopping.qtyNotNumber"), "error");
       return;
     }
     const id = await run(
@@ -193,7 +198,7 @@ function ExtraSheet({
           aisleId,
           memberId: memberId ?? undefined,
         }),
-      "Ajouté à la liste.",
+      t("shopping.addedToList"),
     );
     if (id) {
       onAdded();
@@ -205,48 +210,48 @@ function ExtraSheet({
     <Sheet
       open
       onClose={onClose}
-      title="Ajouter un article"
+      title={t("shopping.addItem")}
       footer={
         <Button size="lg" onClick={save} disabled={!label.trim()}>
-          <Plus size={22} /> Ajouter à la liste
+          <Plus size={22} /> {t("shopping.addToList")}
         </Button>
       }
     >
       <div className="grid gap-4">
         <TextInput
-          label="Article"
+          label={t("shopping.item")}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Lessive, café, piles…"
+          placeholder={t("shopping.itemPlaceholder")}
           autoFocus={!initialLabel}
         />
         <TextInput
-          label="Quantité (facultatif)"
+          label={t("shopping.qtyOptional")}
           value={qtyText}
           onChange={(e) => setQtyText(e.target.value)}
           inputMode="decimal"
-          placeholder="Ex. 2"
+          placeholder={t("shopping.exampleTwo")}
         />
         {qtyText.trim() && (
           <div>
-            <span className="mb-1 block text-[15px] font-bold">Unité</span>
+            <span className="mb-1 block text-[15px] font-bold">{t("shopping.unit")}</span>
             <div className="flex flex-wrap gap-2">
               {UNITS.map((u) => (
                 <Chip key={u} selected={unit === u} onClick={() => setUnit(u)}>
-                  {unitChoiceLabel(u)}
+                  {unitChoiceLabel(u, lang)}
                 </Chip>
               ))}
             </div>
           </div>
         )}
         <div>
-          <span className="mb-1 block text-[15px] font-bold">Rayon</span>
+          <span className="mb-1 block text-[15px] font-bold">{t("shopping.aisle")}</span>
           <div className="flex flex-wrap gap-2">
             <Chip
               selected={aisleId === undefined}
               onClick={() => setAisleId(undefined)}
             >
-              🛒 Divers
+              🛒 {t("shopping.misc")}
             </Chip>
             {base?.aisles.map((a) => (
               <Chip

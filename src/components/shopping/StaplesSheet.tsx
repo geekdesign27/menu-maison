@@ -7,6 +7,7 @@ import { useBase, useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
 import { Button, cx, EmptyState, IconButton, Loading, Sheet } from "../ui";
 import { StapleSheet } from "./StapleSheet";
+import { useT } from "../../i18n/useT";
 
 export type Staple = NonNullable<ReturnType<typeof useStaples>>[number];
 
@@ -53,6 +54,7 @@ export function StaplesSheet({
   const removeStaple = useMutation(api.staples.remove);
   const [editing, setEditing] = useState(false);
   const [moving, setMoving] = useState<Staple | null>(null);
+  const { t } = useT();
 
   const groups = (() => {
     if (!staples || !base) return [];
@@ -73,7 +75,7 @@ export function StaplesSheet({
       }));
     const misc = byAisle.get(null);
     return misc
-      ? [...ordered, { key: "divers", title: "🛒 Divers", items: misc }]
+      ? [...ordered, { key: "divers", title: `🛒 ${t("shopping.misc")}`, items: misc }]
       : ordered;
   })();
 
@@ -83,10 +85,12 @@ export function StaplesSheet({
     <Sheet
       open
       onClose={onClose}
-      title="Articles habituels"
+      title={t("shopping.staples")}
       footer={
         <Button size="lg" onClick={onClose}>
-          {addedCount > 0 ? `C'est bon (${addedCount} sur la liste)` : "Fermer"}
+          {addedCount > 0
+            ? t("shopping.staplesDone", { count: addedCount })
+            : t("shopping.close")}
         </Button>
       }
     >
@@ -95,23 +99,23 @@ export function StaplesSheet({
       ) : staples.length === 0 ? (
         <EmptyState
           emoji="🧺"
-          title="Aucun article habituel"
-          text="Ajoute un article depuis la liste de courses : il sera retenu ici."
+          title={t("shopping.noStaplesTitle")}
+          text={t("shopping.noStaplesText")}
         />
       ) : (
         <>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[15px] text-muted">
               {editing
-                ? "Touche un article pour modifier son nom, son prix, son rayon ou ses magasins. La corbeille le retire de l'assortiment."
-                : "Touche un article pour l'ajouter à la liste de cette semaine."}
+                ? t("shopping.staplesEditHelp")
+                : t("shopping.staplesAddHelp")}
             </p>
             <button
               type="button"
               onClick={() => setEditing((e) => !e)}
               className="min-h-11 shrink-0 rounded-2xl px-3 font-extrabold text-carrot-dark active:bg-carrot-soft"
             >
-              {editing ? "Terminé" : "Modifier"}
+              {editing ? t("shopping.editDone") : t("shopping.edit")}
             </button>
           </div>
           {groups.map((g) => (
@@ -129,17 +133,17 @@ export function StaplesSheet({
                       <button
                         type="button"
                         onClick={() => setMoving(s)}
-                        aria-label={`Modifier\u00a0: ${s.name}`}
+                        aria-label={t("shopping.editNamed", { name: s.name })}
                         className="min-h-10 rounded-full px-3 font-bold underline decoration-line decoration-2 underline-offset-4 active:bg-carrot-soft"
                       >
                         {s.name}
                       </button>
                       <IconButton
-                        label={`Retirer de l'assortiment : ${s.name}`}
+                        label={t("shopping.removeFromRange", { name: s.name })}
                         onClick={() =>
                           run(
                             () => removeStaple({ token, id: s._id }),
-                            `${s.name} retiré de l'assortiment`,
+                            t("shopping.removedFromRange", { name: s.name }),
                           )
                         }
                         className="size-10 text-berry"
@@ -166,6 +170,7 @@ function StapleChip({ staple, onToggle }: { staple: Staple; onToggle: () => void
   const { token } = useSession();
   const run = useRun();
   const setQty = useMutation(api.shopping.setExtraQty);
+  const { t } = useT();
   const qty = staple.extraQty ?? 1;
   const change = (n: number) => staple.extraId && run(() => setQty({ token, id: staple.extraId!, qty: n, unit: "pc" }));
   const main = (
@@ -188,7 +193,7 @@ function StapleChip({ staple, onToggle }: { staple: Staple; onToggle: () => void
       {main}
       <button
         type="button"
-        aria-label={`Un de moins\u00a0: ${staple.name}`}
+        aria-label={t("shopping.oneLess", { name: staple.name })}
         disabled={qty <= 1}
         onClick={() => change(qty - 1)}
         className="flex size-9 items-center justify-center rounded-full text-herb active:bg-paper disabled:opacity-40"
@@ -198,7 +203,7 @@ function StapleChip({ staple, onToggle }: { staple: Staple; onToggle: () => void
       <span className="min-w-6 text-center font-black text-herb tabular-nums">{qty}</span>
       <button
         type="button"
-        aria-label={`Un de plus\u00a0: ${staple.name}`}
+        aria-label={t("shopping.oneMore", { name: staple.name })}
         onClick={() => change(qty + 1)}
         className="flex size-9 items-center justify-center rounded-full text-herb active:bg-paper"
       >

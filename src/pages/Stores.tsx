@@ -9,6 +9,7 @@ import { useRun } from "../lib/toast";
 import { plural } from "../lib/format";
 import { BackButton } from "../components/Layout";
 import { useAppPaths } from "../lib/paths";
+import { useT } from "../i18n/useT";
 import {
   Badge,
   Button,
@@ -25,6 +26,7 @@ import {
 import {
   CHAINS,
   ChainMark,
+  chainLabel,
   priceLevelText,
   type Chain,
 } from "../components/shopping/chains";
@@ -35,11 +37,12 @@ export function StoresPage() {
   const run = useRun();
   const updateSettings = useMutation(api.catalog.updateSettings);
   const [adding, setAdding] = useState(false);
+  const { t, lang } = useT();
 
   return (
     <Page
-      title="Magasins"
-      subtitle="L'ordre des rayons de chaque magasin"
+      title={t("shopping.stores.title")}
+      subtitle={t("shopping.stores.subtitle")}
       back={<BackButton fallback="/plus" />}
     >
       {!base ? (
@@ -49,8 +52,8 @@ export function StoresPage() {
           {base.stores.length === 0 ? (
             <EmptyState
               emoji="🏪"
-              title="Aucun magasin"
-              text="Ajoute ton magasin habituel : la liste de courses suivra son parcours, rayon après rayon."
+              title={t("shopping.stores.emptyTitle")}
+              text={t("shopping.stores.emptyText")}
             />
           ) : (
             <ul className="grid gap-3">
@@ -72,14 +75,14 @@ export function StoresPage() {
                             <Badge
                               tone={s.priceFactor < 1 ? "herb" : "neutral"}
                             >
-                              {priceLevelText(s.priceFactor)}
+                              {priceLevelText(s.priceFactor, lang)}
                             </Badge>
                             {s.overrides.length > 0 && (
                               <Badge tone="carrot">
                                 {plural(
                                   s.overrides.length,
-                                  "exception",
-                                  "exceptions",
+                                  t("shopping.stores.exceptionOne"),
+                                  t("shopping.stores.exceptionMany"),
                                 )}
                               </Badge>
                             )}
@@ -90,8 +93,8 @@ export function StoresPage() {
                       <IconButton
                         label={
                           isDefault
-                            ? `${s.name} est le magasin par défaut`
-                            : `Choisir ${s.name} comme magasin par défaut`
+                            ? t("shopping.stores.isDefault", { name: s.name })
+                            : t("shopping.stores.makeDefault", { name: s.name })
                         }
                         aria-pressed={isDefault}
                         onClick={() =>
@@ -99,7 +102,7 @@ export function StoresPage() {
                           run(
                             () =>
                               updateSettings({ token, defaultStoreId: s._id }),
-                            `${s.name} est le magasin par défaut.`,
+                            t("shopping.stores.nowDefault", { name: s.name }),
                           )
                         }
                       >
@@ -117,11 +120,10 @@ export function StoresPage() {
             </ul>
           )}
           <p className="mt-3 px-1 text-[15px] text-muted">
-            L'étoile désigne le magasin proposé par défaut sur la liste de
-            courses.
+            {t("shopping.stores.starHint")}
           </p>
           <Button size="lg" className="mt-6" onClick={() => setAdding(true)}>
-            <Plus size={22} /> Ajouter un magasin
+            <Plus size={22} /> {t("shopping.addStore")}
           </Button>
         </>
       )}
@@ -148,6 +150,7 @@ export function AddStoreSheet({
   const [name, setName] = useState("");
   const [copyFrom, setCopyFrom] = useState<Id<"stores"> | undefined>();
   const [busy, setBusy] = useState(false);
+  const { t, lang } = useT();
 
   const pickChain = (c: Chain) => {
     setChain(c);
@@ -161,7 +164,7 @@ export function AddStoreSheet({
     setBusy(true);
     const id = await run(
       () => createStore({ token, chain, name, copyFrom }),
-      "Magasin ajouté.",
+      t("shopping.stores.added"),
     );
     setBusy(false);
     if (id) navigate(paths.store(id));
@@ -171,16 +174,16 @@ export function AddStoreSheet({
     <Sheet
       open
       onClose={onClose}
-      title="Nouveau magasin"
+      title={t("shopping.stores.newStore")}
       footer={
         <Button size="lg" onClick={create} disabled={busy || !name.trim()}>
-          Créer le magasin
+          {t("shopping.stores.create")}
         </Button>
       }
     >
       <div className="grid gap-5">
         <div>
-          <span className="mb-1 block text-[15px] font-bold">Enseigne</span>
+          <span className="mb-1 block text-[15px] font-bold">{t("shopping.chain")}</span>
           <div className="flex flex-wrap gap-2">
             {CHAINS.map((c) => (
               <Chip
@@ -190,31 +193,31 @@ export function AddStoreSheet({
                 className="pl-1.5"
               >
                 <ChainMark chain={c} size={28} />
-                {c}
+                {chainLabel(c, lang)}
               </Chip>
             ))}
           </div>
         </div>
         <TextInput
-          label="Nom"
+          label={t("shopping.name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Ex. Aldi Marly"
+          placeholder={t("shopping.stores.namePlaceholder")}
         />
         {stores.length > 0 && (
           <div>
             <span className="mb-1 block text-[15px] font-bold">
-              Copier l'ordre de…
+              {t("shopping.stores.copyFrom")}
             </span>
             <p className="mb-2 text-[15px] text-muted">
-              Pratique pour une autre succursale de la même enseigne.
+              {t("shopping.stores.copyHint")}
             </p>
             <div className="flex flex-wrap gap-2">
               <Chip
                 selected={copyFrom === undefined}
                 onClick={() => setCopyFrom(undefined)}
               >
-                Ordre standard
+                {t("shopping.stores.standardOrder")}
               </Chip>
               {stores.map((s) => (
                 <Chip

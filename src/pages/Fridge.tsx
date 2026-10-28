@@ -5,6 +5,9 @@ import { Link } from "react-router-dom";
 import { CalendarPlus, Check, ChevronRight, Info, Trash } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { formatDayLong, formatDayShort } from "../../convex/domain/dates";
+import type { Lang } from "../../convex/domain/lang";
+import { translate } from "../i18n";
+import { useT } from "../i18n/useT";
 import { useSession } from "../lib/session";
 import { useWeek } from "../lib/week";
 import { useRun } from "../lib/toast";
@@ -28,33 +31,36 @@ const KEEP_TONE = {
   périmé: "berry",
 } as const;
 
-function keepLabel(row: FridgeRow) {
+function keepLabel(row: FridgeRow, lang: Lang) {
   const { state, until } = row.keep;
-  if (state === "aujourd'hui") return "À manger aujourd'hui";
-  if (state === "périmé") return `Périmé depuis le ${formatDayLong(until)}`;
-  return `Bon jusqu'au ${formatDayLong(until)}`;
+  const date = formatDayLong(until, lang);
+  if (state === "aujourd'hui") return translate(lang, "shopping.fridge.eatToday");
+  if (state === "périmé")
+    return translate(lang, "shopping.fridge.expiredSince", { date });
+  return translate(lang, "shopping.fridge.goodUntil", { date });
 }
 
 export function FridgePage() {
   const { token } = useSession();
   const { today } = useWeek();
+  const { t } = useT();
   const rows = useQuery(api.meals.fridge, token ? { token, today } : "skip");
   const stock = useQuery(api.homeStock.list, token ? { token } : "skip");
   const [planning, setPlanning] = useState<FridgeRow | null>(null);
   const hasStock = !!stock && stock.items.length > 0;
 
   return (
-    <Page title="Frigo" subtitle="Les restes à manger">
+    <Page title={t("nav.fridge")} subtitle={t("shopping.fridge.subtitle")}>
       {hasStock && <HomeStock stock={stock} />}
-      {hasStock && <SectionTitle>Restes</SectionTitle>}
+      {hasStock && <SectionTitle>{t("shopping.fridge.leftovers")}</SectionTitle>}
       {rows === undefined ? (
-        <Loading label="Ouverture du frigo" />
+        <Loading label={t("shopping.fridge.loading")} />
       ) : rows.length === 0 ? (
         <Card className="mt-2">
           <EmptyState
             emoji="🧊"
-            title="Le frigo est vide"
-            text="Pas de restes en attente. Tout a été mangé, bravo."
+            title={t("shopping.fridge.emptyTitle")}
+            text={t("shopping.fridge.emptyText")}
           />
         </Card>
       ) : (
@@ -69,11 +75,7 @@ export function FridgePage() {
 
       <div className="mt-6 flex gap-3 rounded-[var(--radius-card)] bg-paper/70 p-4 text-[15px] text-muted ring-1 ring-line">
         <Info size={20} className="mt-0.5 shrink-0 text-carrot" aria-hidden />
-        <p>
-          Comment des restes arrivent ici{" "}? Sur la semaine, touche un plat
-          puis choisis «{" "}Pas mangé{" "}» ou «{" "}Il en reste{" "}». La
-          durée de conservation vient de la recette.
-        </p>
+        <p>{t("shopping.fridge.help")}</p>
       </div>
 
       <PlanLeftoverSheet source={planning} onClose={() => setPlanning(null)} />
@@ -85,7 +87,8 @@ function FridgeCard({ row, onPlan }: { row: FridgeRow; onPlan: () => void }) {
   const { token } = useSession();
   const run = useRun();
   const discard = useMutation(api.meals.discardLeftover);
-  const name = row.recipe?.name ?? row.title ?? "Plat";
+  const { t, lang } = useT();
+  const name = row.recipe?.name ?? row.title ?? t("shopping.fridge.dish");
   const expired = row.keep.state === "périmé";
   return (
     <Card className="p-4">
@@ -99,11 +102,17 @@ function FridgeCard({ row, onPlan }: { row: FridgeRow; onPlan: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="truncate text-lg font-black">{name}</div>
           <div className="text-[15px] font-semibold text-muted">
-            {plural(row.leftoverPortions, "portion", "portions")} · cuisiné le{" "}
-            {formatDayLong(row.cookedOn)}
+            {t("shopping.fridge.cookedOn", {
+              portions: plural(
+                row.leftoverPortions,
+                t("shopping.fridge.portionOne"),
+                t("shopping.fridge.portionMany"),
+              ),
+              date: formatDayLong(row.cookedOn, lang),
+            })}
           </div>
           <div className="mt-1.5">
-            <Badge tone={KEEP_TONE[row.keep.state]}>{keepLabel(row)}</Badge>
+            <Badge tone={KEEP_TONE[row.keep.state]}>{keepLabel(row, lang)}</Badge>
           </div>
         </div>
       </div>
@@ -114,16 +123,19 @@ function FridgeCard({ row, onPlan }: { row: FridgeRow; onPlan: () => void }) {
           disabled={expired}
         >
           <CalendarPlus size={20} />
-          Planifier
+          {t("shopping.fridge.plan")}
         </Button>
         <Button
           variant={expired ? "primary" : "secondary"}
           onClick={() =>
-            run(() => discard({ token, id: row._id }), "Retiré du frigo")
+            run(
+              () => discard({ token, id: row._id }),
+              t("shopping.fridge.removed"),
+            )
           }
         >
           <Trash size={20} />
-          Jeté
+          {t("shopping.fridge.thrown")}
         </Button>
       </div>
     </Card>
@@ -137,9 +149,10 @@ function HomeStock({ stock }: { stock: Stock }) {
   const { token } = useSession();
   const run = useRun();
   const remove = useMutation(api.homeStock.remove);
+  const { t, lang } = useT();
   return (
     <>
-      <SectionTitle>À utiliser</SectionTitle>
+      <SectionTitle>{t("shopping.fridge.toUse")}</SectionTitle>
       <Card className="overflow-hidden">
         <ul className="divide-y divide-line">
           {stock.items.map((i) => (
@@ -152,18 +165,27 @@ function HomeStock({ stock }: { stock: Stock }) {
                   </span>
                 </div>
                 <div className="text-[15px] text-muted">
-                  Depuis le {formatDayShort(i.since)}
-                  {i.from ? `, plat « ${i.from} » pas cuisiné` : ""}
+                  {i.from
+                    ? t("shopping.fridge.sinceFrom", {
+                        date: formatDayShort(i.since, lang),
+                        from: i.from,
+                      })
+                    : t("shopping.fridge.since", {
+                        date: formatDayShort(i.since, lang),
+                      })}
                 </div>
               </div>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() =>
-                  run(() => remove({ token, id: i._id }), `${i.name} retiré`)
+                  run(
+                    () => remove({ token, id: i._id }),
+                    t("shopping.fridge.stockRemoved", { name: i.name }),
+                  )
                 }
               >
-                <Check size={18} /> Utilisé ou jeté
+                <Check size={18} /> {t("shopping.fridge.usedOrThrown")}
               </Button>
             </li>
           ))}
@@ -172,7 +194,7 @@ function HomeStock({ stock }: { stock: Stock }) {
       {stock.ideas.length > 0 && (
         <>
           <p className="mt-4 mb-2 text-[15px] font-bold text-muted">
-            Des idées pour les utiliser
+            {t("shopping.fridge.ideas")}
           </p>
           <Card className="overflow-hidden">
             <ul className="divide-y divide-line">
@@ -190,7 +212,13 @@ function HomeStock({ stock }: { stock: Stock }) {
                         {r.name}
                       </span>
                       <span className="block truncate text-[15px] text-muted">
-                        avec {r.uses.join(", ").toLowerCase()}
+                        {t("shopping.fridge.uses", {
+                          // German nouns keep their capital letter
+                          list:
+                            lang === "de"
+                              ? r.uses.join(", ")
+                              : r.uses.join(", ").toLowerCase(),
+                        })}
                       </span>
                     </span>
                     <ChevronRight size={20} className="shrink-0 text-muted" />

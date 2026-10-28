@@ -34,12 +34,14 @@ import {
 import {
   CHAINS,
   ChainMark,
+  chainLabel,
   priceLevelText,
 } from "../components/shopping/chains";
 import { AislePicker } from "../components/shopping/AislePicker";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { useUpdateStore } from "../components/shopping/useUpdateStore";
 import { searchKey } from "../lib/text";
+import { useT } from "../i18n/useT";
 
 const MIN_FACTOR = 0.8;
 const MAX_FACTOR = 1.2;
@@ -49,10 +51,15 @@ export function StoreEditorPage() {
   const base = useBase();
   const store = base?.stores.find((s) => s._id === id);
   const paths = useAppPaths();
+  const { t, lang } = useT();
   return (
     <Page
-      title={store?.name ?? "Magasin"}
-      subtitle={store ? `Enseigne ${store.chain}` : undefined}
+      title={store?.name ?? t("shopping.store.fallback")}
+      subtitle={
+        store
+          ? t("shopping.store.chainOf", { chain: chainLabel(store.chain, lang) })
+          : undefined
+      }
       back={<BackButton fallback={paths.stores} />}
     >
       {!base ? (
@@ -60,8 +67,8 @@ export function StoreEditorPage() {
       ) : !store ? (
         <EmptyState
           emoji="🏚️"
-          title="Magasin introuvable"
-          text="Il a peut-être été archivé. Retourne à la liste des magasins."
+          title={t("shopping.store.notFoundTitle")}
+          text={t("shopping.store.notFoundText")}
         />
       ) : (
         <StoreForm key={store._id} store={store} base={base} />
@@ -81,6 +88,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
   const [moved, setMoved] = useState<Id<"aisles"> | null>(null);
   const [addingException, setAddingException] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const { t, lang } = useT();
 
   const walk = useMemo(
     () => orderAisles(base.aisles, store) as Doc<"aisles">[],
@@ -132,7 +140,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
     <>
       <Card className="grid gap-4 p-4">
         <TextInput
-          label="Nom du magasin"
+          label={t("shopping.store.name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={saveName}
@@ -140,7 +148,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
           enterKeyHint="done"
         />
         <div>
-          <span className="mb-1 block text-[15px] font-bold">Enseigne</span>
+          <span className="mb-1 block text-[15px] font-bold">{t("shopping.chain")}</span>
           <div className="flex flex-wrap gap-2">
             {CHAINS.map((c) => (
               <Chip
@@ -153,17 +161,16 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
                 className="pl-1.5"
               >
                 <ChainMark chain={c} size={28} />
-                {c}
+                {chainLabel(c, lang)}
               </Chip>
             ))}
           </div>
         </div>
       </Card>
 
-      <SectionTitle>Parcours dans le magasin</SectionTitle>
+      <SectionTitle>{t("shopping.store.walk")}</SectionTitle>
       <p className="mb-3 px-1 text-[15px] text-muted">
-        Range les rayons dans l'ordre où tu les croises, de l'entrée à la
-        caisse. La liste de courses suit cet ordre.
+        {t("shopping.store.walkHelp")}
       </p>
       <Card className="overflow-hidden">
         <ol className="divide-y divide-line">
@@ -185,7 +192,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
                 {aisle.name}
               </span>
               <IconButton
-                label={`Monter ${aisle.name}`}
+                label={t("shopping.store.moveUp", { aisle: aisle.name })}
                 disabled={i === 0}
                 onClick={() => move(i, -1)}
                 className="bg-cream"
@@ -193,7 +200,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
                 <ChevronUp size={24} />
               </IconButton>
               <IconButton
-                label={`Descendre ${aisle.name}`}
+                label={t("shopping.store.moveDown", { aisle: aisle.name })}
                 disabled={i === walk.length - 1}
                 onClick={() => move(i, 1)}
                 className="bg-cream"
@@ -205,11 +212,9 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
         </ol>
       </Card>
 
-      <SectionTitle>Exceptions</SectionTitle>
+      <SectionTitle>{t("shopping.store.exceptions")}</SectionTitle>
       <p className="mb-3 px-1 text-[15px] text-muted">
-        Les articles rangés ailleurs que d'habitude dans ce magasin. Tu peux
-        aussi en ajouter depuis la liste de courses, d'un appui long sur
-        l'article.
+        {t("shopping.store.exceptionsHelp")}
       </p>
       {exceptions.length > 0 && (
         <Card className="mb-3 overflow-hidden">
@@ -231,7 +236,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
                           <span className="line-through">
                             {usual.emoji} {usual.name}
                           </span>
-                          <ArrowRight size={14} aria-label="devient" />
+                          <ArrowRight size={14} aria-label={t("shopping.store.becomes")} />
                         </>
                       )}
                       <span className="font-bold text-carrot-dark">
@@ -240,7 +245,9 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
                     </div>
                   </div>
                   <IconButton
-                    label={`Supprimer l'exception pour ${ingredient.name}`}
+                    label={t("shopping.store.removeException", {
+                      name: ingredient.name,
+                    })}
                     onClick={() =>
                       run(
                         () =>
@@ -250,7 +257,9 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
                             ingredientId: ingredient._id,
                             aisleId: null,
                           }),
-                        `${ingredient.name} retrouve son rayon habituel.`,
+                        t("shopping.store.exceptionRemoved", {
+                          name: ingredient.name,
+                        }),
                       )
                     }
                     className="text-muted"
@@ -264,13 +273,13 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
         </Card>
       )}
       <Button variant="secondary" onClick={() => setAddingException(true)}>
-        <Plus size={20} /> Ajouter une exception
+        <Plus size={20} /> {t("shopping.store.addException")}
       </Button>
 
-      <SectionTitle>Niveau de prix</SectionTitle>
+      <SectionTitle>{t("shopping.store.priceLevel")}</SectionTitle>
       <Card className="flex items-center gap-3 p-3">
         <IconButton
-          label="Moins cher"
+          label={t("shopping.store.cheaper")}
           disabled={store.priceFactor <= MIN_FACTOR}
           onClick={() => changeFactor(-0.01)}
           className="bg-cream ring-1 ring-line"
@@ -286,14 +295,14 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
             )}
             aria-live="polite"
           >
-            {priceLevelText(store.priceFactor)}
+            {priceLevelText(store.priceFactor, lang)}
           </div>
           <div className="text-[15px] text-muted">
-            Ajuste le coût estimé des courses
+            {t("shopping.store.priceHelp")}
           </div>
         </div>
         <IconButton
-          label="Plus cher"
+          label={t("shopping.store.dearer")}
           disabled={store.priceFactor >= MAX_FACTOR}
           onClick={() => changeFactor(0.01)}
           className="bg-cream ring-1 ring-line"
@@ -308,7 +317,7 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
           size="lg"
           onClick={() => setConfirmArchive(true)}
         >
-          <Archive size={20} /> Archiver ce magasin
+          <Archive size={20} /> {t("shopping.store.archive")}
         </Button>
       </div>
 
@@ -322,15 +331,15 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
       <ConfirmSheet
         open={confirmArchive}
         onClose={() => setConfirmArchive(false)}
-        title="Archiver ce magasin ?"
-        text={`${store.name} disparaîtra de la liste des magasins et du choix sur la liste de courses.`}
-        confirmLabel="Archiver"
+        title={t("shopping.store.archiveTitle")}
+        text={t("shopping.store.archiveText", { name: store.name })}
+        confirmLabel={t("shopping.store.archiveConfirm")}
         danger
         onConfirm={async () => {
           navigate(paths.stores, { replace: true });
           await run(
             () => update({ token, id: store._id, archived: true }),
-            `${store.name} est archivé.`,
+            t("shopping.store.archived", { name: store.name }),
           );
         }}
       />
@@ -352,6 +361,7 @@ function AddExceptionSheet({
   const setOverride = useMutation(api.catalog.setOverride);
   const [search, setSearch] = useState("");
   const [ingredient, setIngredient] = useState<Doc<"ingredients"> | null>(null);
+  const { t } = useT();
 
   const needle = searchKey(search);
   const matches = base.ingredients
@@ -366,7 +376,7 @@ function AddExceptionSheet({
     return (
       <Sheet open onClose={onClose} title={ingredient.name}>
         <p className="mb-3 text-[17px]">
-          Chez {store.name}, cet article est au rayon…
+          {t("shopping.store.atStore", { store: store.name })}
         </p>
         <AislePicker
           aisles={base.aisles}
@@ -382,7 +392,7 @@ function AddExceptionSheet({
                   ingredientId: ingredient._id,
                   aisleId,
                 }),
-              "Exception enregistrée.",
+              t("shopping.store.exceptionSaved"),
             );
           }}
         />
@@ -391,11 +401,11 @@ function AddExceptionSheet({
   }
 
   return (
-    <Sheet open onClose={onClose} title="Quel article ?">
+    <Sheet open onClose={onClose} title={t("shopping.store.whichItem")}>
       <SearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Chercher un ingrédient"
+        placeholder={t("shopping.store.searchIngredient")}
       />
       <ul className="mt-3 grid gap-1.5">
         {matches.map((i) => {
@@ -423,8 +433,8 @@ function AddExceptionSheet({
       {matches.length === 0 && (
         <EmptyState
           emoji="🔎"
-          title="Aucun ingrédient trouvé"
-          text="Ajoute-le d'abord dans Réglages, rubrique Ingrédients et prix."
+          title={t("shopping.store.noIngredientTitle")}
+          text={t("shopping.store.noIngredientText")}
         />
       )}
     </Sheet>
