@@ -132,6 +132,12 @@ Serveurs de dev via Portly.
   téléchargée (`src/lib/look.ts`). Couleurs du kit d'identité v1 ; contraste au-dessus de 4,5:1
   dans les trois thèmes (boutons Carotte en #C1511C, l'orange vif #E97537 reste pour le
   logo). Captures : `docs/themes/`.
+- **Guide pour les nouveaux** (depuis le 2026-10-28) : carte de bienvenue, tour en bulles
+  (driver.js) et checklist « Premiers pas » dans Plus, pour les comptes activés après sa mise
+  en route. Interrupteur des admins dans Gestion, Famille (`settings.onboarding`, activé pour
+  les nouvelles familles ; l'activer marque les comptes existants comme habitués,
+  `members.onboardingDoneAt = 0`). « Revoir le guide » dans Plus. Détail et captures :
+  `docs/guide/GUIDE.md`, section 6.
 - **Logo** (kit d'identité v1, « m » souriant avec fourchette) : `src/components/Logo.tsx`
   en `currentColor`, il prend la couleur du thème (connexion, gestion). L'icône d'onglet,
   l'icône d'écran d'accueil et le manifeste suivent aussi le thème (`public/brand/`,
@@ -262,6 +268,8 @@ Serveurs de dev via Portly.
   conversion des unités, doublons fusionnés).
 - `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
   refus de suppression.
+- `onboarding.ts` : étapes de « Premiers pas » d'après les actions du membre, carte de
+  bienvenue, habitués à marquer quand le guide est activé.
 
 ## Règles
 

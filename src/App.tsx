@@ -31,6 +31,7 @@ import { AislesSection } from "./gestion/AislesSection";
 import { StoresSection } from "./gestion/StoresSection";
 import { FamiliesSection } from "./gestion/FamiliesSection";
 import { FamilyAdminSection } from "./gestion/FamilyAdminSection";
+import { OnboardingGate } from "./onboarding";
 
 /** The family app: sign-in gate, then the phone screens and the management area. */
 export function App() {
@@ -51,6 +52,7 @@ export function App() {
             <Gate>
               <WeekProvider>
                 <HashRouter>
+                  <OnboardingGate />
                   <Routes>
                     <Route path="/gestion" element={<GestionLayout />}>
                       <Route

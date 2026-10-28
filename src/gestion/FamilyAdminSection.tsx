@@ -9,6 +9,7 @@ import { plural } from "../lib/format";
 import { FONTS, THEMES, type Font, type Theme } from "../lib/look";
 import { Avatar, Badge, Button, cx, ErrorBox, Loading } from "../components/ui";
 import { MemberSheet } from "../components/shopping/MemberSheet";
+import { Toggle } from "../components/planning/controls";
 import { FamilyNameCard } from "../pages/Settings";
 import { DataTable, type Column } from "./DataTable";
 import { GestionHeader } from "./GestionLayout";
@@ -112,6 +113,8 @@ export function FamilyAdminSection() {
         </section>
 
         <LookSection theme={account.look.theme} font={account.look.font} />
+
+        <GuideSection enabled={base.settings.onboarding === true} />
       </div>
       {editing !== undefined && (
         <MemberSheet
@@ -122,6 +125,38 @@ export function FamilyAdminSection() {
         />
       )}
     </>
+  );
+}
+
+/** Switch of the onboarding: welcome card, tour and « Premiers pas » for new accounts. */
+function GuideSection({ enabled }: { enabled: boolean }) {
+  const { token } = useSession();
+  const setEnabled = useMutation(api.onboarding.setEnabled);
+  const run = useRun();
+  return (
+    <section className="grid gap-3">
+      <div>
+        <h2 className="text-xl font-black">Guide pour les nouveaux</h2>
+        <p className="text-[15px] text-muted">
+          À sa première connexion, un nouveau membre voit une carte de bienvenue, un tour de
+          l'app en 1 minute et, dans Plus, ses « Premiers pas ». Les comptes déjà
+          activés ne le voient pas, chacun peut le relancer dans Plus.
+        </p>
+      </div>
+      <div className="max-w-xl rounded-2xl bg-paper p-4 ring-1 ring-line">
+        <Toggle
+          checked={enabled}
+          onChange={(on) =>
+            void run(
+              () => setEnabled({ token, enabled: on }),
+              on ? "Guide activé pour les nouveaux" : "Guide coupé",
+            )
+          }
+          label="Guide pour les nouveaux"
+          hint={enabled ? "Activé" : "Coupé : l'app reste comme avant pour tout le monde"}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -137,7 +172,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
   }, []);
 
   return (
-    <section className="grid gap-4">
+    <section className="grid gap-4" data-tour="look">
       <div>
         <h2 className="text-xl font-black">Apparence</h2>
         <p className="text-[15px] text-muted">

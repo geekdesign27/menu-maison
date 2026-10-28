@@ -82,7 +82,7 @@ export const add = mutation({
     ctx,
     { token, tomorrowLunchPersons, cookedTheEveningBefore, extraPortions, ...m },
   ) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const { db, member } = await requireMemberWriter(ctx, token);
     assertDate(m.date);
     assertPersons(m.persons);
     if (!m.recipeId && !m.title?.trim())
@@ -102,6 +102,7 @@ export const add = mutation({
       extraPortions: extra,
       // The extra portions go to the fridge once cooked (the fridge shows them from cookedOn)
       leftoverPortions: extra ?? 0,
+      addedBy: member._id,
     });
     if (tomorrowLunchPersons && m.slot === "soir") {
       assertPersons(tomorrowLunchPersons);
@@ -114,6 +115,7 @@ export const add = mutation({
         cookedOn: m.date,
         status: "prévu",
         leftoverPortions: 0,
+        addedBy: member._id,
       });
     }
     return id;
@@ -169,7 +171,7 @@ export const setStatus = mutation({
     leftoverPortions: v.optional(v.number()),
   },
   handler: async (ctx, { token, id, status, leftoverPortions }) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const { db, member } = await requireMemberWriter(ctx, token);
     const meal = await db.get(id);
     if (!meal) throw new ConvexError("Repas introuvable.");
     if (status === MEAL_NOT_COOKED)
@@ -189,7 +191,7 @@ export const setStatus = mutation({
       status === "pas mangé"
         ? (leftoverPortions ?? Math.max(0, meal.persons + extra - placed))
         : (leftoverPortions ?? (status === "prévu" ? Math.max(0, extra - placed) : meal.leftoverPortions));
-    await db.patch(id, { status, leftoverPortions: portions });
+    await db.patch(id, { status, leftoverPortions: portions, statusBy: member._id });
   },
 });
 
@@ -288,7 +290,7 @@ export const markNotCooked = mutation({
     keep: v.array(v.object({ ingredientId: v.id("ingredients"), qty: v.number(), unit: unitValidator })),
   },
   handler: async (ctx, { token, id, keep }) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const { db, member } = await requireMemberWriter(ctx, token);
     const meal = await db.own(id, "Repas introuvable.");
     if (meal.fromLeftoverOf) throw new ConvexError("Des restes ne se cuisinent pas : retire-les du menu.");
     if (keep.length > 60) throw new ConvexError("Trop d'ingrédients.");
@@ -312,7 +314,8 @@ export const markNotCooked = mutation({
     const later = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 30));
     for (const m of later)
       if (group.some((g) => g._id === m.fromLeftoverOf) && m.status === "prévu") await db.delete(m._id);
-    for (const m of group) await db.patch(m._id, { status: MEAL_NOT_COOKED, leftoverPortions: 0 });
+    for (const m of group)
+      await db.patch(m._id, { status: MEAL_NOT_COOKED, leftoverPortions: 0, statusBy: member._id });
   },
 });
 
@@ -350,7 +353,7 @@ export const planLeftover = mutation({
     persons: v.number(),
   },
   handler: async (ctx, { token, sourceId, date, slot, persons }) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const { db, member } = await requireMemberWriter(ctx, token);
     assertDate(date);
     assertPersons(persons);
     const source = await db.get(sourceId);
@@ -372,6 +375,7 @@ export const planLeftover = mutation({
       fromLeftoverOf: sourceId,
       status: "prévu",
       leftoverPortions: 0,
+      addedBy: member._id,
     });
   },
 });
@@ -401,7 +405,7 @@ export const addRecurring = mutation({
     weeks: v.number(),
   },
   handler: async (ctx, { token, date, slot, recipeId, title, persons, weekdays, weeks }) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const { db, member } = await requireMemberWriter(ctx, token);
     assertDate(date);
     assertPersons(persons);
     assertInt(weeks, 1, 12, "Nombre de semaines");
@@ -429,6 +433,7 @@ export const addRecurring = mutation({
         cookedOn: day,
         status: "prévu",
         leftoverPortions: 0,
+        addedBy: member._id,
       });
       added++;
     }

@@ -108,6 +108,8 @@ export default defineSchema({
     passwordHash: v.optional(v.string()), // "pbkdf2-sha256$<iterations>$<salt>$<hash>"
     role: v.optional(roleValidator),
     superadmin: v.optional(v.boolean()), // manages every family (PA)
+    // Welcome tour finished or skipped; 0 = account older than the guide (see domain/onboarding)
+    onboardingDoneAt: v.optional(v.number()),
   })
     .index("by_family", ["familyId"])
     .index("by_family_username", ["familyId", "username"]),
@@ -205,6 +207,9 @@ export default defineSchema({
     status: mealStatusValidator,
     // Portions left in the fridge after this meal (0 = nothing left)
     leftoverPortions: v.number(),
+    // Who planned it and who last set its status: ticks the « Premiers pas » checklist
+    addedBy: v.optional(v.id("members")),
+    statusBy: v.optional(v.id("members")),
   })
     .index("by_family", ["familyId"])
     .index("by_family_date", ["familyId", "date"])
@@ -343,6 +348,8 @@ export default defineSchema({
     defaultPersons: v.number(),
     theme: v.optional(themeValidator),
     font: v.optional(fontValidator),
+    // Guide for new members; absent = off (families older than the guide)
+    onboarding: v.optional(v.boolean()),
   }).index("by_family", ["familyId"]),
 
   /** Device sessions opened by a member (token kept in localStorage). */

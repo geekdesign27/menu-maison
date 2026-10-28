@@ -148,10 +148,12 @@ export const DEFAULT_SETTINGS = { shoppingDay: 6, defaultPersons: 3 } as const;
 export async function getSettings(
   db: FamilyDb,
 ): Promise<
-  Pick<Doc<"settings">, "shoppingDay" | "defaultPersons" | "defaultStoreId" | "theme" | "font">
+  Pick<Doc<"settings">, "shoppingDay" | "defaultPersons" | "defaultStoreId" | "theme" | "font" | "onboarding">
 > {
   const row = await db.query("settings").first();
-  return row ?? { ...DEFAULT_SETTINGS, defaultStoreId: undefined, theme: undefined, font: undefined };
+  return (
+    row ?? { ...DEFAULT_SETTINGS, defaultStoreId: undefined, theme: undefined, font: undefined, onboarding: undefined }
+  );
 }
 
 

@@ -69,7 +69,8 @@ export async function seedFamily(ctx: MutationCtx, familyId: Id<"families">) {
     firstStore ??= id;
   }
 
-  await db.insert("settings", { ...DEFAULT_SETTINGS, defaultStoreId: firstStore });
+  // New families get the guide for new members, an admin can switch it off
+  await db.insert("settings", { ...DEFAULT_SETTINGS, defaultStoreId: firstStore, onboarding: true });
   for (const st of STAPLES) {
     await db.insert("staples", { name: st.name, aisleId: aisleIds.get(st.aisle), useCount: 0 });
   }

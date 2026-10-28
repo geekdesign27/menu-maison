@@ -89,7 +89,7 @@ export function RecipesPage() {
       subtitle={plural(shown.length, "recette", "recettes")}
       action={newButton}
     >
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="recipes">
         <Segmented
           label="Choix des recettes"
           value={view}
