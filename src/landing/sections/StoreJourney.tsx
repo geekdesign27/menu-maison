@@ -3,16 +3,11 @@ import { Check } from "lucide-react";
 import { ChainMark } from "../../components/shopping/chains";
 import { cx } from "../../components/ui";
 import { DEMO_STORES, demoList } from "../demo";
+import type { LandingKey } from "../i18n";
+import { useL } from "../lang";
 import { DemoTag, Heading, Phone, Reveal, Section } from "../parts";
-import { fr } from "../typo";
 
-const POINTS = [
-  "Chaque magasin a son propre ordre de rayons.",
-  "Tu changes de magasin, la liste se réorganise.",
-  "Les prix peuvent varier d'une enseigne à l'autre.",
-  "Ce qui est coché apparaît tout de suite sur les autres téléphones de la famille.",
-  fr`Un filtre « Reste à acheter » montre ce qui manque encore.`,
-];
+const POINTS: LandingKey[] = ["store.point1", "store.point2", "store.point3", "store.point4", "store.point5"];
 
 /** Moves the aisles to their new place instead of jumping (FLIP). */
 function useReorder() {
@@ -46,18 +41,21 @@ function useReorder() {
 }
 
 function RouteDemo() {
+  const { l, lang } = useL();
   const [index, setIndex] = useState(0);
   const store = DEMO_STORES[index];
-  const list = useMemo(() => demoList(store), [store]);
+  const list = useMemo(() => demoList(store, undefined, lang), [store, lang]);
+  // « On commence par : boulangerie », but German nouns keep their capital
+  const first = lang === "fr" ? list.sections[0].name.toLowerCase() : list.sections[0].name;
   const { snapshot, bind } = useReorder();
 
   return (
     <div className="rounded-[2rem] bg-paper p-5 shadow-[0_24px_60px_-34px_rgba(43,36,32,0.55)] sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[15px] font-extrabold text-muted">Choisis ton magasin</p>
+        <p className="text-[15px] font-extrabold text-muted">{l("store.choose")}</p>
         <DemoTag />
       </div>
-      <div role="radiogroup" aria-label="Magasin de l'exemple" className="mt-3 flex flex-wrap gap-2">
+      <div role="radiogroup" aria-label={l("store.storesLabel")} className="mt-3 flex flex-wrap gap-2">
         {DEMO_STORES.map((s, i) => (
           <button
             key={s.name}
@@ -81,7 +79,7 @@ function RouteDemo() {
       </div>
 
       <p className="mt-6 text-[15px] font-bold text-muted" aria-live="polite">
-        {fr`${list.total} articles, env. CHF ${list.costChf.toFixed(2)} estimés chez ${store.name}. On commence par : ${list.sections[0].name.toLowerCase()}.`}
+        {l("store.summary", { count: list.total, cost: list.costChf.toFixed(2), store: store.name, first })}
       </p>
 
       <ol className="relative mt-4 space-y-2.5">
@@ -96,7 +94,7 @@ function RouteDemo() {
                 <span aria-hidden>{s.emoji}</span> {s.name}
               </p>
               <p className="mt-0.5 truncate text-[14px] text-muted">
-                {s.items.map((it) => (it.display ? fr`${it.label} ${it.display}` : it.label)).join(" · ")}
+                {s.items.map((it) => (it.display ? `${it.label} ${it.display}` : it.label)).join(" · ")}
               </p>
             </div>
           </li>
@@ -107,17 +105,18 @@ function RouteDemo() {
 }
 
 export function StoreJourney() {
+  const { l } = useL();
   return (
     <Section id="magasins" tone="peach">
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16">
         <div>
           <Reveal>
-            <Heading id="magasins">Ton magasin. Tes rayons. Zéro slalom inutile.</Heading>
+            <Heading id="magasins">{l("store.title")}</Heading>
             <p className="mt-6 text-lg leading-relaxed text-ink/80 sm:text-xl">
-              {fr`Aldi, Coop, Migros, Lidl ou ton commerce habituel : tu définis l'ordre des rayons une fois, et Menu Maison range ensuite ta liste en conséquence.`}
+              {l("store.lead1")}
             </p>
             <p className="mt-4 text-lg leading-relaxed text-ink/80 sm:text-xl">
-              {fr`Les fruits et légumes d'abord ? Le pain juste après ? Parfait. La liste suit ton trajet, pas l'alphabet.`}
+              {l("store.lead2")}
             </p>
           </Reveal>
 
@@ -126,7 +125,7 @@ export function StoreJourney() {
               src="parcours"
               size="w-[150px] sm:w-[190px]"
               className="hidden rotate-[-3deg] sm:block"
-              alt="L'éditeur d'un magasin, Coop Fribourg Centre : le parcours dans le magasin, de 1 Fruits et légumes à 5 Charcuterie, avec des flèches pour monter ou descendre chaque rayon."
+              alt={l("store.editorAlt")}
             />
             <ul className="space-y-3 pt-2">
               {POINTS.map((p) => (
@@ -134,7 +133,7 @@ export function StoreJourney() {
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-herb text-white">
                     <Check size={15} strokeWidth={3.2} aria-hidden />
                   </span>
-                  {p}
+                  {l(p)}
                 </li>
               ))}
             </ul>
@@ -147,7 +146,7 @@ export function StoreJourney() {
             className="lp-note mx-auto mt-10 max-w-sm rounded-md bg-sun-soft px-6 pt-7 pb-6 text-[18px] leading-snug font-extrabold"
             style={{ "--lp-tilt": "-2deg" } as CSSProperties}
           >
-            L'application connaît ton parcours. Pour retrouver ton caddie, en revanche, on ne peut rien promettre.
+            {l("store.note")}
           </p>
         </Reveal>
       </div>

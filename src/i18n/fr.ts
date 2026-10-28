@@ -6,6 +6,7 @@ import * as shopping from "./zones/shopping";
 import * as recipes from "./zones/recipes";
 import * as common from "./zones/common";
 import * as admin from "./zones/admin";
+import * as gate from "./zones/gate";
 
 export const fr = {
   ...core.fr,
@@ -14,6 +15,7 @@ export const fr = {
   ...recipes.fr,
   ...common.fr,
   ...admin.fr,
+  ...gate.fr,
 };
 
 export type MessageKey = keyof typeof fr;

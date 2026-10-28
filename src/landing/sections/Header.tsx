@@ -2,15 +2,18 @@ import { useEffect, useState } from "react";
 import { LogoSymbol } from "../../components/Logo";
 import { cx } from "../../components/ui";
 import { pill, SectionLink, useLogin } from "../parts";
+import { LangSwitch } from "../../components/LangSwitch";
+import type { LandingKey } from "../i18n";
+import { useL } from "../lang";
 
 export const NAV = [
-  { to: "fonctionnement", label: "Fonctionnement" },
-  { to: "astuces", label: "Les petites astuces" },
-  { to: "acces", label: "Accès privé" },
-];
+  { to: "fonctionnement", labelKey: "shell.navHow" },
+  { to: "astuces", labelKey: "shell.navTips" },
+  { to: "acces", labelKey: "shell.navAccess" },
+] as const satisfies readonly { to: string; labelKey: LandingKey }[];
 
 /** Logo and name, as on the app icon: the smiling « m » with its fork. */
-export function Wordmark({ size = 36 }: { size?: number }) {
+export function Wordmark({ size = 36, compact = false }: { size?: number; compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2.5">
       <span
@@ -20,13 +23,22 @@ export function Wordmark({ size = 36 }: { size?: number }) {
       >
         <LogoSymbol size={size * 0.77} micro={size < 32} />
       </span>
-      <span className="text-[19px] font-extrabold tracking-tight whitespace-nowrap lowercase">menu maison</span>
+      {/* compact: the name gives way to the FR | DE switch on narrow phones (logo kept) */}
+      <span
+        className={cx(
+          "text-[19px] font-extrabold tracking-tight whitespace-nowrap lowercase",
+          compact && "hidden min-[430px]:inline",
+        )}
+      >
+        menu maison
+      </span>
     </span>
   );
 }
 
 export function Header() {
   const login = useLogin();
+  const { l } = useL();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -49,10 +61,10 @@ export function Header() {
           scrolled ? "py-2" : "py-3 sm:py-4",
         )}
       >
-        <SectionLink to="haut" aria-label="Menu Maison, retour en haut" className="mr-auto rounded-xl">
-          <Wordmark />
+        <SectionLink to="haut" aria-label={l("shell.home")} className="mr-auto rounded-xl">
+          <Wordmark compact />
         </SectionLink>
-        <nav aria-label="Sections de la page" className="hidden lg:block">
+        <nav aria-label={l("shell.sections")} className="hidden lg:block">
           <ul className="flex items-center gap-1">
             {NAV.map((item) => (
               <li key={item.to}>
@@ -60,14 +72,17 @@ export function Header() {
                   to={item.to}
                   className="inline-flex min-h-11 items-center rounded-full px-3.5 text-[16px] font-bold whitespace-nowrap text-ink/80 transition hover:bg-carrot-soft hover:text-carrot-dark"
                 >
-                  {item.label}
+                  {l(item.labelKey)}
                 </SectionLink>
               </li>
             ))}
           </ul>
         </nav>
+        <LangSwitch />
         <a href={login.href} className={cx(pill.primary, "min-h-11 px-4 text-[16px] whitespace-nowrap sm:px-5")}>
-          {login.label}
+          {/* Short on phones: the logo, the FR | DE switch and the button share 375 px */}
+          <span className="sm:hidden">{login.short}</span>
+          <span className="hidden sm:inline">{login.label}</span>
         </a>
       </div>
     </header>

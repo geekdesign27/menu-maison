@@ -6,6 +6,7 @@ import * as shopping from "./zones/shopping";
 import * as recipes from "./zones/recipes";
 import * as common from "./zones/common";
 import * as admin from "./zones/admin";
+import * as gate from "./zones/gate";
 
 export const de: Messages = {
   ...core.de,
@@ -14,4 +15,5 @@ export const de: Messages = {
   ...recipes.de,
   ...common.de,
   ...admin.de,
+  ...gate.de,
 };

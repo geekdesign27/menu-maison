@@ -9,6 +9,7 @@ import {
 } from "react";
 import { cx } from "../components/ui";
 import { LOGIN_HASH } from "./entry";
+import { useL } from "./lang";
 
 // ---------- Page context ----------
 
@@ -30,12 +31,13 @@ export function useLanding() {
   return useContext(LandingContext);
 }
 
-/** Where « Se connecter » leads, and what it says on a phone already signed in. */
-export function useLogin(label = "Se connecter") {
+/** Where « Se connecter » leads, and what it says on a phone already signed in. `label`: already translated. */
+export function useLogin(label?: string) {
   const { signedIn } = useLanding();
+  const { l } = useL();
   return signedIn
-    ? { href: "#/", label: "Ouvrir Menu Maison" }
-    : { href: LOGIN_HASH, label };
+    ? { href: "#/", label: l("shell.openApp"), short: l("shell.openShort") }
+    : { href: LOGIN_HASH, label: label ?? l("shell.login"), short: l("shell.login") };
 }
 
 // ---------- In-page navigation ----------
@@ -203,11 +205,12 @@ export function Note({
 }
 
 /** Marks an interactive example: local data, never the family's. */
-export function DemoTag({ children = "Exemple, données fictives" }: { children?: ReactNode }) {
+export function DemoTag({ children }: { children?: ReactNode }) {
+  const { l } = useL();
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-sun-soft px-3 py-1 text-[13px] font-extrabold text-[#7a5600]">
       <span aria-hidden className="size-1.5 rounded-full bg-sun" />
-      {children}
+      {children ?? l("shell.demo")}
     </span>
   );
 }

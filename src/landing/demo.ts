@@ -9,20 +9,27 @@ import {
   type ShoppingList,
 } from "../../convex/domain/shopping";
 import { addDays } from "../../convex/domain/dates";
+import { localName, type Lang } from "../../convex/domain/lang";
+import { NAMES_DE } from "../../convex/seedNamesDe";
 
-const ingredients: ShoppingInput["ingredients"] = Object.fromEntries(
-  INGREDIENTS.map((i) => [
-    i.name,
-    { name: i.name, aisleId: i.aisle, unit: i.unit, priceChf: i.priceChf, priceQty: i.priceQty },
-  ]),
-);
+/** A starter catalogue name in the page language (German from seedNamesDe.ts). */
+const named = (name: string, lang: Lang) => localName({ name, nameDe: NAMES_DE[name] }, lang);
 
-const aisles: ShoppingInput["aisles"] = AISLES.map((a, order) => ({
-  _id: a.key,
-  name: a.name,
-  emoji: a.emoji,
-  order,
-}));
+// Ingredients stay keyed by their French name (stable id), only the shown name follows the language
+function catalog(lang: Lang): ShoppingInput["ingredients"] {
+  return Object.fromEntries(
+    INGREDIENTS.map((i) => [
+      i.name,
+      { name: named(i.name, lang), aisleId: i.aisle, unit: i.unit, priceChf: i.priceChf, priceQty: i.priceQty },
+    ]),
+  );
+}
+
+const ingredients = catalog("fr");
+
+function aislesIn(lang: Lang): ShoppingInput["aisles"] {
+  return AISLES.map((a, order) => ({ _id: a.key, name: named(a.name, lang), emoji: a.emoji, order }));
+}
 
 function recipe(name: string) {
   const r = RECIPES.find((x) => x.name === name);
@@ -62,8 +69,12 @@ export const STORY_PORTIONS: Portions = { tonight: 3, tomorrowLunch: 2, extra: 1
 /** Sunday's roast chicken, the other dish with carrots this week. */
 export const CHICKEN_PORTIONS = 3;
 
-/** The example week's list, as the app builds it for one store. */
-export function demoList(target: DemoStore = DEMO_STORES[0], portions: Portions = STORY_PORTIONS): ShoppingList {
+/** The example week's list, as the app builds it for one store, in the page language. */
+export function demoList(
+  target: DemoStore = DEMO_STORES[0],
+  portions: Portions = STORY_PORTIONS,
+  lang: Lang = "fr",
+): ShoppingList {
   // Tomorrow's lunch is its own meal, cooked the same evening: the app adds the quantities up
   const meals: ShoppingInput["meals"] = [
     { _id: "mer-soir", recipeId: LASAGNES.name, persons: portions.tonight, extraPortions: portions.extra, cookedOn: LASAGNES_DAY },
@@ -74,20 +85,21 @@ export function demoList(target: DemoStore = DEMO_STORES[0], portions: Portions 
   return buildShoppingList({
     meals,
     recipes: { [LASAGNES.name]: LASAGNES, [ROAST_CHICKEN.name]: ROAST_CHICKEN },
-    ingredients,
-    aisles,
+    ingredients: lang === "fr" ? ingredients : catalog(lang),
+    aisles: aislesIn(lang),
     store: target,
     extras: [
-      { _id: "tresse", label: "Tresse au beurre", aisleId: "boulangerie" },
-      { _id: "cafe", label: "Café en grains", aisleId: "petit-dej" },
+      { _id: "tresse", label: named("Tresse au beurre", lang), aisleId: "boulangerie" },
+      { _id: "cafe", label: named("Café en grains", lang), aisleId: "petit-dej" },
     ],
     checks: {},
+    lang,
   });
 }
 
-/** One line of the list, found by its label. */
-export function demoItem(list: ShoppingList, label: string) {
-  return list.sections.flatMap((s) => s.items).find((i) => i.label === label);
+/** One ingredient line of the list, found by the ingredient's French name (its id), whatever the language. */
+export function demoItem(list: ShoppingList, ingredient: string) {
+  return list.sections.flatMap((s) => s.items).find((i) => i.ingredientId === ingredient);
 }
 
 /** What each dish alone needs of one ingredient, in the recipe's unit. */

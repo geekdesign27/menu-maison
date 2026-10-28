@@ -4,6 +4,9 @@ import { api } from "../../convex/_generated/api";
 import { MIN_PASSWORD_LENGTH } from "../../convex/domain/auth";
 import { rememberedFamily, useSession } from "../lib/session";
 import { errorMessage } from "../lib/format";
+import { serverText } from "../i18n/serverText";
+import { useT } from "../i18n/useT";
+import { LangSwitch } from "./LangSwitch";
 import { Button, ErrorBox, Loading, TextInput } from "./ui";
 import { AppIcon } from "./Logo";
 import { NO_INVITE_HASH } from "../landing/entry";
@@ -42,13 +45,14 @@ function openApp() {
 export function Gate({ children }: { children: ReactNode }) {
   const { token, checking, expired, setToken } = useSession();
   const link = useLink();
+  const { t } = useT();
 
   // A signed-in phone opening a sign-in link goes straight to the app
   useEffect(() => {
     if (token && (link.family || link.invite)) openApp();
   }, [token, link.family, link.invite]);
 
-  if (checking) return <Loading label="Ouverture" />;
+  if (checking) return <Loading label={t("gate.opening")} />;
   if (link.invite && !token)
     return (
       <InviteScreen
@@ -85,8 +89,12 @@ function Brand({ subtitle }: { subtitle: string }) {
 
 function Screen({ children }: { children: ReactNode }) {
   return (
-    <main className="pt-safe mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-8">
-      {children}
+    <main className="pt-safe mx-auto flex min-h-dvh max-w-md flex-col px-6 pb-8">
+      {/* In the flow, not absolute: never covers the content on a small phone */}
+      <div className="flex justify-end pt-3">
+        <LangSwitch />
+      </div>
+      <div className="flex flex-1 flex-col justify-center pt-4">{children}</div>
     </main>
   );
 }
@@ -100,6 +108,7 @@ function LoginScreen({
   expired: boolean;
   onToken: (t: string) => void;
 }) {
+  const { t, lang } = useT();
   const login = useAction(api.access.login);
   const [slug, setSlug] = useState(familySlug ?? "");
   const family = useQuery(
@@ -108,9 +117,9 @@ function LoginScreen({
   );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(
-    expired ? "Ta session a expiré, reconnecte-toi." : "",
-  );
+  const [error, setError] = useState("");
+  // Kept as a flag so it follows a language switch
+  const [showExpired, setShowExpired] = useState(expired);
   const [busy, setBusy] = useState(false);
 
   // Family known from the link (or from this phone): no need to type it
@@ -120,6 +129,7 @@ function LoginScreen({
     e.preventDefault();
     setBusy(true);
     setError("");
+    setShowExpired(false);
     try {
       const res = await login({
         family: knownFamily?.slug ?? slug,
@@ -129,15 +139,16 @@ function LoginScreen({
       if (res.ok) {
         rememberedFamily.set(res.slug);
         onToken(res.token);
-      } else setError(res.error);
+      } else setError(serverText(lang, res.error));
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, lang));
     } finally {
       setBusy(false);
     }
   }
 
-  if (familySlug && family === undefined) return <Loading label="Ouverture" />;
+  if (familySlug && family === undefined)
+    return <Loading label={t("gate.opening")} />;
 
   return (
     <Screen>
@@ -145,22 +156,22 @@ function LoginScreen({
         subtitle={
           knownFamily
             ? knownFamily.name
-            : "Les menus de la semaine et la liste de courses."
+            : t("gate.tagline")
         }
       />
       <form onSubmit={submit} className="space-y-4">
         {!knownFamily && (
           <TextInput
-            label="Famille"
+            label={t("gate.login.family")}
             autoCapitalize="none"
             autoCorrect="off"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="Le nom de ta famille, par exemple Dupont"
+            placeholder={t("gate.login.familyPlaceholder")}
           />
         )}
         <TextInput
-          label="Pseudo"
+          label={t("gate.login.pseudo")}
           autoComplete="username"
           autoCapitalize="none"
           autoCorrect="off"
@@ -168,12 +179,15 @@ function LoginScreen({
           onChange={(e) => setUsername(e.target.value)}
         />
         <TextInput
-          label="Mot de passe"
+          label={t("gate.login.password")}
           type="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {showExpired && !error && (
+          <ErrorBox>{t("gate.login.expired")}</ErrorBox>
+        )}
         {error && <ErrorBox>{error}</ErrorBox>}
         <Button
           type="submit"
@@ -185,20 +199,18 @@ function LoginScreen({
             (!knownFamily && !slug.trim())
           }
         >
-          {busy ? "Vérification…" : "Se connecter"}
+          {busy ? t("gate.login.checking") : t("gate.login.submit")}
         </Button>
       </form>
       <p className="mt-6 text-center text-[15px] text-muted">
-        Pour rester connecté, ajoute l'app à l'écran d'accueil (Safari :
-        Partager, puis « Sur l'écran d'accueil »). Mot de passe oublié : demande
-        un nouveau lien à l'admin de ta famille.
+        {t("gate.login.help")}
       </p>
       {!knownFamily && (
         <a
           href={NO_INVITE_HASH}
           className="mx-auto mt-2 inline-flex min-h-11 items-center px-3 text-[15px] font-bold text-carrot-dark underline underline-offset-4"
         >
-          Je n'ai pas de compte
+          {t("gate.login.noAccount")}
         </a>
       )}
     </Screen>
@@ -212,6 +224,7 @@ function InviteScreen({
   link: string;
   onToken: (t: string) => void;
 }) {
+  const { t, lang } = useT();
   const info = useQuery(api.access.inviteInfo, { link });
   const activate = useAction(api.access.activate);
   const [password, setPassword] = useState("");
@@ -219,22 +232,19 @@ function InviteScreen({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (info === undefined) return <Loading label="Ouverture" />;
+  if (info === undefined) return <Loading label={t("gate.opening")} />;
   if (info === null)
     return (
       <Screen>
-        <Brand subtitle="Lien d'invitation" />
-        <ErrorBox>
-          Ce lien n'est plus valable. Demande-en un nouveau à l'admin de ta
-          famille.
-        </ErrorBox>
+        <Brand subtitle={t("gate.invite.subtitle")} />
+        <ErrorBox>{t("gate.invite.invalid")}</ErrorBox>
         <Button
           size="lg"
           variant="secondary"
           className="mt-4"
           onClick={openApp}
         >
-          Aller à la connexion
+          {t("gate.invite.toLogin")}
         </Button>
       </Screen>
     );
@@ -242,7 +252,7 @@ function InviteScreen({
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (password !== again) {
-      setError("Les deux mots de passe ne sont pas pareils.");
+      setError(t("gate.invite.mismatch"));
       return;
     }
     setBusy(true);
@@ -252,7 +262,7 @@ function InviteScreen({
       rememberedFamily.set(info!.slug);
       onToken(token);
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, lang));
     } finally {
       setBusy(false);
     }
@@ -262,21 +272,20 @@ function InviteScreen({
     <Screen>
       <Brand subtitle={info.family} />
       <h2 className="mb-1 text-center text-xl font-black">
-        Bienvenue {info.name} !
+        {t("gate.invite.welcome", { name: info.name })}
       </h2>
       {info.username ? (
         <div className="mb-6 rounded-3xl bg-white p-4 text-center shadow-sm">
-          <p className="text-[15px] font-semibold text-muted">Ton pseudo</p>
+          <p className="text-[15px] font-semibold text-muted">
+            {t("gate.invite.yourPseudo")}
+          </p>
           <p className="text-3xl font-black tracking-tight">{info.username}</p>
           <p className="mt-1 text-[15px] text-muted">
-            Avec ta famille « {info.family} », il te servira à te connecter.
+            {t("gate.invite.pseudoHelp", { family: info.family })}
           </p>
         </div>
       ) : (
-        <ErrorBox>
-          Ton profil n'a pas encore de pseudo. Demande à l'admin de ta famille
-          de t'en choisir un, puis un nouveau lien.
-        </ErrorBox>
+        <ErrorBox>{t("gate.invite.noPseudo")}</ErrorBox>
       )}
       <form onSubmit={submit} className="space-y-4">
         {/* Lets the phone's password manager save the pair */}
@@ -289,14 +298,14 @@ function InviteScreen({
           hidden
         />
         <TextInput
-          label={`Mot de passe (${MIN_PASSWORD_LENGTH} caractères au moins)`}
+          label={t("gate.invite.password", { min: MIN_PASSWORD_LENGTH })}
           type="password"
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <TextInput
-          label="Encore une fois"
+          label={t("gate.invite.again")}
           type="password"
           autoComplete="new-password"
           value={again}
@@ -308,7 +317,7 @@ function InviteScreen({
           size="lg"
           disabled={busy || !info.username || !password || !again}
         >
-          {busy ? "Enregistrement…" : "C'est parti"}
+          {busy ? t("gate.invite.saving") : t("gate.invite.submit")}
         </Button>
       </form>
     </Screen>

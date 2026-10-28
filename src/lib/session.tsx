@@ -20,6 +20,7 @@ import {
 import { applyLook, rememberLook } from "./look";
 import { localeOf } from "../../convex/domain/lang";
 import { localize } from "./catalogNames";
+import { setDeviceLang, useDeviceLang } from "./deviceLang";
 
 /** Family link name remembered on this phone, so the sign-in screen knows the family. */
 export const rememberedFamily = {
@@ -98,11 +99,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     rememberLook({ theme, font });
   }, [theme, font]);
 
-  // Screen readers and the browser's spelling follow the member's language
-  const lang = account?.lang ?? "fr";
+  // Screen readers and the browser's spelling follow the member's language;
+  // the next sign-in screen on this phone opens in it too
+  const device = useDeviceLang();
+  const lang = account ? (account.lang ?? "fr") : device;
   useEffect(() => {
     document.documentElement.lang = localeOf(lang);
-  }, [lang]);
+    if (account) setDeviceLang(lang);
+  }, [lang, account]);
 
   const ready = !!stored && !!account;
   const value = useMemo(

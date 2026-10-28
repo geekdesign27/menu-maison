@@ -40,6 +40,15 @@ describe("landing demo week", () => {
     expect(demoRecipeCost(LASAGNES, 3, DEMO_STORES[1])).toBe(13.95);
   });
 
+  it("speaks German on the German page, same ids and quantities", () => {
+    const list = demoList(DEMO_STORES[0], STORY_PORTIONS, "de");
+    expect(list.sections[0].name).toBe("Bäckerei");
+    const carrots = demoItem(list, "Carottes");
+    expect(carrots?.label).toBe("Rüebli");
+    expect(carrots?.qty).toBe(540);
+    expect(demoItem(list, "Viande hachée mixte")?.label).toBe("Gemischtes Hackfleisch");
+  });
+
   it("keeps the lasagnes three days in the fridge", () => {
     expect(goodUntil(LASAGNES)).toBe("2026-10-31");
   });

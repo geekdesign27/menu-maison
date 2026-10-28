@@ -154,8 +154,13 @@ Serveurs de dev via Portly.
   seule traduction à la fois, regroupée après 30 secondes, et les noms que Claude laisse ne
   sont plus renvoyés automatiquement (`families.germanNames`). Bouton « Traduire maintenant »
   dans Gestion, Famille. La dictée suit la langue du profil, la recette reste rédigée en
-  français. Restent en français : les recettes, la connexion, l'onglet Super admin, la page
-  d'accueil (lot 5, sélecteur FR | DE, captures gardées en français).
+  français. Lot 5 (fait) : la page d'accueil et les écrans de connexion ont un sélecteur
+  FR | DE ; avant connexion, la langue est celle de l'appareil (`src/lib/deviceLang.ts` :
+  choix mémorisé, sinon la langue du navigateur, sinon le français), et une fois connecté le
+  profil impose la sienne, mémorisée pour le prochain écran de connexion. Textes de la page
+  d'accueil dans `src/landing/i18n/` (séparés de l'app, `useL`), démo calculée en allemand ;
+  captures d'écran et aperçu de partage restent en français. Restent en français : les
+  recettes et l'onglet Super admin.
 - **Guide pour les nouveaux** (depuis le 2026-10-28) : carte de bienvenue, tour en bulles
   (driver.js) et checklist « Premiers pas » dans Plus, pour les comptes activés après sa mise
   en route. Interrupteur des admins dans Gestion, Famille (`settings.onboarding`, activé pour
