@@ -3,6 +3,9 @@ import { ConvexError, v } from "convex/values";
 import { requireMember } from "./lib";
 import { accessLink } from "./access";
 import { createFamily } from "./families";
+import { isUnlimited, usageOf } from "./aiBudget";
+import { capsOf } from "./domain/aiBudget";
+import { assertInt, assertPositive } from "./lib";
 
 /**
  * Super-admin space (PA): the only functions that see several families. They
@@ -27,7 +30,7 @@ export const families = query({
     ]);
     return Promise.all(
       families.map(async (f) => {
-        const [members, recipes] = await Promise.all([
+        const [members, recipes, usage, unlimited] = await Promise.all([
           ctx.db
             .query("members")
             .withIndex("by_family", (q) => q.eq("familyId", f._id))
@@ -36,7 +39,10 @@ export const families = query({
             .query("recipes")
             .withIndex("by_family", (q) => q.eq("familyId", f._id))
             .collect(),
+          usageOf(ctx, f._id),
+          isUnlimited(ctx, f._id),
         ]);
+        const caps = capsOf(f, unlimited);
         const signIns = sessions
           .filter((s) => s.familyId === f._id)
           .map((s) => s.createdAt);
@@ -58,6 +64,15 @@ export const families = query({
             })),
           recipes: recipes.filter((r) => !r.archived).length,
           lastSignIn: signIns.length ? Math.max(...signIns) : null,
+          // AI this month (Swiss time) against the family's caps, null: never blocked
+          ai: {
+            claudeUsd: usage?.claudeUsd ?? 0,
+            claudeCalls: usage?.claudeCalls ?? 0,
+            dictations: usage?.dictations ?? 0,
+            capUsd: caps.claudeUsd,
+            dictationCap: caps.dictations,
+            customCaps: f.aiCapUsd !== undefined || f.dictationCap !== undefined,
+          },
         };
       }),
     );
@@ -124,5 +139,28 @@ export const setSuspended = mutation({
       if (s.familyId === familyId) await ctx.db.delete(s._id);
     for (const i of await ctx.db.query("invites").collect())
       if (i.familyId === familyId) await ctx.db.delete(i._id);
+  },
+});
+
+/**
+ * Monthly AI caps of a family: Claude in USD and number of dictations; null
+ * goes back to the defaults (2 USD, 60). The super-admin's family is never blocked.
+ */
+export const setAiCaps = mutation({
+  args: {
+    token: v.string(),
+    familyId: v.id("families"),
+    capUsd: v.union(v.number(), v.null()),
+    dictationCap: v.union(v.number(), v.null()),
+  },
+  handler: async (ctx, { token, familyId, capUsd, dictationCap }) => {
+    await requireSuperadmin(ctx, token);
+    if (!(await ctx.db.get(familyId))) throw new ConvexError("Famille introuvable.");
+    if (capUsd !== null && capUsd !== 0) assertPositive(capUsd, 100, "Budget Claude");
+    if (dictationCap !== null) assertInt(dictationCap, 0, 1000, "Dictées par mois");
+    await ctx.db.patch(familyId, {
+      aiCapUsd: capUsd ?? undefined,
+      dictationCap: dictationCap ?? undefined,
+    });
   },
 });

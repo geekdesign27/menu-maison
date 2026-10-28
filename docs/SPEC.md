@@ -180,6 +180,15 @@ Serveurs de dev via Portly.
   d'activation), nouveau lien pour l'admin d'une autre famille, suspendre ou réactiver une
   autre famille (appareils déconnectés et liens annulés, données gardées). Chaque fonction vérifie le super-admin côté serveur ; ce
   sont les seules fonctions qui lisent plusieurs familles.
+- **Budget IA par famille** (lot C, 2026-10-28) : chaque appel à Claude (tickets, import,
+  traduction du catalogue) et chaque dictée passe par `convex/aiBudget.ts` : une même
+  mutation vérifie le plafond du mois (heure suisse, repart le 1er) et réserve l'appel (0,10 USD
+  estimés, ou la dictée), si bien que des appels en rafale ne passent pas tous ; le coût réel
+  tiré de `usage` (tarif Opus 5.5 dans `convex/domain/aiBudget.ts`) remplace l'estimation
+  après la réponse ; table `aiUsage`. Catalogue limité à 1500 produits par prompt. Plafonds :
+  2 USD de Claude et 60 dictées par mois, réglables par famille dans Super admin
+  (`superadmin.setAiCaps`, champ vide : défaut). La famille du super-admin est comptée, jamais
+  bloquée. Le dernier appel accepté peut dépasser le plafond de son coût réel. Compteurs visibles par le super-admin seulement (colonne « IA ce mois »).
 - En ligne de commande, même création :
   `npx convex run families:create '{"name":"Dupont","admin":"Marc"}'`.
 - Urgences : `access:revokeAll` (déconnecte tout le monde), `access:resetGuards`.

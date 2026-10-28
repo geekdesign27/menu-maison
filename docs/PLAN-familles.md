@@ -8,7 +8,7 @@ les liens d'activation et de mot de passe oublié, et nomme la famille (qui donn
 Reste de A2 : rôle admin ou membre réglable, changer son propre mot de passe. Lot B en
 production le 2026-10-28 : onglet « Familles » de `/gestion` (créer, nouveau lien d'admin,
 suspendre). Pas encore : supprimer une famille. Lot E (thèmes et polices) et fin de A2 (rôles, onglet « Famille » de la gestion) le même
-jour. Prochain : lot C (budget IA) avant tout pote.
+jour. Lot C (budget IA par famille) fait le 2026-10-28 : la voie est libre pour inviter un pote.
 
 ## Décisions de PA (2026-10-27)
 

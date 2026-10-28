@@ -109,9 +109,11 @@ export const missing = internalQuery({
 
 /** End of a run: the next change may start another; ids Claude left are not sent again automatically. */
 export const finish = internalMutation({
-  args: { familyId: v.id("families"), skipped: v.array(v.string()) },
+  // No `skipped` (failed run, budget reached): the list stays as it was
+  args: { familyId: v.id("families"), skipped: v.optional(v.array(v.string())) },
   handler: async (ctx, { familyId, skipped }) => {
-    await ctx.db.patch(familyId, { germanNames: { skipped: skipped.slice(0, 1000) } });
+    const before = (await ctx.db.get(familyId))?.germanNames?.skipped ?? [];
+    await ctx.db.patch(familyId, { germanNames: { skipped: (skipped ?? before).slice(0, 1000) } });
   },
 });
 
@@ -160,6 +162,8 @@ async function fillMissing(
   for (let start = 0; start < sent.length; start += BATCH) {
     const batch = sent.slice(start, start + BATCH);
     const answer = (await askClaude({
+      ctx,
+      familyId,
       label: "catalog translation",
       system: SYSTEM,
       schema: SCHEMA,
@@ -196,7 +200,7 @@ export const fill = internalAction({
     } catch (e) {
       // Our own messages only: another error could quote item names
       console.log("catalog translation failed", e instanceof ConvexError ? e.data : "unexpected");
-      await ctx.runMutation(internal.catalogTranslate.finish, { familyId, skipped: [] }).catch(() => {});
+      await ctx.runMutation(internal.catalogTranslate.finish, { familyId }).catch(() => {});
     }
   },
 });

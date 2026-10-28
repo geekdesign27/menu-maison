@@ -28,6 +28,11 @@ const DATE = new Intl.DateTimeFormat("fr-CH", {
   year: "numeric",
 });
 const shortDate = (ms: number | null) => (ms ? DATE.format(ms) : "jamais");
+const usd = (n: number) => `${n.toFixed(2)} USD`;
+/** A cap reached: the family's calls of that kind are refused until the 1st. */
+const aiOver = (f: Family) =>
+  (f.ai.capUsd !== null && f.ai.claudeUsd >= f.ai.capUsd) ||
+  (f.ai.dictationCap !== null && f.ai.dictations >= f.ai.dictationCap);
 const shortLink = (slug: string) =>
   appUrl(`/f/${slug}`).replace(/^https?:\/\//, "");
 
@@ -82,16 +87,33 @@ export function FamiliesSection() {
       render: (f) => f.recipes,
     },
     {
-      key: "lastSignIn",
-      label: "Dernière connexion",
-      sort: (f) => f.lastSignIn ?? 0,
-      render: (f) => shortDate(f.lastSignIn),
+      key: "createdAt",
+      label: "Connexion",
+      sort: (f) => f.createdAt,
+      render: (f) => (
+        <span className="block whitespace-nowrap">
+          {f.lastSignIn ? shortDate(f.lastSignIn) : "Jamais connectée"}
+          <span className="block text-[13px] text-muted">créée le {shortDate(f.createdAt)}</span>
+        </span>
+      ),
     },
     {
-      key: "createdAt",
-      label: "Créée le",
-      sort: (f) => f.createdAt,
-      render: (f) => shortDate(f.createdAt),
+      key: "ai",
+      label: "IA ce mois",
+      align: "right",
+      sort: (f) => f.ai.claudeUsd,
+      render: (f) => (
+        <span className="block whitespace-nowrap">
+          <span className={aiOver(f) ? "font-extrabold text-berry" : undefined}>
+            {usd(f.ai.claudeUsd)} / {f.ai.capUsd === null ? "sans plafond" : usd(f.ai.capUsd)}
+          </span>
+          <span className="block text-[13px] text-muted">
+            {f.ai.dictationCap === null
+              ? plural(f.ai.dictations, "dictée", "dictées")
+              : `${f.ai.dictations} / ${f.ai.dictationCap} dictées`}
+          </span>
+        </span>
+      ),
     },
     {
       key: "status",
@@ -341,6 +363,8 @@ function FamilySheet({
           )}
         </section>
 
+        <AiBudget family={family} />
+
         {link && (
           <LinkReady
             url={link.url}
@@ -396,5 +420,65 @@ function FamilySheet({
         }
       />
     </Sheet>
+  );
+}
+
+/** This month's AI use of a family, and its caps (empty field: the default). */
+function AiBudget({ family }: { family: Family }) {
+  const { token } = useSession();
+  const run = useRun();
+  const setAiCaps = useMutation(api.superadmin.setAiCaps);
+  const custom = family.ai.customCaps;
+  const [capText, setCapText] = useState(custom && family.ai.capUsd !== null ? String(family.ai.capUsd) : "");
+  const [dictText, setDictText] = useState(
+    custom && family.ai.dictationCap !== null ? String(family.ai.dictationCap) : "",
+  );
+  const parse = (text: string) => (text.trim() === "" ? null : Number(text.replace(",", ".")));
+  const save = () =>
+    run(
+      () => setAiCaps({ token, familyId: family._id, capUsd: parse(capText), dictationCap: parse(dictText) }),
+      "Plafonds IA enregistrés",
+    );
+
+  return (
+    <section className="grid gap-2">
+      <h3 className="text-[17px] font-black">IA ce mois</h3>
+      <p className="text-[15px]">
+        Claude : <strong>{usd(family.ai.claudeUsd)}</strong> pour{" "}
+        {plural(family.ai.claudeCalls, "appel", "appels")}
+        {family.ai.capUsd !== null && <> sur {usd(family.ai.capUsd)}</>}. Dictées :{" "}
+        <strong>{family.ai.dictations}</strong>
+        {family.ai.dictationCap !== null && <> sur {family.ai.dictationCap}</>}.
+        {aiOver(family) && (
+          <span className="block font-bold text-berry">Plafond atteint : les appels sont refusés jusqu'au 1er.</span>
+        )}
+      </p>
+      {family.ai.capUsd === null ? (
+        <p className="text-[15px] text-muted">Ta famille est comptée, jamais bloquée.</p>
+      ) : (
+        <div className="grid gap-3 rounded-2xl bg-paper p-3 ring-1 ring-line">
+          <div className="grid grid-cols-2 gap-3">
+            <TextInput
+              label="Budget Claude (USD)"
+              inputMode="decimal"
+              value={capText}
+              onChange={(e) => setCapText(e.target.value)}
+              placeholder="2"
+            />
+            <TextInput
+              label="Dictées par mois"
+              inputMode="numeric"
+              value={dictText}
+              onChange={(e) => setDictText(e.target.value)}
+              placeholder="60"
+            />
+          </div>
+          <p className="text-[14px] text-muted">Vide : 2 USD et 60 dictées par mois. Les compteurs repartent le 1er.</p>
+          <Button variant="secondary" onClick={save}>
+            Enregistrer les plafonds
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

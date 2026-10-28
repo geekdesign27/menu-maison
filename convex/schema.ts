@@ -93,7 +93,8 @@ export default defineSchema({
     name: v.string(), // « Famille Schütz »
     slug: v.string(), // in the sign-in link: menumaison.ch/#/f/schutz
     suspended: v.boolean(),
-    aiCapUsd: v.optional(v.number()), // monthly Claude budget set by the super-admin
+    aiCapUsd: v.optional(v.number()), // monthly Claude budget set by the super-admin (default 2 USD)
+    dictationCap: v.optional(v.number()), // monthly dictations set by the super-admin (default 60)
     // Background translation of the catalogue: one run at a time, and the ids
     // Claude left untranslated, not sent again automatically (catalogTranslate.ts)
     germanNames: v.optional(v.object({ queuedAt: v.optional(v.number()), skipped: v.array(v.string()) })),
@@ -264,6 +265,15 @@ export default defineSchema({
   })
     .index("by_family", ["familyId"])
     .index("by_family_period", ["familyId", "periodStart"]),
+
+  /** AI used by a family in a month (convex/aiBudget.ts): reserved before each call, settled after. */
+  aiUsage: defineTable({
+    familyId,
+    month: v.string(), // « 2026-10 », Swiss time
+    claudeUsd: v.number(),
+    claudeCalls: v.number(),
+    dictations: v.number(),
+  }).index("by_family", ["familyId", "month"]),
 
   /** Usual non-recipe items (toilet paper, washing powder…), offered first when adding. */
   staples: defineTable({

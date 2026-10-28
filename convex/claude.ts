@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ConvexError } from "convex/values";
+import type { ActionCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { reserveCall, settleClaude } from "./aiBudget";
+import { claudeCostUsd } from "./domain/aiBudget";
 
 const MODEL = "claude-opus-5-5";
 
@@ -15,9 +19,12 @@ export interface ClaudeMessages {
 /**
  * One structured call to Claude: the answer follows `schema` and comes back as
  * parsed JSON. Errors become ConvexErrors with the given French messages; the
- * model's text is never quoted in an error.
+ * model's text is never quoted in an error. Every call goes through the
+ * family's monthly budget: refused once it is used up, counted once answered.
  */
 export async function askClaude({
+  ctx,
+  familyId,
   label,
   system,
   content,
@@ -25,6 +32,8 @@ export async function askClaude({
   maxTokens,
   messages,
 }: {
+  ctx: ActionCtx;
+  familyId: Id<"families">;
   label: string; // for the cost line in the Convex logs
   system: string;
   content: Anthropic.Beta.BetaContentBlockParam[];
@@ -34,6 +43,7 @@ export async function askClaude({
 }): Promise<unknown> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new ConvexError(messages.missingKey);
+  await reserveCall(ctx, familyId, "claude");
   const client = new Anthropic({ apiKey });
   let text = "";
   try {
@@ -51,6 +61,8 @@ export async function askClaude({
     });
     // Tokens only, to follow the cost of each call in the Convex logs
     console.log(label, JSON.stringify(response.usage));
+    // Paid even when the answer is then refused or unreadable
+    await settleClaude(ctx, familyId, claudeCostUsd(response.usage));
     if (response.stop_reason === "refusal")
       throw new ConvexError(messages.refusal);
     if (response.stop_reason === "max_tokens")

@@ -4,6 +4,8 @@ import type { Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
 import { requireMember, getSettings } from "./lib";
 import { askClaude } from "./claude";
+import { reserveCall } from "./aiBudget";
+import { MAX_CATALOG_IN_PROMPT } from "./domain/aiBudget";
 import { UNITS, type Unit } from "./domain/quantities";
 import { TAGS } from "./domain/tags";
 import {
@@ -119,14 +121,15 @@ export const checkSession = internalQuery({
 export const catalog = internalQuery({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const { db } = await requireMember(ctx, token);
+    const { db, familyId } = await requireMember(ctx, token);
     const [ingredients, aisles, settings] = await Promise.all([
       db.query("ingredients").collect(),
       db.query("aisles").collect(),
       getSettings(db),
     ]);
     return {
-      ingredients: ingredients.map((i) => ({
+      // Bounded: the whole catalogue goes into the prompt (cost of one call)
+      ingredients: ingredients.slice(0, MAX_CATALOG_IN_PROMPT).map((i) => ({
         id: i._id,
         name: i.name,
         nameDe: i.nameDe,
@@ -136,6 +139,7 @@ export const catalog = internalQuery({
         .sort((a, b) => a.order - b.order)
         .map((a) => ({ id: a._id, name: a.name })),
       defaultPersons: settings.defaultPersons,
+      familyId,
     };
   },
 });
@@ -276,6 +280,8 @@ export const transcribe = action({
       if (meta.size > MAX_AUDIO_BYTES) throw new ConvexError("Dictée trop longue, 5 minutes au plus.");
       const apiKey = process.env.GROQ_API_KEY;
       if (!apiKey) throw new ConvexError("La dictée n'est pas encore configurée (clé GROQ_API_KEY manquante).");
+      // Counted from here, even if Groq then fails: errs on the side of the shared quota
+      await reserveCall(ctx, meta.familyId, "dictation");
       const audio = await ctx.storage.get(audioId);
       if (!audio) throw new ConvexError("Enregistrement introuvable, recommence la dictée.");
       const form = new FormData();
@@ -318,11 +324,11 @@ export const transcribe = action({
 export const audioMeta = internalQuery({
   args: { token: v.string(), audioId: v.id("_storage") },
   handler: async (ctx, { token, audioId }) => {
-    const { member } = await requireMember(ctx, token);
+    const { member, familyId } = await requireMember(ctx, token);
     const meta = await ctx.db.system.get(audioId);
     // Only a recording just uploaded: an older file is not this member's dictation
     return meta && Date.now() - meta._creationTime < AUDIO_MAX_AGE_MS
-      ? { ...meta, lang: member.lang ?? ("fr" as const) }
+      ? { ...meta, lang: member.lang ?? ("fr" as const), familyId }
       : null;
   },
 });
@@ -379,6 +385,8 @@ export const read = action({
     const ingredients = data.ingredients.map((i, n) => ({ ...i, key: `i${n}` }));
     const aisles = data.aisles.map((a, n) => ({ ...a, key: `a${n}` }));
     const answer = await askClaude({
+      ctx,
+      familyId: data.familyId,
       label: "recipe import",
       system: SYSTEM,
       schema: SCHEMA,

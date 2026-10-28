@@ -1,3 +1,4 @@
+import { MAX_CATALOG_IN_PROMPT } from "./domain/aiBudget";
 import { translateLater } from "./catalogTranslate";
 import { action, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -81,20 +82,22 @@ const SCHEMA = {
 export const catalog = internalQuery({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const { db } = await requireMember(ctx, token);
+    const { db, familyId } = await requireMember(ctx, token);
     const [ingredients, staples, aliases] = await Promise.all([
       db.query("ingredients").collect(),
       db.query("staples").collect(),
       db.query("receiptAliases").collect(),
     ]);
     return {
-      ingredients: ingredients.map((i) => ({
+      // Bounded: the whole catalogue goes into the prompt (cost of one call)
+      ingredients: ingredients.slice(0, MAX_CATALOG_IN_PROMPT).map((i) => ({
         _id: i._id,
         name: i.name,
         unit: i.unit,
       })),
-      staples: staples.map((s) => ({ _id: s._id, name: s.name })),
+      staples: staples.slice(0, MAX_CATALOG_IN_PROMPT).map((s) => ({ _id: s._id, name: s.name })),
       aliases,
+      familyId,
     };
   },
 });
@@ -153,6 +156,8 @@ export const read = action({
     });
 
     const answer = await askClaude({
+      ctx,
+      familyId: data.familyId,
       label: "receipt read",
       system: SYSTEM,
       schema: SCHEMA,

@@ -36,6 +36,8 @@ const DE: Record<string, string> = {
   Étape: "Schritt",
   "Le pseudo": "Der Benutzername",
   "Le nom du lien": "Der Name des Links",
+  "Budget Claude": "Claude-Budget",
+  "Dictées par mois": "Diktate pro Monat",
   "Nom allemand": "Deutscher Name",
 
   // ---------- Shared checks (convex/lib.ts)
@@ -209,6 +211,12 @@ const DE: Record<string, string> = {
     "Den Inhalt in Gramm angeben: 500 für eine Packung von 500 g.",
   "Le contenu se donne en millilitres : 1000 pour une bouteille d'un litre.":
     "Den Inhalt in Milliliter angeben: 1000 für eine Literflasche.",
+
+  // ---------- Monthly AI budget
+  "Le budget IA de ta famille pour ce mois est atteint. Il repart le 1er du mois prochain.":
+    "Das KI-Budget deiner Familie für diesen Monat ist aufgebraucht. Am 1. des nächsten Monats geht es wieder los.",
+  "Ta famille a utilisé toutes ses dictées de ce mois. Elles repartent le 1er du mois prochain.":
+    "Deine Familie hat alle Diktate dieses Monats gebraucht. Am 1. des nächsten Monats geht es wieder los.",
 
   // ---------- Recipe import and dictation
   "Cette page ne répond pas. Vérifie le lien ou réessaie plus tard.":

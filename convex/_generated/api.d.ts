@@ -9,10 +9,12 @@
  */
 
 import type * as access from "../access.js";
+import type * as aiBudget from "../aiBudget.js";
 import type * as catalog from "../catalog.js";
 import type * as catalogTranslate from "../catalogTranslate.js";
 import type * as claude from "../claude.js";
 import type * as crons from "../crons.js";
+import type * as domain_aiBudget from "../domain/aiBudget.js";
 import type * as domain_auth from "../domain/auth.js";
 import type * as domain_dates from "../domain/dates.js";
 import type * as domain_lang from "../domain/lang.js";
@@ -56,10 +58,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   access: typeof access;
+  aiBudget: typeof aiBudget;
   catalog: typeof catalog;
   catalogTranslate: typeof catalogTranslate;
   claude: typeof claude;
   crons: typeof crons;
+  "domain/aiBudget": typeof domain_aiBudget;
   "domain/auth": typeof domain_auth;
   "domain/dates": typeof domain_dates;
   "domain/lang": typeof domain_lang;

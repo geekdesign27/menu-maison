@@ -51,7 +51,7 @@ describe("super-admin space", () => {
     expect(dupont.lastSignIn).toBeTypeOf("number");
     // Figures, never a family's content or a password hash
     expect(Object.keys(dupont).sort()).toEqual(
-      ["_id", "createdAt", "isMine", "lastSignIn", "members", "name", "recipes", "slug", "suspended"].sort(),
+      ["_id", "ai", "createdAt", "isMine", "lastSignIn", "members", "name", "recipes", "slug", "suspended"].sort(),
     );
     expect(JSON.stringify(list)).not.toContain("pbkdf2");
   });
