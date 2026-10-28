@@ -22,6 +22,7 @@ import {
 } from "../components/ui";
 import { DataTable, Thumb, type Column } from "./DataTable";
 import { GestionHeader } from "./GestionLayout";
+import { useT } from "../i18n/useT";
 
 type Status = "all" | "saved" | "catalog";
 
@@ -30,6 +31,7 @@ export function RecipesSection() {
   const recipes = useRecipes();
   const overview = useOverview();
   const pricing = usePricing();
+  const { t, lang } = useT();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("all");
   const [tag, setTag] = useState("");
@@ -59,7 +61,7 @@ export function RecipesSection() {
     {
       key: "name",
       className: "min-w-48",
-      label: "Recette",
+      label: t("admin.recipes.colRecipe"),
       sort: (r) => r.name,
       render: (r) => (
         <span className="flex items-center gap-3">
@@ -71,33 +73,33 @@ export function RecipesSection() {
     {
       key: "tags",
       className: "min-w-48",
-      label: "Étiquettes",
+      label: t("admin.recipes.tags"),
       sort: (r) => r.tags.join(", "),
       render: (r) => (
         <span className="flex flex-wrap gap-1 whitespace-nowrap">
-          {r.tags.map((t) => (
-            <Badge key={t}>{t}</Badge>
+          {r.tags.map((tag) => (
+            <Badge key={tag}>{tag}</Badge>
           ))}
         </span>
       ),
     },
     {
       key: "prep",
-      label: "Temps",
+      label: t("admin.recipes.colTime"),
       align: "right",
       sort: (r) => r.prepMinutes,
       render: (r) => minutes(r.prepMinutes),
     },
     {
       key: "items",
-      label: "Ingrédients",
+      label: t("admin.recipes.colIngredients"),
       align: "right",
       sort: (r) => r.items.length,
       render: (r) => r.items.length,
     },
     {
       key: "cost",
-      label: "Coût / portion",
+      label: t("admin.recipes.colCost"),
       align: "right",
       sort: portionCost,
       render: (r) =>
@@ -105,14 +107,19 @@ export function RecipesSection() {
     },
     {
       key: "fridge",
-      label: "Frigo",
+      label: t("admin.recipes.colFridge"),
       align: "right",
       sort: (r) => r.fridgeDays,
-      render: (r) => plural(r.fridgeDays, "jour", "jours"),
+      render: (r) =>
+        plural(
+          r.fridgeDays,
+          t("admin.recipes.dayOne"),
+          t("admin.recipes.dayMany"),
+        ),
     },
     {
       key: "likes",
-      label: "Cœurs",
+      label: t("admin.recipes.colHearts"),
       align: "right",
       sort: (r) => r.likedBy.length,
       render: (r) =>
@@ -124,34 +131,40 @@ export function RecipesSection() {
     },
     {
       key: "last",
-      label: "Cuisinée",
+      label: t("admin.recipes.colCooked"),
       className: "whitespace-nowrap",
       sort: (r) => stats.get(r._id)?.lastDate,
       render: (r) => {
         const stat = stats.get(r._id);
         return stat ? (
           <>
-            {formatDayShort(stat.lastDate)}
+            {formatDayShort(stat.lastDate, lang)}
             <span className="text-muted">
               {" "}
-              ({plural(stat.countAll, "fois", "fois")})
+              (
+              {plural(
+                stat.countAll,
+                t("admin.recipes.timesOne"),
+                t("admin.recipes.timesMany"),
+              )}
+              )
             </span>
           </>
         ) : (
-          <span className="text-muted">Jamais</span>
+          <span className="text-muted">{t("admin.recipes.never")}</span>
         );
       },
     },
     {
       key: "status",
       className: "whitespace-nowrap",
-      label: "Statut",
+      label: t("admin.recipes.status"),
       sort: (r) => (r.saved ? 0 : 1),
       render: (r) =>
         r.saved ? (
-          <Badge tone="herb">Nos recettes</Badge>
+          <Badge tone="herb">{t("admin.recipes.saved")}</Badge>
         ) : (
-          <Badge>Catalogue</Badge>
+          <Badge>{t("admin.recipes.catalog")}</Badge>
         ),
     },
   ];
@@ -159,15 +172,22 @@ export function RecipesSection() {
   return (
     <>
       <GestionHeader
-        title="Recettes"
-        subtitle={plural(recipes.length, "recette", "recettes")}
+        title={t("admin.recipes.title")}
+        subtitle={plural(
+          recipes.length,
+          t("admin.recipes.one"),
+          t("admin.recipes.many"),
+        )}
         actions={
           <>
-            <Button variant="secondary" onClick={() => navigate("/gestion/recette/importer")}>
-              <Link2 size={20} /> Importer
+            <Button
+              variant="secondary"
+              onClick={() => navigate("/gestion/recette/importer")}
+            >
+              <Link2 size={20} /> {t("admin.recipes.import")}
             </Button>
             <Button onClick={() => navigate("/gestion/recette/nouvelle")}>
-              <Plus size={20} /> Nouvelle recette
+              <Plus size={20} /> {t("admin.recipes.new")}
             </Button>
           </>
         }
@@ -177,27 +197,27 @@ export function RecipesSection() {
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Chercher une recette"
+            placeholder={t("admin.recipes.search")}
           />
           <Segmented
-            label="Statut"
+            label={t("admin.recipes.status")}
             value={status}
             onChange={setStatus}
             options={[
-              { value: "all", label: "Toutes" },
-              { value: "saved", label: "Nos recettes" },
-              { value: "catalog", label: "Catalogue" },
+              { value: "all", label: t("admin.recipes.all") },
+              { value: "saved", label: t("admin.recipes.saved") },
+              { value: "catalog", label: t("admin.recipes.catalog") },
             ]}
           />
           <Select
-            aria-label="Étiquette"
+            aria-label={t("admin.recipes.tag")}
             value={tag}
             onChange={(e) => setTag(e.target.value)}
           >
-            <option value="">Étiquettes</option>
-            {TAGS.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">{t("admin.recipes.tags")}</option>
+            {TAGS.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
               </option>
             ))}
           </Select>
@@ -205,8 +225,8 @@ export function RecipesSection() {
         {shown.length === 0 ? (
           <EmptyState
             emoji="🔎"
-            title="Aucune recette ne correspond"
-            text="Change la recherche ou les filtres."
+            title={t("admin.recipes.noMatchTitle")}
+            text={t("admin.recipes.noMatchText")}
           />
         ) : (
           <DataTable
@@ -214,7 +234,7 @@ export function RecipesSection() {
             columns={columns}
             rowKey={(r) => r._id}
             onOpen={(r) => navigate(`/gestion/recette/${r._id}/modifier`)}
-            openLabel={(r) => `Modifier ${r.name}`}
+            openLabel={(r) => t("admin.editName", { name: r.name })}
           />
         )}
       </div>

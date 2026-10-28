@@ -13,11 +13,13 @@ import { Toggle } from "../components/planning/controls";
 import { FamilyNameCard } from "../pages/Settings";
 import { DataTable, type Column } from "./DataTable";
 import { GestionHeader } from "./GestionLayout";
+import { useT } from "../i18n/useT";
 
 /** Family admins: name and link, accounts and roles, colours and font. */
 export function FamilyAdminSection() {
   const base = useBase();
   const { account } = useSession();
+  const { t } = useT();
   // undefined: closed; null: new profile
   const [editing, setEditing] = useState<Id<"members"> | null | undefined>(
     undefined,
@@ -26,7 +28,7 @@ export function FamilyAdminSection() {
   if (account && account.role !== "admin")
     return (
       <div className="p-6">
-        <ErrorBox>Cette page est réservée aux admins de la famille.</ErrorBox>
+        <ErrorBox>{t("admin.family.adminOnly")}</ErrorBox>
       </div>
     );
   if (!base || !account) return <Loading />;
@@ -34,53 +36,60 @@ export function FamilyAdminSection() {
   const columns: Column<Member>[] = [
     {
       key: "name",
-      label: "Profil",
+      label: t("admin.family.colProfile"),
       sort: (m) => m.order,
       render: (m) => (
         <span className="flex items-center gap-3">
           <Avatar member={m} size={36} />
           <span className="font-extrabold">{m.name}</span>
           {m._id === account.memberId && (
-            <span className="text-muted">(toi)</span>
+            <span className="text-muted">{t("admin.family.me")}</span>
           )}
         </span>
       ),
     },
     {
       key: "username",
-      label: "Pseudo",
+      label: t("admin.family.colUsername"),
       sort: (m) => m.username ?? "",
-      render: (m) => m.username ?? <span className="text-muted">aucun</span>,
+      render: (m) =>
+        m.username ?? (
+          <span className="text-muted">{t("admin.family.noUsername")}</span>
+        ),
     },
     {
       key: "role",
-      label: "Rôle",
+      label: t("admin.family.colRole"),
       sort: (m) => (m.role === "admin" ? 0 : 1),
       render: (m) =>
         m.role === "admin" ? (
-          <Badge tone="carrot">Admin</Badge>
+          <Badge tone="carrot">{t("admin.family.admin")}</Badge>
         ) : (
-          <Badge>Membre</Badge>
+          <Badge>{t("admin.family.member")}</Badge>
         ),
     },
     {
       key: "lang",
-      label: "Langue",
+      label: t("lang.column"),
       sort: (m) => (m.lang === "de" ? 1 : 0),
       render: (m) =>
-        m.lang === "de" ? <Badge tone="carrot">Deutsch</Badge> : "Français",
+        m.lang === "de" ? (
+          <Badge tone="carrot">{t("lang.de")}</Badge>
+        ) : (
+          t("lang.fr")
+        ),
     },
     {
       key: "access",
-      label: "Accès",
+      label: t("admin.family.colAccess"),
       sort: (m) => (m.hasPassword ? 0 : m.username ? 1 : 2),
       render: (m) =>
         m.hasPassword ? (
-          <Badge tone="herb">Activé</Badge>
+          <Badge tone="herb">{t("admin.family.activated")}</Badge>
         ) : m.username ? (
-          <Badge tone="sun">Pas encore activé</Badge>
+          <Badge tone="sun">{t("admin.family.notActivated")}</Badge>
         ) : (
-          <Badge>Sans accès</Badge>
+          <Badge>{t("admin.family.noAccess")}</Badge>
         ),
     },
   ];
@@ -88,26 +97,36 @@ export function FamilyAdminSection() {
   return (
     <>
       <GestionHeader
-        title="Famille"
-        subtitle={`${account.family.name} : ${plural(base.members.length, "profil", "profils")}, comptes et apparence de l'app.`}
+        title={t("admin.family.title")}
+        subtitle={t("admin.family.subtitle", {
+          family: account.family.name,
+          count: plural(
+            base.members.length,
+            t("admin.family.profileOne"),
+            t("admin.family.profileMany"),
+          ),
+        })}
       />
       <div className="grid max-w-4xl gap-8 px-6 pb-10">
         <section className="grid gap-3">
-          <h2 className="text-xl font-black">Nom et lien de connexion</h2>
+          <h2 className="text-xl font-black">
+            {t("admin.family.nameAndLink")}
+          </h2>
           <FamilyNameCard />
         </section>
 
         <section className="grid gap-3">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-black">Comptes</h2>
+              <h2 className="text-xl font-black">
+                {t("admin.family.accounts")}
+              </h2>
               <p className="text-[15px] text-muted">
-                Clique sur un profil pour son pseudo, son rôle et son lien
-                d'activation ou de mot de passe oublié.
+                {t("admin.family.accountsHelp")}
               </p>
             </div>
             <Button variant="secondary" onClick={() => setEditing(null)}>
-              <Plus size={20} /> Ajouter un profil
+              <Plus size={20} /> {t("admin.family.addProfile")}
             </Button>
           </div>
           <DataTable
@@ -115,7 +134,7 @@ export function FamilyAdminSection() {
             columns={columns}
             rowKey={(m) => m._id}
             onOpen={(m) => setEditing(m._id)}
-            openLabel={(m) => `Modifier ${m.name}`}
+            openLabel={(m) => t("admin.editName", { name: m.name })}
           />
         </section>
 
@@ -140,16 +159,12 @@ function GuideSection({ enabled }: { enabled: boolean }) {
   const { token } = useSession();
   const setEnabled = useMutation(api.onboarding.setEnabled);
   const run = useRun();
+  const { t } = useT();
   return (
     <section className="grid gap-3">
       <div>
-        <h2 className="text-xl font-black">Guide pour les nouveaux</h2>
-        <p className="text-[15px] text-muted">
-          À sa première connexion, un nouveau membre voit une carte de
-          bienvenue, un tour de l'app en 1 minute et, dans Plus, ses « Premiers
-          pas ». Les comptes déjà activés ne le voient pas, chacun peut le
-          relancer dans Plus.
-        </p>
+        <h2 className="text-xl font-black">{t("admin.guide.title")}</h2>
+        <p className="text-[15px] text-muted">{t("admin.guide.help")}</p>
       </div>
       <div className="max-w-xl rounded-2xl bg-paper p-4 ring-1 ring-line">
         <Toggle
@@ -157,15 +172,11 @@ function GuideSection({ enabled }: { enabled: boolean }) {
           onChange={(on) =>
             void run(
               () => setEnabled({ token, enabled: on }),
-              on ? "Guide activé pour les nouveaux" : "Guide coupé",
+              on ? t("admin.guide.on") : t("admin.guide.off"),
             )
           }
-          label="Guide pour les nouveaux"
-          hint={
-            enabled
-              ? "Activé"
-              : "Coupé : l'app reste comme avant pour tout le monde"
-          }
+          label={t("admin.guide.title")}
+          hint={enabled ? t("admin.guide.hintOn") : t("admin.guide.hintOff")}
         />
       </div>
     </section>
@@ -177,6 +188,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
   const { token } = useSession();
   const run = useRun();
   const updateSettings = useMutation(api.catalog.updateSettings);
+  const { t } = useT();
 
   // The previews show every font: loaded here only, on this admin page
   useEffect(() => {
@@ -186,27 +198,24 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
   return (
     <section className="grid gap-4" data-tour="look">
       <div>
-        <h2 className="text-xl font-black">Apparence</h2>
-        <p className="text-[15px] text-muted">
-          Le choix vaut pour toute la famille, sur tous les téléphones, tout de
-          suite.
-        </p>
+        <h2 className="text-xl font-black">{t("admin.look.title")}</h2>
+        <p className="text-[15px] text-muted">{t("admin.look.help")}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {THEMES.map((t) => {
-          const chosen = t.id === theme;
-          const [cream, accent, soft, other] = t.swatch;
+        {THEMES.map((th) => {
+          const chosen = th.id === theme;
+          const [cream, accent, soft, other] = th.swatch;
           return (
             <button
-              key={t.id}
+              key={th.id}
               type="button"
               aria-pressed={chosen}
               onClick={() =>
                 !chosen &&
                 void run(
-                  () => updateSettings({ token, theme: t.id }),
-                  `Thème ${t.label}`,
+                  () => updateSettings({ token, theme: th.id }),
+                  t("admin.look.theme", { name: th.label }),
                 )
               }
               className={cx(
@@ -219,7 +228,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
             >
               <span className="flex items-center justify-between">
                 <span className="text-lg font-black text-[#2b2420]">
-                  {t.label}
+                  {th.label}
                 </span>
                 {chosen && (
                   <span
@@ -235,13 +244,13 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
                   className="rounded-xl px-3 py-1.5 text-[15px] font-extrabold text-white"
                   style={{ background: accent }}
                 >
-                  Bouton
+                  {t("admin.look.sampleButton")}
                 </span>
                 <span
                   className="rounded-xl px-3 py-1.5 text-[15px] font-extrabold"
                   style={{ background: soft }}
                 >
-                  Onglet
+                  {t("admin.look.sampleTab")}
                 </span>
                 <span
                   className="size-8 rounded-full"
@@ -249,7 +258,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
                 />
               </span>
               <span className="text-[15px] text-[#6b6058]">
-                {t.description}
+                {th.description}
               </span>
             </button>
           );
@@ -268,7 +277,7 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
                 !chosen &&
                 void run(
                   () => updateSettings({ token, font: f.id }),
-                  `Police ${f.label}`,
+                  t("admin.look.font", { name: f.label }),
                 )
               }
               className={cx(
@@ -288,14 +297,13 @@ function LookSection({ theme, font }: { theme: Theme; font: Font }) {
                 className="text-2xl font-black"
                 style={{ fontFamily: `"${f.family}", sans-serif` }}
               >
-                Gratin de courgettes
+                {t("admin.look.sampleDish")}
               </span>
               <span
                 className="text-[15px]"
                 style={{ fontFamily: `"${f.family}", sans-serif` }}
               >
-                {f.description}. Lundi 3 portions, 1 l de lait, 250 g de
-                gruyère.
+                {t("admin.look.sampleText", { description: f.description })}
               </span>
             </button>
           );

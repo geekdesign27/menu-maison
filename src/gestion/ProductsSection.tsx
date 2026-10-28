@@ -14,10 +14,12 @@ import {
 } from "../pages/Products";
 import { DataTable, Thumb, type Column } from "./DataTable";
 import { GestionHeader } from "./GestionLayout";
+import { useT } from "../i18n/useT";
 
 export function ProductsSection() {
   const base = useBase();
   const rows = useProductRows();
+  const { t, lang } = useT();
   if (!base || !rows) return <Loading />;
   const aisleById = new Map(base.aisles.map((a) => [a._id as string, a]));
   const aisleOf = (p: ProductRowData) =>
@@ -26,7 +28,7 @@ export function ProductsSection() {
   const columns: Column<ProductRowData>[] = [
     {
       key: "name",
-      label: "Produit",
+      label: t("admin.products.colProduct"),
       sort: (p) => p.name,
       render: (p) => (
         <span className="flex items-center gap-3">
@@ -41,26 +43,26 @@ export function ProductsSection() {
     {
       key: "kind",
       className: "whitespace-nowrap",
-      label: "Type",
+      label: t("admin.products.colType"),
       sort: (p) => p.kind,
       render: (p) =>
         p.kind === "ingredient" ? (
-          <Badge>Ingrédient</Badge>
+          <Badge>{t("admin.products.ingredient")}</Badge>
         ) : (
-          <Badge tone="sun">Hors recette</Badge>
+          <Badge tone="sun">{t("admin.products.staple")}</Badge>
         ),
     },
     {
       key: "aisle",
       className: "whitespace-nowrap",
-      label: "Rayon",
+      label: t("admin.products.colAisle"),
       sort: (p) => aisleOf(p)?.name ?? MISC_SECTION.name,
       render: (p) => aisleOf(p)?.name ?? MISC_SECTION.name,
     },
     {
       key: "price",
       className: "whitespace-nowrap",
-      label: "Prix",
+      label: t("admin.products.colPrice"),
       sort: (p) => p.ingredient?.priceChf ?? p.staple?.priceChf,
       render: (p) => (
         <span>
@@ -77,17 +79,17 @@ export function ProductsSection() {
     },
     {
       key: "pack",
-      label: "Paquet",
+      label: t("admin.products.colPack"),
       align: "right",
       sort: (p) => p.ingredient?.packSize,
       render: (p) =>
         p.ingredient?.packSize !== undefined
-          ? `${formatNumber(p.ingredient.packSize)} ${unitName(p.ingredient.unit, p.ingredient.packSize)}`
+          ? `${formatNumber(p.ingredient.packSize, 2, lang)} ${unitName(p.ingredient.unit, p.ingredient.packSize, lang)}`
           : null,
     },
     {
       key: "chains",
-      label: "Enseignes",
+      label: t("admin.products.colChains"),
       sort: (p) => (p.ingredient ?? p.staple)?.onlyChains?.join(", "),
       render: (p) => {
         const chains = ((p.ingredient ?? p.staple)?.onlyChains ??
@@ -95,21 +97,23 @@ export function ProductsSection() {
         return chains.length ? (
           <span
             className="flex gap-1"
-            title={`Seulement chez ${chains.join(", ")}`}
+            title={t("admin.products.onlyAt", { chains: chains.join(", ") })}
           >
             {chains.map((c) => (
               <ChainMark key={c} chain={c} size={22} />
             ))}
-            <span className="sr-only">Seulement chez {chains.join(", ")}</span>
+            <span className="sr-only">
+              {t("admin.products.onlyAt", { chains: chains.join(", ") })}
+            </span>
           </span>
         ) : (
-          <span className="text-muted">Partout</span>
+          <span className="text-muted">{t("admin.products.everywhere")}</span>
         );
       },
     },
     {
       key: "recipes",
-      label: "Recettes",
+      label: t("admin.products.colRecipes"),
       align: "right",
       sort: (p) =>
         p.kind === "ingredient"
@@ -122,18 +126,25 @@ export function ProductsSection() {
     },
     {
       key: "pantry",
-      label: "En stock",
+      label: t("admin.products.colPantry"),
       align: "center",
       sort: (p) => (p.ingredient?.pantry ? 0 : 1),
-      render: (p) => (p.ingredient?.pantry ? <Badge>Souvent</Badge> : null),
+      render: (p) =>
+        p.ingredient?.pantry ? (
+          <Badge>{t("admin.products.often")}</Badge>
+        ) : null,
     },
   ];
 
   return (
     <>
       <GestionHeader
-        title="Produits"
-        subtitle={plural(rows.length, "produit", "produits")}
+        title={t("admin.products.title")}
+        subtitle={plural(
+          rows.length,
+          t("admin.products.one"),
+          t("admin.products.many"),
+        )}
       />
       <div className="px-6 pb-10">
         <ProductsContent
@@ -146,7 +157,7 @@ export function ProductsSection() {
                 columns={columns}
                 rowKey={(p) => p.key}
                 onOpen={open}
-                openLabel={(p) => `Modifier ${p.name}`}
+                openLabel={(p) => t("admin.editName", { name: p.name })}
               />
             </div>
           )}

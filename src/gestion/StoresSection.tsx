@@ -12,12 +12,14 @@ import { ChainMark, priceLevelText } from "../components/shopping/chains";
 import { AddStoreSheet } from "../pages/Stores";
 import { DataTable, type Column } from "./DataTable";
 import { GestionHeader } from "./GestionLayout";
+import { useT } from "../i18n/useT";
 
 export function StoresSection() {
   const base = useBase();
   const { token } = useSession();
   const run = useRun();
   const navigate = useNavigate();
+  const { t } = useT();
   const updateSettings = useMutation(api.catalog.updateSettings);
   const [adding, setAdding] = useState(false);
   if (!base) return <Loading />;
@@ -26,7 +28,7 @@ export function StoresSection() {
   const columns: Column<Doc<"stores">>[] = [
     {
       key: "name",
-      label: "Magasin",
+      label: t("admin.stores.colStore"),
       sort: (s) => s.name,
       render: (s) => (
         <span className="flex items-center gap-3">
@@ -37,13 +39,13 @@ export function StoresSection() {
     },
     {
       key: "chain",
-      label: "Enseigne",
+      label: t("admin.stores.colChain"),
       sort: (s) => s.chain,
       render: (s) => s.chain,
     },
     {
       key: "price",
-      label: "Niveau de prix",
+      label: t("admin.stores.colPriceLevel"),
       sort: (s) => s.priceFactor,
       render: (s) => (
         <Badge tone={s.priceFactor < 1 ? "herb" : "neutral"}>
@@ -53,14 +55,14 @@ export function StoresSection() {
     },
     {
       key: "overrides",
-      label: "Exceptions",
+      label: t("admin.stores.colOverrides"),
       align: "right",
       sort: (s) => s.overrides.length,
       render: (s) => s.overrides.length,
     },
     {
       key: "default",
-      label: "Par défaut",
+      label: t("admin.stores.colDefault"),
       align: "center",
       sort: (s) => (s._id === defaultId ? 0 : 1),
       render: (s) => {
@@ -69,8 +71,8 @@ export function StoresSection() {
           <IconButton
             label={
               isDefault
-                ? `${s.name} est le magasin par défaut`
-                : `Choisir ${s.name} comme magasin par défaut`
+                ? t("admin.stores.isDefault", { name: s.name })
+                : t("admin.stores.makeDefault", { name: s.name })
             }
             aria-pressed={isDefault}
             onClick={(e) => {
@@ -79,7 +81,7 @@ export function StoresSection() {
               if (!isDefault)
                 void run(
                   () => updateSettings({ token, defaultStoreId: s._id }),
-                  `${s.name} est le magasin par défaut.`,
+                  t("admin.stores.nowDefault", { name: s.name }),
                 );
             }}
           >
@@ -96,11 +98,17 @@ export function StoresSection() {
   return (
     <>
       <GestionHeader
-        title="Magasins"
-        subtitle={`${plural(base.stores.length, "magasin", "magasins")}. L'étoile désigne celui proposé sur la liste de courses.`}
+        title={t("admin.stores.title")}
+        subtitle={t("admin.stores.subtitle", {
+          count: plural(
+            base.stores.length,
+            t("admin.stores.one"),
+            t("admin.stores.many"),
+          ),
+        })}
         actions={
           <Button onClick={() => setAdding(true)}>
-            <Plus size={20} /> Nouveau magasin
+            <Plus size={20} /> {t("admin.stores.new")}
           </Button>
         }
       />
@@ -110,7 +118,7 @@ export function StoresSection() {
           columns={columns}
           rowKey={(s) => s._id}
           onOpen={(s) => navigate(`/gestion/magasin/${s._id}`)}
-          openLabel={(s) => `Modifier ${s.name}`}
+          openLabel={(s) => t("admin.editName", { name: s.name })}
         />
       </div>
       {adding && (

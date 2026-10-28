@@ -13,28 +13,36 @@ import { GestionContext } from "../lib/paths";
 import { useMe, useSession } from "../lib/session";
 import { Avatar, cx } from "../components/ui";
 import { AppIcon } from "../components/Logo";
+import { useT } from "../i18n/useT";
+import type { MessageKey } from "../i18n";
 
-const SECTIONS = [
-  { to: "/gestion/recettes", label: "Recettes", icon: BookHeart },
-  { to: "/gestion/produits", label: "Produits", icon: ShoppingBasket },
-  { to: "/gestion/rayons", label: "Rayons", icon: Layers },
-  { to: "/gestion/magasins", label: "Magasins", icon: Store },
+const SECTIONS: { to: string; labelKey: MessageKey; icon: typeof Store }[] = [
+  { to: "/gestion/recettes", labelKey: "admin.tabRecipes", icon: BookHeart },
+  {
+    to: "/gestion/produits",
+    labelKey: "admin.tabProducts",
+    icon: ShoppingBasket,
+  },
+  { to: "/gestion/rayons", labelKey: "admin.tabAisles", icon: Layers },
+  { to: "/gestion/magasins", labelKey: "admin.tabStores", icon: Store },
 ];
 
 /** Desktop management area: side menu on the left, wide content on the right. */
 export function GestionLayout() {
   const me = useMe();
   const { account } = useSession();
+  const { t } = useT();
   // Family admins manage their family; PA alone sees every family
   const sections = [
-    ...SECTIONS,
+    ...SECTIONS.map(({ labelKey, ...s }) => ({ ...s, label: t(labelKey) })),
     ...(account?.role === "admin"
-      ? [{ to: "/gestion/famille", label: "Famille", icon: House }]
+      ? [{ to: "/gestion/famille", label: t("admin.tabFamily"), icon: House }]
       : []),
     ...(account?.superadmin
       ? [
           {
             to: "/gestion/super-admin",
+            // Reserved to PA: same label in every language
             label: "Super admin",
             icon: ShieldCheck,
           },
@@ -52,12 +60,12 @@ export function GestionLayout() {
                 Menu Maison
               </span>
               <span className="block text-[13px] font-bold text-muted">
-                Gestion
+                {t("admin.title")}
               </span>
             </span>
           </div>
           <nav
-            aria-label="Gestion"
+            aria-label={t("admin.title")}
             className="flex gap-1 overflow-x-auto md:flex-col"
           >
             {sections.map(({ to, label, icon: Icon }) => (
@@ -83,7 +91,7 @@ export function GestionLayout() {
               to="/"
               className="flex min-h-11 items-center gap-3 rounded-xl px-3 font-bold text-muted hover:bg-cream"
             >
-              <ArrowLeft size={20} /> Retour à l'app
+              <ArrowLeft size={20} /> {t("admin.backToApp")}
             </Link>
             {me && (
               <div className="mt-2 flex items-center gap-2 border-t border-line px-2 pt-3 text-[15px] font-bold">
