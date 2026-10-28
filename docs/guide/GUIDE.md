@@ -126,7 +126,14 @@ Le cycle : **(0) entrer dans l'app** une fois, puis chaque semaine **(1) planifi
 6. Les fois suivantes : le lien de la famille (`menumaison.ch/#/f/<famille>`) ou le nom
    de la famille, le pseudo, le mot de passe. Connexion gardée 365 jours.
 
-Mot de passe oublié : un **autre** admin crée un nouveau lien depuis la même section.
+Mot de passe oublié : « Mot de passe oublié ? » sur l'écran de connexion envoie un lien de
+2 heures à l'adresse e-mail confirmée du profil. Sans adresse, un **autre** admin crée un
+nouveau lien depuis la même section.
+
+Réglages, **Mon compte** (chaque membre) : adresse e-mail (facultative, confirmée par un lien),
+changement de mot de passe, déconnexion des autres appareils. Réglages, **Données de la
+famille** (admins) : export JSON de toutes les données, et suppression définitive de la famille
+(nom de la famille et mot de passe demandés, abonnement arrêté d'abord).
 
 <p>
 <img src="captures/m-48b-profil-acces.png" width="230" alt="Section Accès d'un profil">

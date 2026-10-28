@@ -218,7 +218,7 @@ export const completeSignup = internalMutation({
     if (!signup) return null;
     if (signup.familyId) {
       const family = await ctx.db.get(signup.familyId);
-      if (family) await applySubscription(ctx, family, sub);
+      if (family && !family.deleting) await applySubscription(ctx, family, sub);
       return signup.familyId;
     }
     const { familyId } = await createFamily(ctx, {
@@ -272,7 +272,37 @@ export const updateSubscription = internalMutation({
       .unique();
     // Not one of ours yet: the sign-up completes it with the same values
     if (!family) return false;
+    // Being deleted: its subscription is stopped on purpose, no e-mail about it
+    if (family.deleting) return true;
     await applySubscription(ctx, family, sub);
+    return true;
+  },
+});
+
+/** A Checkout of an existing family paid after that family was deleted: nobody to serve. */
+export const orphanSignup = internalQuery({
+  args: { sessionId: v.string() },
+  handler: async (ctx, { sessionId }) => {
+    const signup = await ctx.db
+      .query("signups")
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+      .unique();
+    if (!signup?.familyId) return false;
+    const family = await ctx.db.get(signup.familyId);
+    return !family || family.deleting === true;
+  },
+});
+
+/** The customer's e-mail changed at Stripe (portal): the family's copy follows. */
+export const updateCustomerEmail = internalMutation({
+  args: { customerId: v.string(), email: v.optional(v.string()) },
+  handler: async (ctx, { customerId, email }) => {
+    // Few families: a scan is enough, and customers of other products match none
+    const family = (await ctx.db.query("families").collect()).find(
+      (f) => f.billing?.customerId === customerId,
+    );
+    if (!family?.billing || family.deleting || !email) return false;
+    await ctx.db.patch(family._id, { billing: { ...family.billing, email: email.slice(0, 200) } });
     return true;
   },
 });

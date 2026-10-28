@@ -93,6 +93,8 @@ export default defineSchema({
     name: v.string(), // « Famille Schütz »
     slug: v.string(), // in the sign-in link: menumaison.ch/#/f/schutz
     suspended: v.boolean(),
+    // Deletion asked by its admin: Stripe events and e-mails leave it alone, then purged
+    deleting: v.optional(v.boolean()),
     aiCapUsd: v.optional(v.number()), // monthly Claude budget set by the super-admin (default 2 USD)
     dictationCap: v.optional(v.number()), // monthly dictations set by the super-admin (default 60)
     // Offered by PA (Super admin); unset: offered when there is no subscription
@@ -173,9 +175,16 @@ export default defineSchema({
     lang: v.optional(langValidator), // set by an admin or the member; absent = French
     // Welcome tour finished or skipped; 0 = account older than the guide (see domain/onboarding)
     onboardingDoneAt: v.optional(v.number()),
+    // Own e-mail, optional: forgotten password and security notices
+    email: v.optional(v.string()), // confirmed, lowercase
+    pendingEmail: v.optional(v.string()), // waiting for its confirmation link
+    emailTokenHash: v.optional(v.string()), // SHA-256 of that link's token
+    emailTokenExpiresAt: v.optional(v.number()),
   })
     .index("by_family", ["familyId"])
-    .index("by_family_username", ["familyId", "username"]),
+    .index("by_family_username", ["familyId", "username"])
+    .index("by_email", ["email"])
+    .index("by_email_token", ["emailTokenHash"]),
 
   /** Generic aisles (rayons). Each store orders them its own way. */
   aisles: defineTable({

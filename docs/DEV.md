@@ -36,8 +36,8 @@ identifiant dans `STRIPE_PORTAL_CONFIG_ID`. Webhook en local : Stripe CLI
 `stripe listen --forward-to http://127.0.0.1:3211/stripe/webhook` (3211 : port par défaut
 du site Convex local, à vérifier dans `.env.local`, `CONVEX_SITE_URL` ; le secret `whsec_…`
 affiché va dans `STRIPE_WEBHOOK_SECRET`). En production, l'adresse du webhook est
-`https://<déploiement>.convex.site/stripe/webhook`, événements `checkout.session.completed`
-et `customer.subscription.*`. Sans clé, l'inscription répond « Le paiement n'est pas encore
+`https://<déploiement>.convex.site/stripe/webhook`, événements `checkout.session.completed`,
+`customer.subscription.*` et `customer.updated` (e-mail changé dans le portail). Sans clé, l'inscription répond « Le paiement n'est pas encore
 configuré. » : rien n'est créé.
 
 E-mails (Resend, `convex/email.ts`, modèles dans `convex/domain/emails.ts`) : clé

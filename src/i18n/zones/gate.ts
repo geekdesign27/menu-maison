@@ -11,8 +11,26 @@ export const fr = {
   "gate.login.submit": "Se connecter",
   "gate.login.expired": "Ta session a expiré, reconnecte-toi.",
   "gate.login.help":
-    "Pour rester connecté, ajoute l'app à l'écran d'accueil (Safari : Partager, puis « Sur l'écran d'accueil »). Mot de passe oublié : demande un nouveau lien à l'admin de ta famille.",
+    "Pour rester connecté, ajoute l'app à l'écran d'accueil (Safari : Partager, puis « Sur l'écran d'accueil »).",
   "gate.login.noAccount": "Je n'ai pas de compte",
+  "gate.login.forgot": "Mot de passe oublié\u00a0?",
+
+  "gate.forgot.subtitle": "Mot de passe oublié",
+  "gate.forgot.help":
+    "Indique l'adresse e-mail confirmée dans ton profil. Tu reçois un lien pour choisir un nouveau mot de passe, valable 2\u00a0heures.",
+  "gate.forgot.noEmail":
+    "Pas d'adresse e-mail dans ton profil\u00a0? Demande un nouveau lien à l'admin de ta famille.",
+  "gate.forgot.sent": "Si cette adresse est enregistrée, un e-mail vient de partir.",
+  "gate.forgot.sentHelp":
+    "Regarde aussi dans les indésirables. Rien reçu après quelques minutes\u00a0? Demande un nouveau lien à l'admin de ta famille.",
+  "gate.forgot.back": "Retour à la connexion",
+
+  "gate.emailConfirm.subtitle": "Adresse e-mail",
+  "gate.emailConfirm.checking": "Confirmation…",
+  "gate.emailConfirm.done": "Adresse confirmée, merci\u00a0!",
+  "gate.emailConfirm.invalid":
+    "Ce lien n'est plus valable. Indique à nouveau ton adresse dans Réglages, Mon compte.",
+  "gate.emailConfirm.toSettings": "Retour aux réglages",
 
   "gate.invite.subtitle": "Lien d'invitation",
   "gate.invite.invalid":
@@ -70,8 +88,26 @@ export const de: { [K in keyof typeof fr]: string } = {
   "gate.login.submit": "Anmelden",
   "gate.login.expired": "Deine Sitzung ist abgelaufen, melde dich wieder an.",
   "gate.login.help":
-    "Damit du angemeldet bleibst, füge die App zum Home-Bildschirm hinzu (Safari: Teilen, dann «Zum Home-Bildschirm»). Passwort vergessen: Bitte den Admin deiner Familie um einen neuen Link.",
+    "Damit du angemeldet bleibst, füge die App zum Home-Bildschirm hinzu (Safari: Teilen, dann «Zum Home-Bildschirm»).",
   "gate.login.noAccount": "Ich habe kein Konto",
+  "gate.login.forgot": "Passwort vergessen?",
+
+  "gate.forgot.subtitle": "Passwort vergessen",
+  "gate.forgot.help":
+    "Gib die bestätigte E-Mail-Adresse deines Profils ein. Du erhältst einen Link, um ein neues Passwort zu wählen, 2 Stunden gültig.",
+  "gate.forgot.noEmail":
+    "Keine E-Mail-Adresse in deinem Profil? Bitte den Admin deiner Familie um einen neuen Link.",
+  "gate.forgot.sent": "Falls diese Adresse gespeichert ist, ist gerade eine E-Mail unterwegs.",
+  "gate.forgot.sentHelp":
+    "Schau auch im Spam-Ordner nach. Nach ein paar Minuten nichts erhalten? Bitte den Admin deiner Familie um einen neuen Link.",
+  "gate.forgot.back": "Zurück zur Anmeldung",
+
+  "gate.emailConfirm.subtitle": "E-Mail-Adresse",
+  "gate.emailConfirm.checking": "Wird bestätigt…",
+  "gate.emailConfirm.done": "Adresse bestätigt, danke!",
+  "gate.emailConfirm.invalid":
+    "Dieser Link ist nicht mehr gültig. Gib deine Adresse unter Einstellungen, Mein Konto nochmals ein.",
+  "gate.emailConfirm.toSettings": "Zurück zu den Einstellungen",
 
   "gate.invite.subtitle": "Einladungslink",
   "gate.invite.invalid":

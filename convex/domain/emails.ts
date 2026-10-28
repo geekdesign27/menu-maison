@@ -12,7 +12,13 @@ export type EmailKind =
   | "adminSignup"
   | "adminConverted"
   | "adminCanceled"
-  | "adminPaymentFailed";
+  | "adminPaymentFailed"
+  | "passwordReset"
+  | "passwordChanged"
+  | "emailConfirm"
+  | "emailChanged"
+  | "familyDeleted"
+  | "adminDeleted";
 
 export interface EmailData {
   familyName: string;
@@ -28,6 +34,8 @@ export interface EmailData {
   lang?: Lang;
   /** Totals for PA's alerts. */
   subscribers?: number;
+  /** The member's pseudo, in a reset e-mail. */
+  pseudo?: string;
 }
 
 export interface Email {
@@ -123,6 +131,57 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
       ],
       button: d.link ? { label: "Réactiver", url: d.link } : undefined,
     }),
+    passwordReset: (d) => ({
+      subject: "Choisir un nouveau mot de passe pour Menu Maison",
+      title: `Bonjour ${d.adminName}`,
+      paragraphs: [
+        `Quelqu'un a demandé un nouveau mot de passe pour ton profil dans la famille «${NBSP}${d.familyName}${NBSP}». Ton pseudo${NBSP}: ${d.pseudo}.`,
+        "Le lien est valable 2 heures et ne sert qu'une fois. Ton mot de passe actuel reste valable tant que tu n'en as pas choisi un nouveau.",
+      ],
+      button: d.link
+        ? { label: "Choisir un nouveau mot de passe", url: d.link }
+        : undefined,
+      after: [
+        `Si ce n'est pas toi, ignore cet e-mail${NBSP}: rien ne change.`,
+      ],
+    }),
+    passwordChanged: (d) => ({
+      subject: "Ton mot de passe Menu Maison a changé",
+      title: "Mot de passe changé",
+      paragraphs: [
+        `Le mot de passe de ton profil dans la famille «${NBSP}${d.familyName}${NBSP}» vient d'être changé, le ${d.date}. Tes autres appareils ont été déconnectés.`,
+        `Si ce n'est pas toi, demande tout de suite un nouveau lien à l'admin de ta famille, ou utilise «${NBSP}Mot de passe oublié${NBSP}» sur l'écran de connexion.`,
+      ],
+      button: d.link ? { label: "Ouvrir Menu Maison", url: d.link } : undefined,
+    }),
+    emailConfirm: (d) => ({
+      subject: "Confirme ton adresse e-mail pour Menu Maison",
+      title: `Bonjour ${d.adminName}`,
+      paragraphs: [
+        `Confirme que cette adresse est bien la tienne pour ton profil dans la famille «${NBSP}${d.familyName}${NBSP}». Elle servira si tu oublies ton mot de passe.`,
+        "Le lien est valable 24 heures.",
+      ],
+      button: d.link
+        ? { label: "Confirmer mon adresse", url: d.link }
+        : undefined,
+      after: ["Si tu n'as rien demandé, ignore cet e-mail."],
+    }),
+    emailChanged: (d) => ({
+      subject: "L'adresse e-mail de ton profil Menu Maison a changé",
+      title: "Adresse e-mail changée",
+      paragraphs: [
+        `L'adresse e-mail de ton profil dans la famille «${NBSP}${d.familyName}${NBSP}» a été changée ou retirée. Les e-mails de Menu Maison n'arrivent plus ici.`,
+        "Si ce n'est pas toi, préviens l'admin de ta famille.",
+      ],
+    }),
+    familyDeleted: (d) => ({
+      subject: "La famille a été supprimée de Menu Maison",
+      title: "Famille supprimée",
+      paragraphs: [
+        `La famille «${NBSP}${d.familyName}${NBSP}» et toutes ses données (recettes, menus, courses, profils) ont été supprimées le ${d.date}, à la demande de ${d.adminName}. L'abonnement est arrêté, plus rien ne sera débité.`,
+        "Merci d'avoir cuisiné avec Menu Maison. Tu peux toujours recommencer avec une nouvelle famille.",
+      ],
+    }),
     adminSignup: (d) => ({
       subject: `Nouvelle inscription : ${d.familyName}`,
       title: "Nouvelle inscription",
@@ -169,6 +228,13 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
         label: "Ouvrir Super admin",
         url: `${SITE}/#/gestion/super-admin`,
       },
+    }),
+    adminDeleted: (d) => ({
+      subject: `Famille supprimée : ${d.familyName}`,
+      title: "Famille supprimée",
+      paragraphs: [
+        `La famille «${NBSP}${d.familyName}${NBSP}» (${d.email ?? "e-mail inconnu"}) a été supprimée par ${d.adminName} le ${d.date}. Son abonnement Stripe a été arrêté.`,
+      ],
     }),
   },
   de: {
@@ -225,17 +291,67 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
       ],
       button: d.link ? { label: "Wieder aktivieren", url: d.link } : undefined,
     }),
+    passwordReset: (d) => ({
+      subject: "Neues Passwort für Menu Maison wählen",
+      title: `Hallo ${d.adminName}`,
+      paragraphs: [
+        `Jemand hat ein neues Passwort für dein Profil in der Familie «${d.familyName}» angefordert. Dein Pseudonym: ${d.pseudo}.`,
+        "Der Link ist 2 Stunden gültig und funktioniert nur einmal. Dein jetziges Passwort bleibt gültig, bis du ein neues gewählt hast.",
+      ],
+      button: d.link
+        ? { label: "Neues Passwort wählen", url: d.link }
+        : undefined,
+      after: ["Falls das nicht du warst, ignoriere diese E-Mail: Es ändert sich nichts."],
+    }),
+    passwordChanged: (d) => ({
+      subject: "Dein Passwort für Menu Maison wurde geändert",
+      title: "Passwort geändert",
+      paragraphs: [
+        `Das Passwort deines Profils in der Familie «${d.familyName}» wurde am ${d.date} geändert. Deine anderen Geräte wurden abgemeldet.`,
+        "Falls das nicht du warst, verlange sofort einen neuen Link beim Admin deiner Familie oder nutze «Passwort vergessen» auf dem Anmeldebildschirm.",
+      ],
+      button: d.link ? { label: "Menu Maison öffnen", url: d.link } : undefined,
+    }),
+    emailConfirm: (d) => ({
+      subject: "Bestätige deine E-Mail-Adresse für Menu Maison",
+      title: `Hallo ${d.adminName}`,
+      paragraphs: [
+        `Bestätige, dass diese Adresse dir gehört, für dein Profil in der Familie «${d.familyName}». Sie hilft, wenn du dein Passwort vergisst.`,
+        "Der Link ist 24 Stunden gültig.",
+      ],
+      button: d.link
+        ? { label: "Meine Adresse bestätigen", url: d.link }
+        : undefined,
+      after: ["Falls du nichts angefordert hast, ignoriere diese E-Mail."],
+    }),
+    emailChanged: (d) => ({
+      subject: "Die E-Mail-Adresse deines Profils bei Menu Maison wurde geändert",
+      title: "E-Mail-Adresse geändert",
+      paragraphs: [
+        `Die E-Mail-Adresse deines Profils in der Familie «${d.familyName}» wurde geändert oder entfernt. E-Mails von Menu Maison kommen nicht mehr hierhin.`,
+        "Falls das nicht du warst, melde es dem Admin deiner Familie.",
+      ],
+    }),
+    familyDeleted: (d) => ({
+      subject: "Die Familie wurde aus Menu Maison gelöscht",
+      title: "Familie gelöscht",
+      paragraphs: [
+        `Die Familie «${d.familyName}» und alle ihre Daten (Rezepte, Menüs, Einkäufe, Profile) wurden am ${d.date} auf Wunsch von ${d.adminName} gelöscht. Das Abo ist beendet, es wird nichts mehr belastet.`,
+        "Danke, dass du mit Menu Maison gekocht hast. Du kannst jederzeit mit einer neuen Familie neu beginnen.",
+      ],
+    }),
     // Alerts go to PA, in French
     adminSignup: (d) => TEXTS.fr.adminSignup(d),
     adminConverted: (d) => TEXTS.fr.adminConverted(d),
     adminCanceled: (d) => TEXTS.fr.adminCanceled(d),
     adminPaymentFailed: (d) => TEXTS.fr.adminPaymentFailed(d),
+    adminDeleted: (d) => TEXTS.fr.adminDeleted(d),
   },
 };
 
 const FOOTER: Record<Lang, string> = {
-  fr: "Menu Maison, les menus de la semaine et les courses en famille. Tu reçois cet e-mail pour l'abonnement de ta famille.",
-  de: "Menu Maison, Wochenmenüs und Einkäufe für die ganze Familie. Du erhältst diese E-Mail wegen des Abos deiner Familie.",
+  fr: "Menu Maison, les menus de la semaine et les courses en famille. Tu reçois cet e-mail pour le compte de ta famille.",
+  de: "Menu Maison, Wochenmenüs und Einkäufe für die ganze Familie. Du erhältst diese E-Mail wegen des Kontos deiner Familie.",
 };
 
 /** The e-mail ready to send: names escaped in HTML, a text version for mail programs without HTML. */
@@ -249,6 +365,7 @@ export function renderEmail(
     familyName: escapeHtml(data.familyName),
     adminName: escapeHtml(data.adminName),
     email: data.email && escapeHtml(data.email),
+    pseudo: data.pseudo && escapeHtml(data.pseudo),
   };
   const b = TEXTS[lang][kind](safe);
   const plain = TEXTS[lang][kind](data);
@@ -301,4 +418,10 @@ export const EMAIL_KINDS: EmailKind[] = [
   "adminConverted",
   "adminCanceled",
   "adminPaymentFailed",
+  "passwordReset",
+  "passwordChanged",
+  "emailConfirm",
+  "emailChanged",
+  "familyDeleted",
+  "adminDeleted",
 ];

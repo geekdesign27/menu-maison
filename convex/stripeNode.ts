@@ -17,6 +17,8 @@ import {
   signupProblem,
   TRIAL_DAYS,
 } from "./domain/billing";
+import { deleteConfirmMatches } from "./domain/account";
+import { checkPassword } from "./passwordCheck";
 
 const NOT_CONFIGURED = "Le paiement n'est pas encore configuré.";
 const BUSY =
@@ -282,10 +284,17 @@ async function completeFromSession(
       ? session.subscription
       : session.subscription.id;
   const sub = await client.subscriptions.retrieve(subscriptionId);
-  return ctx.runMutation(internal.billing.completeSignup, {
+  const familyId = await ctx.runMutation(internal.billing.completeSignup, {
     sessionId: session.id,
     ...subscriptionFields(sub, session.customer_details?.email),
   });
+  // Checked after: either the family got this subscription (a deletion now stops
+  // it), or it was already gone or being deleted: stopped here, nothing more is charged
+  if (await ctx.runQuery(internal.billing.orphanSignup, { sessionId: session.id })) {
+    if (sub.status !== "canceled") await client.subscriptions.cancel(sub.id);
+    return null;
+  }
+  return familyId;
 }
 
 /**
@@ -378,6 +387,15 @@ export const handleWebhook = internalAction({
         );
         break;
       }
+      case "customer.updated": {
+        // The customer changed their e-mail in the portal: Stripe's receipts and ours agree
+        const customer = event.data.object;
+        await ctx.runMutation(internal.billing.updateCustomerEmail, {
+          customerId: customer.id,
+          email: customer.email ?? undefined,
+        });
+        break;
+      }
       default:
         // Not used: receipts and invoices stay with Stripe
         return { ok: true, status: 200 };
@@ -387,5 +405,53 @@ export const handleWebhook = internalAction({
       type: event.type,
     });
     return { ok: true, status: 200 };
+  },
+});
+
+/** Every live subscription of ours for this customer, plus the one stored on the family. */
+async function liveSubscriptions(client: Stripe, customerId: string | null, stored: string | null) {
+  const ids = new Set<string>();
+  if (customerId) {
+    const subs = await client.subscriptions.list({ customer: customerId, status: "all", limit: 100 });
+    for (const sub of subs.data)
+      if (isOurs(sub.metadata) && LIVE_STRIPE_STATUSES.includes(sub.status)) ids.add(sub.id);
+  }
+  if (stored) {
+    const sub = await client.subscriptions.retrieve(stored).catch(() => null);
+    if (sub && sub.status !== "canceled") ids.add(sub.id);
+  }
+  return [...ids];
+}
+
+/**
+ * Gestion, Données: deletes the family for good, confirmed by its name and the
+ * admin's password. Every subscription is stopped at Stripe first (nothing more
+ * is charged); if that fails, nothing is deleted.
+ */
+export const deleteFamily = action({
+  args: { token: v.string(), confirmName: v.string(), password: v.string() },
+  handler: async (ctx, { token, confirmName, password }): Promise<void> => {
+    const target = await ctx.runQuery(internal.familyData.deletionTarget, { token });
+    if (!deleteConfirmMatches(confirmName, target.familyName))
+      throw new ConvexError("Le nom tapé ne correspond pas à celui de la famille.");
+    await checkPassword(ctx, target.memberId, target.passwordHash, password);
+    await ctx.runMutation(internal.familyData.markDeleting, { familyId: target.familyId, deleting: true });
+    if (target.customerId || target.subscriptionId || target.openCheckouts.length) {
+      try {
+        const client = stripe();
+        // A payment page still open would subscribe the family after its deletion
+        for (const id of target.openCheckouts)
+          await client.checkout.sessions.expire(id).catch(() => undefined);
+        for (const id of await liveSubscriptions(client, target.customerId, target.subscriptionId))
+          await client.subscriptions.cancel(id);
+      } catch {
+        await ctx.runMutation(internal.familyData.markDeleting, { familyId: target.familyId, deleting: false });
+        throw new ConvexError("L'abonnement n'a pas pu être arrêté : rien n'a été supprimé. Réessaie dans un moment.");
+      }
+    }
+    await ctx.runMutation(internal.familyData.finishDeletion, {
+      familyId: target.familyId,
+      adminName: target.adminName,
+    });
   },
 });

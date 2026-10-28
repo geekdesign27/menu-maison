@@ -9,6 +9,9 @@ import { describe, expect, it } from "vitest";
 // Mutations that do not write a family's data through the family writer, on purpose
 const ALLOWED = new Set([
   "access.logout", // ends this phone's session
+  "account.signOutOthers", // ends the member's other sessions
+  "account.confirmEmail", // the link's own profile, no session: confirms an address
+  "account.requestReset", // public form: e-mails a link, writes no family data
   "superadmin.createOne", // the super-admin space checks requireSuperadmin
   "superadmin.adminLink",
   "superadmin.setSuspended",
@@ -60,6 +63,7 @@ describe("read-only families", () => {
       "access.setLang",
       "access.setRole",
       "access.setUsername",
+      "account.removeEmail",
       "onboarding.finish",
     ]);
   });

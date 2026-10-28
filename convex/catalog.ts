@@ -40,8 +40,9 @@ export const base = query({
       members: await Promise.all(
         members
           .sort((a, b) => a.order - b.order)
-          // The password hash never leaves the server
-          .map(async ({ passwordHash, ...m }) => ({
+          // The password hash and the members' e-mails never leave the server
+          // (each member sees their own address in Réglages, Mon compte)
+          .map(async ({ passwordHash, email: _email, pendingEmail: _pending, emailTokenHash: _hash, emailTokenExpiresAt: _expires, ...m }) => ({
             ...m,
             hasPassword: !!passwordHash,
             imageUrl: m.imageId ? await ctx.storage.getUrl(m.imageId) : null,

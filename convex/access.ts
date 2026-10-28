@@ -35,6 +35,8 @@ import {
   slugFromName,
   verifyPassword,
 } from "./domain/auth";
+import { formatDayLong } from "./domain/dates";
+import { sendOnce, siteUrl } from "./email";
 
 const INVITE_DAYS = 14; // first sign-in
 const RESET_DAYS = 2; // forgotten password: the link may linger in a chat
@@ -53,16 +55,55 @@ async function openSession(ctx: MutationCtx, member: Doc<"members">) {
   return token;
 }
 
-async function revokeSessions(ctx: MutationCtx, memberId: Id<"members">) {
+/** Signs a member out of every device, except the session `keep` (this phone). */
+export async function revokeSessions(
+  ctx: MutationCtx,
+  memberId: Id<"members">,
+  keep?: Id<"sessions">,
+) {
   const sessions = await ctx.db
     .query("sessions")
     .withIndex("by_member", (q) => q.eq("memberId", memberId))
     .collect();
-  for (const s of sessions) await ctx.db.delete(s._id);
+  let removed = 0;
+  for (const s of sessions)
+    if (s._id !== keep) {
+      await ctx.db.delete(s._id);
+      removed++;
+    }
+  return removed;
+}
+
+/** E-mail to the member (when they gave one) once their password was replaced. */
+export async function notifyPasswordChanged(
+  ctx: MutationCtx,
+  member: Doc<"members">,
+  family: Doc<"families">,
+) {
+  const lang = member.lang ?? "fr";
+  const now = Date.now();
+  await sendOnce(ctx, {
+    kind: "passwordChanged",
+    key: `passwordChanged:${member._id}:${now}`,
+    to: member.email,
+    lang,
+    data: {
+      familyName: family.name,
+      adminName: member.name,
+      date: formatDayLong(new Date(now).toISOString().slice(0, 10), lang),
+      link: `${siteUrl()}/#/f/${family.slug}`,
+    },
+    familyId: family._id,
+  });
 }
 
 /** One-time link token for a member to choose a password (first sign-in or reset). */
-export async function createInvite(ctx: MutationCtx, member: Doc<"members">, days = INVITE_DAYS) {
+export async function createInvite(
+  ctx: MutationCtx,
+  member: Doc<"members">,
+  days = INVITE_DAYS,
+  { revoke = true } = {},
+) {
   if (!member.familyId) throw new ConvexError("Profil sans famille.");
   // A new link replaces any older one
   const old = await ctx.db
@@ -70,8 +111,9 @@ export async function createInvite(ctx: MutationCtx, member: Doc<"members">, day
     .withIndex("by_member", (q) => q.eq("memberId", member._id))
     .collect();
   for (const i of old) await ctx.db.delete(i._id);
-  // A reset link signs the member out everywhere (lost or compromised password)
-  await revokeSessions(ctx, member._id);
+  // A reset link from an admin signs the member out everywhere (lost or
+  // compromised password); one asked by e-mail does not: anybody may ask for it
+  if (revoke) await revokeSessions(ctx, member._id);
   const token = randomToken();
   await ctx.db.insert("invites", {
     familyId: member.familyId,
@@ -296,6 +338,8 @@ export const redeemInvite = internalMutation({
     await ctx.db.delete(invite._id);
     // A new password signs out the other devices of this member
     await revokeSessions(ctx, member._id);
+    // A password replaced (not a first one): the member hears of it
+    if (member.passwordHash) await notifyPasswordChanged(ctx, member, found.family);
     return openSession(ctx, { ...member, passwordHash });
   },
 });

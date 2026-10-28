@@ -148,7 +148,7 @@ export const fr = {
   "common.access.notActivated":
     "Pas encore activé : envoie-lui son lien pour choisir son mot de passe.",
   "common.access.forgotOwn":
-    "Mot de passe oublié : demande un nouveau lien à un autre admin de la famille.",
+    "Changer ton mot de passe\u00a0: Réglages, Mon compte. Oublié\u00a0: «\u00a0Mot de passe oublié\u00a0?\u00a0» sur l'écran de connexion, ou un nouveau lien d'un autre admin.",
   "common.access.linkReady":
     "Lien prêt, valable {duration} et utilisable une fois. Ses autres appareils sont déconnectés.",
   "common.access.hours48": "48 heures",
@@ -386,7 +386,7 @@ export const de: { [K in keyof typeof fr]: string } = {
   "common.access.notActivated":
     "Noch nicht aktiviert: Schick den Link, damit das Passwort gewählt werden kann.",
   "common.access.forgotOwn":
-    "Passwort vergessen: Bitte einen anderen Admin der Familie um einen neuen Link.",
+    "Passwort ändern: Einstellungen, Mein Konto. Vergessen: «Passwort vergessen?» auf dem Anmeldebildschirm oder ein neuer Link von einem anderen Admin.",
   "common.access.linkReady":
     "Link bereit, {duration} gültig und nur einmal nutzbar. Die anderen Geräte dieses Profils werden abgemeldet.",
   "common.access.hours48": "48 Stunden",

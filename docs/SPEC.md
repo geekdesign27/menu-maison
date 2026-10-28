@@ -116,6 +116,15 @@ Serveurs de dev via Portly.
   (`access.resetLink`) et l'envoie par message. Lien unique `#/activer/<jeton>` (14 jours,
   `invites`) pour choisir son mot de passe ; il remplace l'ancien lien et déconnecte les
   autres appareils du membre. Pas pour soi-même : un autre admin le fait.
+- **Compte en libre-service** (`convex/account.ts`, Réglages, Mon compte) : e-mail facultatif
+  par membre, confirmé par un lien de 24 heures (`#/email/<jeton>`) et jamais montré aux autres
+  membres ; « Mot de passe oublié » à la connexion (`#/mot-de-passe`) : lien `#/activer/<jeton>`
+  de 2 heures par e-mail, même réponse que l'adresse soit connue ou non, 3 par heure et par
+  adresse, sans déconnecter personne avant usage ; changement de mot de passe et nouvel e-mail
+  avec le mot de passe actuel ; déconnexion des autres appareils.
+- **Données de la famille** (`convex/familyData.ts`, admins) : export JSON sans secrets ;
+  suppression avec le nom de la famille et le mot de passe, abonnements Stripe arrêtés d'abord
+  (`stripeNode.deleteFamily`), puis purge par lots. La famille du super-admin ne se supprime pas.
 - Famille suspendue (`families.suspended`) : plus de connexion ni de session valide.
 - **Onglet « Famille » de `/gestion`** (admins de la famille) : nom et lien, tableau des
   comptes (pseudo, rôle, accès ; la fiche d'un profil change le pseudo, le rôle admin ou

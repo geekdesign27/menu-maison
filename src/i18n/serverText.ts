@@ -277,6 +277,17 @@ const DE: Record<string, string> = {
     "Rezept zu lang für einmal Lesen.",
   "La lecture de la recette a échoué. Réessaie dans un moment.":
     "Das Lesen des Rezepts ist fehlgeschlagen. Versuch es gleich nochmals.",
+  "Trop de demandes. Réessaie dans une heure.": "Zu viele Anfragen. Versuche es in einer Stunde nochmals.",
+  "Mot de passe actuel incorrect.": "Aktuelles Passwort falsch.",
+  "Trop d'essais. Réessaie dans quelques minutes.": "Zu viele Versuche. Versuche es in ein paar Minuten nochmals.",
+  "Cette famille gère Menu Maison : elle ne se supprime pas depuis l'app.":
+    "Diese Familie verwaltet Menu Maison: Sie lässt sich nicht in der App löschen.",
+  "Le nom tapé ne correspond pas à celui de la famille.": "Der eingetippte Name stimmt nicht mit dem der Familie überein.",
+  "L'abonnement n'a pas pu être arrêté : rien n'a été supprimé. Réessaie dans un moment.":
+    "Das Abo konnte nicht beendet werden: Es wurde nichts gelöscht. Versuche es in einem Moment nochmals.",
+  "Indique une adresse e-mail.": "Gib eine E-Mail-Adresse ein.",
+  "Cette adresse e-mail est trop longue.": "Diese E-Mail-Adresse ist zu lang.",
+  "Cette adresse e-mail n'est pas valable.": "Diese E-Mail-Adresse ist nicht gültig.",
 };
 
 const plain = (s: string) => s.replace(/[  ]/g, " ").trim();

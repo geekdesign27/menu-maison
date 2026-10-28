@@ -27,6 +27,12 @@ const kindValidator = v.union(
   v.literal("adminConverted"),
   v.literal("adminCanceled"),
   v.literal("adminPaymentFailed"),
+  v.literal("passwordReset"),
+  v.literal("passwordChanged"),
+  v.literal("emailConfirm"),
+  v.literal("emailChanged"),
+  v.literal("familyDeleted"),
+  v.literal("adminDeleted"),
 );
 
 export const dataValidator = v.object({
@@ -38,6 +44,7 @@ export const dataValidator = v.object({
   email: v.optional(v.string()),
   lang: v.optional(v.union(v.literal("fr"), v.literal("de"))),
   subscribers: v.optional(v.number()),
+  pseudo: v.optional(v.string()),
 });
 
 /** The app's address in links (SITE_URL), https://menumaison.ch by default. */

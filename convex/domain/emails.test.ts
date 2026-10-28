@@ -9,6 +9,7 @@ const DATA = {
   loginLink: "https://menumaison.ch/#/f/dupont",
   email: "marc@example.ch",
   subscribers: 3,
+  pseudo: "marc",
 };
 
 describe("e-mails", () => {

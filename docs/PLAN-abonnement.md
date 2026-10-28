@@ -126,15 +126,18 @@ limités pour éviter le remplissage.
 
 | Action | Qui | Où |
 |---|---|---|
-| Mot de passe oublié | Tout membre qui a un e-mail | Écran de connexion, par e-mail |
+| Mot de passe oublié | Tout membre qui a un e-mail confirmé | Écran de connexion, « Mot de passe oublié ? » (lien de 2 heures par e-mail) |
 | Nouveau lien pour un membre sans e-mail | Admin de la famille | Réglages, Profils (existe) |
-| Ajouter ou changer son e-mail | Chaque membre | Réglages, son profil (confirmation par e-mail) |
-| Changer son mot de passe | Chaque membre | Réglages, son profil |
-| Changer l'e-mail de facturation | Admin | Gestion, Abonnement |
-| Carte, factures, résiliation, réactivation | Admin | Gestion, Abonnement, portail Stripe |
-| Exporter les données de la famille | Admin | Gestion, Abonnement (fichier JSON, droit d'accès nLPD) |
-| Supprimer la famille et ses données | Admin | Gestion, Abonnement, confirmation en deux étapes |
-| Déconnecter tous les appareils | Chaque membre | Réglages, son profil |
+| Ajouter ou changer son e-mail | Chaque membre | Réglages, Mon compte (mot de passe demandé, confirmation par e-mail) |
+| Changer son mot de passe | Chaque membre | Réglages, Mon compte (les autres appareils sont déconnectés) |
+| Changer l'e-mail de facturation | Admin | Portail Stripe ; Menu Maison suit (`customer.updated`) |
+| Carte, factures, résiliation, réactivation | Admin | Réglages, Abonnement, portail Stripe |
+| Exporter les données de la famille | Admin | Réglages, Données de la famille (fichier JSON, droit d'accès nLPD) |
+| Supprimer la famille et ses données | Admin | Réglages, Données de la famille : avertissement, puis nom de la famille et mot de passe ; l'abonnement est arrêté d'abord |
+| Déconnecter ses autres appareils | Chaque membre | Réglages, Mon compte |
+
+Les e-mails des membres ne sont visibles que par chacun pour lui-même (et dans l'export des
+admins). La famille du super-admin ne peut pas être supprimée depuis l'app.
 
 Un e-mail par membre devient facultatif : sans e-mail, c'est l'admin qui envoie un nouveau
 lien, comme aujourd'hui.
@@ -183,6 +186,13 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   contient un jeton) et compte protégé par la double authentification.
 - [ ] Antivirus de messagerie (Microsoft Safe Links…) : vérifier qu'ils ne cassent pas le lien de
   bienvenue (ils peuvent l'ouvrir avant la personne).
+- [ ] E-mails du compte reçus pour de vrai : mot de passe oublié, mot de passe changé, confirmation
+  d'adresse, adresse changée, famille supprimée, alerte « famille supprimée ».
+- [ ] Mot de passe oublié de bout en bout depuis un autre téléphone (lien de 2 heures).
+- [ ] Suppression d'une famille de test avec un vrai abonnement de test : abonnement arrêté chez
+  Stripe, aucun e-mail « résilié » envoyé, données effacées.
+- [ ] Webhook : ajouter l'événement `customer.updated` (test et live), puis changer l'e-mail dans
+  le portail et vérifier qu'il suit dans Réglages, Abonnement.
 
 **IA et coûts**
 - [ ] Compteur IA en production : vérifier qu'un premier vrai ticket fait bouger « IA ce mois ».
@@ -203,8 +213,7 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   (Chrome) : vue seulement sur un téléphone simulé.
 - [ ] Parcours d'inscription complet sur un vrai téléphone, page Stripe comprise.
 
-**Lots encore à faire** : e-mails (S3b), actions en libre-service (S3c), guide de bienvenue
-client (S3d), page d'accueil (S4), pages légales (S5), statistiques (S6b), essai complet (S7).
+**Lots encore à faire** : guide de bienvenue client (S3d), page d'accueil (S4), pages légales (S5), statistiques (S6b), essai complet (S7).
 
 **Ménage** : familles de test locales « Test Stripe » et « Rochat Test », et leurs abonnements
 de test chez Stripe.
@@ -218,7 +227,7 @@ de test chez Stripe.
 | S2 | **Fait le 2026-10-28.** Accès selon le statut (offert à part : `families.offered`, les familles sans abonnement sont offertes), écritures et IA coupées en lecture seule, budget d'essai réduit, bandeau, bouton Offrir / Retirer l'offre dans Super admin | `lib.ts`, `domain/billing.ts`, tests |
 | S3 | **Fait le 2026-10-28.** Parcours client : `#/essai`, `#/bienvenue` puis mot de passe, carte Abonnement (Réglages et Gestion), portail Stripe dédié, un seul abonnement par famille | `Gate`, `SignupScreens`, `SubscriptionPanel` |
 | S3b | **Fait le 2026-10-28** (inactif sans clé Resend). E-mails HTML de marque liés à l'abonnement (bienvenue avec lien de 7 jours, fin d'essai, confirmé, paiement échoué, résilié) et 4 alertes à PA, une seule fois chacun, aperçus dans Super admin. Les e-mails de mot de passe et de suppression viennent avec S3c | `domain/emails.ts`, `email.ts` |
-| S3c | Actions en libre-service : mot de passe oublié, e-mail, export, suppression, déconnexion | `access.ts`, `Settings`, `gestion/` |
+| S3c | **Fait le 2026-10-28** (e-mails inactifs sans clé Resend). Mot de passe oublié par e-mail, e-mail de chaque membre confirmé par lien, changement de mot de passe, déconnexion des autres appareils, export JSON, suppression de la famille (Stripe arrêté d'abord), suivi de l'e-mail de facturation, 6 nouveaux e-mails FR/DE | `account.ts`, `familyData.ts`, `passwordCheck.ts`, `AccountPanel.tsx`, `AccountScreens.tsx` |
 | S3d | Guide de bienvenue d'une famille cliente | `onboarding/`, i18n |
 | S4 | Page d'accueil : section Tarif, section Formation, boutons, traductions | `landing/` |
 | S5 | Légal : conditions générales, confidentialité, mentions légales | `landing/`, réglages Stripe |

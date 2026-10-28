@@ -11,11 +11,13 @@ import { Button, ErrorBox, Loading, TextInput } from "./ui";
 import { AppIcon } from "./Logo";
 import { NO_INVITE_HASH } from "../landing/entry";
 import { SignupScreen, WelcomeScreen } from "./SignupScreens";
+import { EmailConfirmScreen, ForgotScreen } from "./AccountScreens";
 
 /**
  * Sign-in links live in the address, before the app's own routes:
  * « #/f/dupont » opens the family's sign-in, « #/activer/<link> » an invitation,
- * « #/essai » the sign-up and « #/bienvenue?session_id=… » Stripe's return.
+ * « #/essai » the sign-up and « #/bienvenue?session_id=… » Stripe's return,
+ * « #/mot-de-passe » a forgotten password and « #/email/<link> » an e-mail to confirm.
  */
 function readLink() {
   const hash = window.location.hash;
@@ -27,7 +29,10 @@ function readLink() {
   // From Stripe (« session_id ») or from the welcome e-mail (« &k= », its own secret)
   const back = hash.match(/^#\/bienvenue\?session_id=(cs_(?:test|live)_[A-Za-z0-9]+)(?:&k=([0-9a-f]{64}))?$/);
   const welcome = back ? { sessionId: back[1], emailKey: back[2] ?? null } : null;
-  return { family, invite, signup, welcome };
+  const forgot = /^#\/mot-de-passe\/?$/.test(hash);
+  const emailLink =
+    hash.match(/^#\/email\/([0-9a-f]{64})\/?$/i)?.[1]?.toLowerCase() ?? null;
+  return { family, invite, signup, welcome, forgot, emailLink };
 }
 
 function useLink() {
@@ -63,6 +68,9 @@ export function Gate({ children }: { children: ReactNode }) {
   if (link.signup) return <SignupScreen />;
   if (link.welcome)
     return <WelcomeScreen sessionId={link.welcome.sessionId} emailKey={link.welcome.emailKey} />;
+  // The confirmation link may be opened on any phone, signed in or not
+  if (link.emailLink) return <EmailConfirmScreen link={link.emailLink} />;
+  if (link.forgot && !token) return <ForgotScreen />;
   if (link.invite && !token)
     return (
       <InviteScreen
@@ -212,7 +220,13 @@ function LoginScreen({
           {busy ? t("gate.login.checking") : t("gate.login.submit")}
         </Button>
       </form>
-      <p className="mt-6 text-center text-[15px] text-muted">
+      <a
+        href="#/mot-de-passe"
+        className="mx-auto mt-4 inline-flex min-h-11 items-center px-3 text-[15px] font-bold text-carrot-dark underline underline-offset-4"
+      >
+        {t("gate.login.forgot")}
+      </a>
+      <p className="mt-2 text-center text-[15px] text-muted">
         {t("gate.login.help")}
       </p>
       {!knownFamily && (

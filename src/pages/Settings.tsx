@@ -26,6 +26,7 @@ import { ChainMark } from "../components/shopping/chains";
 import { useT } from "../i18n/useT";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { SubscriptionPanel } from "../components/SubscriptionPanel";
+import { AccountPanel, FamilyDataPanel } from "../components/AccountPanel";
 import { MemberSheet } from "../components/shopping/MemberSheet";
 import { AisleSheet } from "../components/shopping/AisleSheet";
 
@@ -230,6 +231,20 @@ function SettingsContent({ base }: { base: Base }) {
           <ChevronRight className="shrink-0 text-muted" size={20} />
         </Card>
       </Link>
+
+      <SectionTitle>{t("account.title")}</SectionTitle>
+      <Card className="p-4">
+        <AccountPanel />
+      </Card>
+
+      {account?.role === "admin" && (
+        <>
+          <SectionTitle>{t("account.dataTitle")}</SectionTitle>
+          <Card className="p-4">
+            <FamilyDataPanel />
+          </Card>
+        </>
+      )}
 
       <SectionTitle>{t("common.settings.thisPhone")}</SectionTitle>
       <div className="grid gap-2">

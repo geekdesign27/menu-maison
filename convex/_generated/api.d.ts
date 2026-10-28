@@ -9,12 +9,14 @@
  */
 
 import type * as access from "../access.js";
+import type * as account from "../account.js";
 import type * as aiBudget from "../aiBudget.js";
 import type * as billing from "../billing.js";
 import type * as catalog from "../catalog.js";
 import type * as catalogTranslate from "../catalogTranslate.js";
 import type * as claude from "../claude.js";
 import type * as crons from "../crons.js";
+import type * as domain_account from "../domain/account.js";
 import type * as domain_aiBudget from "../domain/aiBudget.js";
 import type * as domain_auth from "../domain/auth.js";
 import type * as domain_billing from "../domain/billing.js";
@@ -35,12 +37,14 @@ import type * as domain_tags from "../domain/tags.js";
 import type * as domain_text from "../domain/text.js";
 import type * as email from "../email.js";
 import type * as families from "../families.js";
+import type * as familyData from "../familyData.js";
 import type * as homeStock from "../homeStock.js";
 import type * as http from "../http.js";
 import type * as lib from "../lib.js";
 import type * as meals from "../meals.js";
 import type * as onboarding from "../onboarding.js";
 import type * as openFoodFacts from "../openFoodFacts.js";
+import type * as passwordCheck from "../passwordCheck.js";
 import type * as products from "../products.js";
 import type * as receipts from "../receipts.js";
 import type * as recipeImport from "../recipeImport.js";
@@ -64,12 +68,14 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   access: typeof access;
+  account: typeof account;
   aiBudget: typeof aiBudget;
   billing: typeof billing;
   catalog: typeof catalog;
   catalogTranslate: typeof catalogTranslate;
   claude: typeof claude;
   crons: typeof crons;
+  "domain/account": typeof domain_account;
   "domain/aiBudget": typeof domain_aiBudget;
   "domain/auth": typeof domain_auth;
   "domain/billing": typeof domain_billing;
@@ -90,12 +96,14 @@ declare const fullApi: ApiFromModules<{
   "domain/text": typeof domain_text;
   email: typeof email;
   families: typeof families;
+  familyData: typeof familyData;
   homeStock: typeof homeStock;
   http: typeof http;
   lib: typeof lib;
   meals: typeof meals;
   onboarding: typeof onboarding;
   openFoodFacts: typeof openFoodFacts;
+  passwordCheck: typeof passwordCheck;
   products: typeof products;
   receipts: typeof receipts;
   recipeImport: typeof recipeImport;
