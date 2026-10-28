@@ -174,8 +174,13 @@ export const setStatus = mutation({
     if (!meal) throw new ConvexError("Repas introuvable.");
     if (status === MEAL_NOT_COOKED)
       throw new ConvexError("Pour un plat pas cuisiné, passe par « Pas cuisiné » sur le plat.");
-    // Back from « pas cuisiné »: what it had left at home is used again by the dish
-    if (meal.status === MEAL_NOT_COOKED) await dropHomeStockOf(db, meal._id);
+    // Back from « pas cuisiné »: the whole cooking is planned again, and what it
+    // had left at home is used again by the dish
+    if (meal.status === MEAL_NOT_COOKED)
+      for (const m of await cookedTogether(db, meal)) {
+        await dropHomeStockOf(db, m._id);
+        if (m._id !== id && m.status === MEAL_NOT_COOKED) await db.patch(m._id, { status: "prévu" });
+      }
     if (leftoverPortions !== undefined) assertInt(leftoverPortions, 0, 60, "Portions restantes");
     // A dish not eaten goes to the fridge whole, with the extra portions cooked for later
     const extra = meal.extraPortions ?? 0;
@@ -206,6 +211,28 @@ export const remove = mutation({
   },
 });
 
+/**
+ * Meals made from one cooking: tonight's dinner and tomorrow's lunch cooked with
+ * it (same dish, same cooking day, one of them eaten another day). Leftovers
+ * planned from a dish are not part of it. The meal itself comes first.
+ */
+async function cookedTogether(db: FamilyDb, meal: Doc<"meals">) {
+  if (meal.fromLeftoverOf) return [meal];
+  const near = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 1));
+  const sameDish = (m: Doc<"meals">) =>
+    meal.recipeId ? m.recipeId === meal.recipeId : !m.recipeId && m.title === meal.title;
+  const others = near.filter(
+    (m) =>
+      m._id !== meal._id &&
+      !m.fromLeftoverOf &&
+      m.cookedOn === meal.cookedOn &&
+      sameDish(m) &&
+      // Two separate dishes the same day are not one cooking
+      (m.date !== m.cookedOn || meal.date !== meal.cookedOn),
+  );
+  return [meal, ...others];
+}
+
 async function dropHomeStockOf(db: FamilyWriter, mealId: Id<"meals">) {
   for (const s of await db.query("homeStock").collect())
     if (s.fromMealId === mealId) await db.delete(s._id);
@@ -229,8 +256,11 @@ export const notCookedPreview = query({
     const { db } = await requireMember(ctx, token);
     const meal = await db.own(id, "Repas introuvable.");
     const recipe = meal.recipeId ? await db.get(meal.recipeId) : null;
-    if (!recipe || meal.fromLeftoverOf) return { items: [], leftoversPlanned: 0 };
-    const needs = mealNeeds(meal, recipe.items, await checksFor(db, meal));
+    if (!recipe || meal.fromLeftoverOf) return { items: [], leftoversPlanned: 0, together: [] };
+    const group = await cookedTogether(db, meal);
+    // Everything was bought for the whole cooking, not for this meal only
+    const portions = group.reduce((sum, m) => sum + m.persons + (m.extraPortions ?? 0), 0);
+    const needs = mealNeeds({ persons: portions }, recipe.items, await checksFor(db, meal));
     const items = [];
     for (const n of needs) {
       const ing = await db.get(n.ingredientId as Id<"ingredients">);
@@ -239,7 +269,9 @@ export const notCookedPreview = query({
     const later = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 30));
     return {
       items: items.sort((a, b) => Number(b.bought) - Number(a.bought) || a.name.localeCompare(b.name, "fr")),
-      leftoversPlanned: later.filter((m) => m.fromLeftoverOf === meal._id && m.status === "prévu").length,
+      leftoversPlanned: later.filter((m) => group.some((g) => g._id === m.fromLeftoverOf) && m.status === "prévu").length,
+      // The other meals of this cooking, cancelled with it
+      together: group.slice(1).map((m) => ({ date: m.date, slot: m.slot })),
     };
   },
 });
@@ -262,8 +294,12 @@ export const markNotCooked = mutation({
     if (keep.length > 60) throw new ConvexError("Trop d'ingrédients.");
     await db.ownAll(keep.map((k) => k.ingredientId), "Ingrédient introuvable.");
     for (const k of keep) assertPositiveQty(k.qty);
+    const group = await cookedTogether(db, meal);
+    if (group.slice(1).some((m) => m.status === "mangé" || m.status === "pas mangé"))
+      throw new ConvexError("Ce plat a déjà été cuisiné pour un autre repas : marque plutôt celui-ci « Pas mangé ».");
     const recipe = meal.recipeId ? await db.get(meal.recipeId) : null;
-    await dropHomeStockOf(db, meal._id);
+    // One stock for the whole cooking, even if a meal of it was cancelled before
+    for (const m of group) await dropHomeStockOf(db, m._id);
     for (const k of keep)
       await db.insert("homeStock", {
         ingredientId: k.ingredientId,
@@ -275,8 +311,8 @@ export const markNotCooked = mutation({
       });
     const later = await mealsBetween(db, meal.cookedOn, addDays(meal.cookedOn, 30));
     for (const m of later)
-      if (m.fromLeftoverOf === meal._id && m.status === "prévu") await db.delete(m._id);
-    await db.patch(id, { status: MEAL_NOT_COOKED, leftoverPortions: 0 });
+      if (group.some((g) => g._id === m.fromLeftoverOf) && m.status === "prévu") await db.delete(m._id);
+    for (const m of group) await db.patch(m._id, { status: MEAL_NOT_COOKED, leftoverPortions: 0 });
   },
 });
 

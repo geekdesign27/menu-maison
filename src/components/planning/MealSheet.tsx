@@ -457,6 +457,22 @@ function NotCookedPanel({
           </ul>
         </div>
       )}
+      {preview.together.length > 0 && (
+        <p className="text-[15px] font-bold">
+          Cuisiné en même temps,{" "}
+          {preview.together.length > 1
+            ? "ces repas sont aussi annulés"
+            : "ce repas est aussi annulé"}
+          {"\u00a0"}:{" "}
+          {preview.together
+            .map(
+              (m) =>
+                `${formatDayLong(m.date)}, ${SLOT_LABEL[m.slot].toLowerCase()}`,
+            )
+            .join(", ")}
+          .
+        </p>
+      )}
       {preview.leftoversPlanned > 0 && (
         <p className="text-[15px] font-bold text-berry">
           {preview.leftoversPlanned > 1

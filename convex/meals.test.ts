@@ -76,6 +76,51 @@ describe("a dish not cooked", () => {
     await expect(t.mutation(api.meals.setStatus, { token, id, status: "pas cuisiné" })).rejects.toThrow("Pas cuisiné");
   });
 
+  it("cancels tomorrow's lunch cooked with tonight's dinner, without counting the food twice", async () => {
+    const { t, token, recipe } = await setup();
+    const dinner = await t.mutation(api.meals.add, {
+      token, date: SATURDAY, slot: "soir", recipeId: recipe._id, persons: 3, tomorrowLunchPersons: 2,
+    });
+    // Another dish of the same recipe, cooked on its own later: not part of it
+    await t.mutation(api.meals.add, { token, date: "2026-10-27", slot: "soir", recipeId: recipe._id, persons: 3 });
+    const items = await itemsOf(t, token, SATURDAY);
+    const bought = items[0];
+    await t.mutation(api.shopping.toggle, { token, start: SATURDAY, itemKey: bought.key, checked: true });
+    const lunch = (await t.query(api.meals.week, { token, start: SATURDAY })).find((m) => m.slot === "midi")!;
+
+    // Asked from the lunch: the whole cooking is cancelled, dinner included
+    const preview = await t.query(api.meals.notCookedPreview, { token, id: lunch._id });
+    expect(preview.together).toEqual([{ date: SATURDAY, slot: "soir" }]);
+    const kept = preview.items.find((i) => i.bought)!;
+    expect(kept.qty).toBeGreaterThan(0);
+    const keep = [{ ingredientId: kept.ingredientId, qty: kept.qty, unit: kept.unit }];
+    await t.mutation(api.meals.markNotCooked, { token, id: lunch._id, keep });
+    const week = await t.query(api.meals.week, { token, start: SATURDAY });
+    expect(week.filter((m) => m.date < "2026-10-27").map((m) => m.status)).toEqual(["pas cuisiné", "pas cuisiné"]);
+    expect(week.find((m) => m.date === "2026-10-27")!.status).toBe("prévu");
+
+    // Asked again from the dinner: still one stock, not two
+    await t.mutation(api.meals.markNotCooked, { token, id: dinner, keep });
+    const stock = (await t.query(api.homeStock.list, { token })).items;
+    expect(stock).toEqual([expect.objectContaining({ ingredientId: kept.ingredientId })]);
+
+    // Cooked after all: both meals come back, the stock is used by the dish
+    await t.mutation(api.meals.setStatus, { token, id: dinner, status: "prévu" });
+    const back = await t.query(api.meals.week, { token, start: SATURDAY });
+    expect(back.map((m) => m.status)).toEqual(["prévu", "prévu", "prévu"]);
+    expect((await t.query(api.homeStock.list, { token })).items).toEqual([]);
+  });
+
+  it("is refused on a lunch whose dinner was already eaten", async () => {
+    const { t, token, recipe } = await setup();
+    const dinner = await t.mutation(api.meals.add, {
+      token, date: SATURDAY, slot: "soir", recipeId: recipe._id, persons: 3, tomorrowLunchPersons: 2,
+    });
+    await t.mutation(api.meals.setStatus, { token, id: dinner, status: "mangé" });
+    const lunch = (await t.query(api.meals.week, { token, start: SATURDAY })).find((m) => m.slot === "midi")!;
+    await expect(t.mutation(api.meals.markNotCooked, { token, id: lunch._id, keep: [] })).rejects.toThrow("Pas mangé");
+  });
+
   it("is used up or thrown away from the fridge", async () => {
     const { t, token, recipe } = await setup();
     const id = await t.mutation(api.meals.add, { token, date: SATURDAY, slot: "soir", recipeId: recipe._id, persons: 3 });

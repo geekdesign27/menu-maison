@@ -170,7 +170,11 @@ Serveurs de dev via Portly.
   dit seulement depuis quand, la famille juge. Sur la liste de courses, un ingrédient à la
   maison est signalé (« Peut-être à la maison… ») mais jamais retiré. Les restes planifiés
   depuis ce plat sont retirés. « Prévu » le remet au menu et reprend ses ingrédients.
-  Pour cuisiner le plat un autre jour : « Déplacer ».
+  Pour cuisiner le plat un autre jour : « Déplacer ». Une cuisson vaut pour tous ses repas
+  (retour de PA, 2026-10-28) : le souper et le midi du lendemain cuisiné avec lui sont
+  annulés ensemble, avec un seul stock « À utiliser » pour toutes leurs portions, et
+  remis ensemble avec « Prévu ». Refusé sur le midi si le souper a déjà été mangé
+  (c'est alors « Pas mangé »).
 - **Liste de courses** : calculée en direct depuis les repas de la semaine (quantité par
   personne × personnes, unités normalisées g/ml/pc, additionnées par ingrédient), plus les
   articles libres. Triée par rayon selon le magasin choisi (ordre + exceptions).
