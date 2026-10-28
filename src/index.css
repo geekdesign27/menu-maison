@@ -20,6 +20,46 @@
   --radius-card: 1.25rem;
 }
 
+/*
+ * Family themes (chosen by the family admins, see src/lib/look.ts). They
+ * only swap the colour variables: the « carrot » names stay the accent of
+ * every theme. Contrast checked: white on the accent and dark accent on its
+ * soft tint are above 4.5:1 for Sauge and Myrtille.
+ */
+html[data-theme="sauge"] {
+  --color-cream: #f4f7f1;
+  --color-line: #dde6d8;
+  --color-ink: #212a22;
+  --color-muted: #5b665b;
+  --color-carrot: #3f7a52;
+  --color-carrot-dark: #2c5c3b;
+  --color-carrot-soft: #e0eee2;
+  /* Success stays apart from the green accent */
+  --color-herb: #2a7a84;
+  --color-herb-soft: #dcf0f2;
+}
+
+html[data-theme="myrtille"] {
+  --color-cream: #f7f6fd;
+  --color-line: #e3e0f2;
+  --color-ink: #23213a;
+  --color-muted: #5f5c78;
+  --color-carrot: #5548c8;
+  --color-carrot-dark: #3f33a6;
+  --color-carrot-soft: #e8e5fb;
+}
+
+/* Family fonts, loaded on demand (only the chosen one is downloaded) */
+html[data-font="quicksand"] {
+  --font-sans: "Quicksand Variable", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+html[data-font="lexend"] {
+  --font-sans: "Lexend Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+html[data-font="atkinson"] {
+  --font-sans: "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;

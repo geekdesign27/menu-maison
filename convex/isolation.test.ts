@@ -292,6 +292,15 @@ describe("writes on another family's ids are refused", () => {
         }),
     ],
     [
+      "access.setRole",
+      () =>
+        s.t.mutation(api.access.setRole, {
+          token: s.b.token,
+          id: s.a.memberId,
+          role: "membre",
+        }),
+    ],
+    [
       "access.resetLink",
       () =>
         s.t.mutation(api.access.resetLink, {

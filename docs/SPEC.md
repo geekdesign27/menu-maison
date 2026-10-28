@@ -117,8 +117,22 @@ Serveurs de dev via Portly.
   `invites`) pour choisir son mot de passe ; il remplace l'ancien lien et déconnecte les
   autres appareils du membre. Pas pour soi-même : un autre admin le fait.
 - Famille suspendue (`families.suspended`) : plus de connexion ni de session valide.
+- **Onglet « Famille » de `/gestion`** (admins de la famille) : nom et lien, tableau des
+  comptes (pseudo, rôle, accès ; la fiche d'un profil change le pseudo, le rôle admin ou
+  membre via `access.setRole`, et crée le lien d'accès), apparence. Personne ne change son
+  propre rôle ; le rôle du super-admin ne se change pas depuis une famille. Règle de
+  confiance : tous les admins d'une famille ont les mêmes pouvoirs (l'un peut retirer le rôle
+  d'un autre ou lui envoyer un lien de mot de passe) ; ne nommer admin que des adultes de
+  confiance. Réparation d'un rôle dans une autre famille : console Convex, pour l'instant.
+- **Apparence** : 3 thèmes (Carotte, Sauge, Myrtille) et 4 polices (Nunito, Quicksand,
+  Lexend, Atkinson Hyperlegible Next), choisis par un admin (`settings.theme`, `settings.font`)
+  et appliqués en direct sur tous les téléphones de la famille (`access.check` renvoie
+  `look`). Les thèmes ne changent que les variables de couleur (`src/index.css`, attribut
+  `data-theme`) ; les polices sont servies par l'app (Fontsource) et seule celle choisie est
+  téléchargée (`src/lib/look.ts`). Contraste : Sauge et Myrtille au-dessus de 4,5:1 (texte
+  blanc sur bouton) ; Carotte à 3,0:1. Captures : `docs/themes/`.
 - **Espace super-admin** (PA, `members.superadmin`, posé seulement en base) : onglet
-  « Familles » de `/gestion` (`convex/superadmin.ts`). Liste de toutes les familles avec des
+  « Super admin » de `/gestion` (`#/gestion/super-admin`) (`convex/superadmin.ts`). Liste de toutes les familles avec des
   chiffres seulement (comptes activés, recettes, dernière connexion, statut), jamais leur
   contenu. Créer une famille (catalogue de départ copié, admin avec son pseudo et son lien
   d'activation), nouveau lien pour l'admin d'une autre famille, suspendre ou réactiver une

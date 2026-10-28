@@ -109,7 +109,7 @@ export function FamiliesSection() {
   return (
     <>
       <GestionHeader
-        title="Familles"
+        title="Super admin"
         subtitle={`${plural(families.length, "famille", "familles")} sur Menu Maison. Espace réservé au super-admin.`}
         actions={
           <Button onClick={() => setCreating(true)}>

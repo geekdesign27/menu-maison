@@ -65,7 +65,8 @@ function SettingsContent({ base }: { base: Base }) {
 
   return (
     <>
-      <FamilySection />
+      <SectionTitle>Famille</SectionTitle>
+      <FamilyNameCard />
 
       <SectionTitle>Profils</SectionTitle>
       <Card className="overflow-hidden">
@@ -201,7 +202,8 @@ function SettingsContent({ base }: { base: Base }) {
           <span className="min-w-0 flex-1">
             <span className="block text-[17px] font-extrabold">Produits</span>
             <span className="block text-[15px] text-muted">
-              {base.ingredients.length} ingrédients, avec leur prix, leur rayon et leur photo
+              {base.ingredients.length} ingrédients, avec leur prix, leur rayon
+              et leur photo
             </span>
           </span>
           <ChevronRight className="shrink-0 text-muted" size={20} />
@@ -260,7 +262,7 @@ function SettingsContent({ base }: { base: Base }) {
 }
 
 /** Family name, which also gives the sign-in link; only admins rename it. */
-function FamilySection() {
+export function FamilyNameCard() {
   const { token, account } = useSession();
   const run = useRun();
   const toast = useToast();
@@ -275,13 +277,19 @@ function FamilySection() {
       setName(account.family.name);
       return;
     }
-    const next = await run(() => rename({ token, name }), "Nom de la famille enregistré");
+    const next = await run(
+      () => rename({ token, name }),
+      "Nom de la famille enregistré",
+    );
     setName(next?.name ?? account.family.name);
   };
 
   const share = async () => {
     try {
-      const done = await shareLink(link, `Menu Maison, famille ${account.family.name} : connecte-toi avec ton pseudo et ton mot de passe.`);
+      const done = await shareLink(
+        link,
+        `Menu Maison, famille ${account.family.name} : connecte-toi avec ton pseudo et ton mot de passe.`,
+      );
       if (done === "copied") toast("Lien copié, colle-le dans un message.");
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -289,35 +297,32 @@ function FamilySection() {
   };
 
   return (
-    <>
-      <SectionTitle>Famille</SectionTitle>
-      <Card className="grid gap-3 p-4">
-        {isAdmin ? (
-          <TextInput
-            label="Nom de la famille"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={save}
-          />
-        ) : (
-          <p className="text-[17px] font-black">{account.family.name}</p>
-        )}
-        <div>
-          <span className="block text-[15px] font-bold">Lien de connexion</span>
-          <span className="block break-all text-[15px] text-muted">
-            {link.replace(/^https?:\/\//, "")}
+    <Card className="grid gap-3 p-4">
+      {isAdmin ? (
+        <TextInput
+          label="Nom de la famille"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={save}
+        />
+      ) : (
+        <p className="text-[17px] font-black">{account.family.name}</p>
+      )}
+      <div>
+        <span className="block text-[15px] font-bold">Lien de connexion</span>
+        <span className="block break-all text-[15px] text-muted">
+          {link.replace(/^https?:\/\//, "")}
+        </span>
+        {isAdmin && (
+          <span className="mt-1 block text-[15px] text-muted">
+            Il suit le nom de la famille : changer le nom change le lien.
           </span>
-          {isAdmin && (
-            <span className="mt-1 block text-[15px] text-muted">
-              Il suit le nom de la famille : changer le nom change le lien.
-            </span>
-          )}
-        </div>
-        <Button variant="secondary" onClick={share}>
-          <Share2 size={20} /> Partager le lien
-        </Button>
-      </Card>
-    </>
+        )}
+      </div>
+      <Button variant="secondary" onClick={share}>
+        <Share2 size={20} /> Partager le lien
+      </Button>
+    </Card>
   );
 }
 

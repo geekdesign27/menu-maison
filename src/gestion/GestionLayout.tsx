@@ -5,8 +5,9 @@ import {
   BookHeart,
   Layers,
   ShoppingBasket,
+  House,
+  ShieldCheck,
   Store,
-  Users,
 } from "lucide-react";
 import { GestionContext } from "../lib/paths";
 import { useMe, useSession } from "../lib/session";
@@ -23,10 +24,22 @@ const SECTIONS = [
 export function GestionLayout() {
   const me = useMe();
   const { account } = useSession();
-  // The families of the whole app: PA's super-admin space
-  const sections = account?.superadmin
-    ? [...SECTIONS, { to: "/gestion/familles", label: "Familles", icon: Users }]
-    : SECTIONS;
+  // Family admins manage their family; PA alone sees every family
+  const sections = [
+    ...SECTIONS,
+    ...(account?.role === "admin"
+      ? [{ to: "/gestion/famille", label: "Famille", icon: House }]
+      : []),
+    ...(account?.superadmin
+      ? [
+          {
+            to: "/gestion/super-admin",
+            label: "Super admin",
+            icon: ShieldCheck,
+          },
+        ]
+      : []),
+  ];
   return (
     <GestionContext.Provider value>
       <div className="flex min-h-dvh flex-col md:flex-row">

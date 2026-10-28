@@ -17,7 +17,7 @@ function memberName(name: string) {
   if (!n) throw new ConvexError("Le prénom est obligatoire.");
   return n;
 }
-import { chainValidator, unitValidator } from "./schema";
+import { chainValidator, fontValidator, themeValidator, unitValidator } from "./schema";
 import { deletionBlocker } from "./domain/products";
 import { removeReceiptData } from "./lib";
 
@@ -69,9 +69,14 @@ export const updateSettings = mutation({
     shoppingDay: v.optional(v.number()),
     defaultPersons: v.optional(v.number()),
     defaultStoreId: v.optional(v.id("stores")),
+    theme: v.optional(themeValidator),
+    font: v.optional(fontValidator),
   },
   handler: async (ctx, { token, ...patch }) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const me = await requireMemberWriter(ctx, token);
+    const { db } = me;
+    // The look of the app is the same for the whole family: admins choose it
+    if (patch.theme !== undefined || patch.font !== undefined) assertAdmin(me);
     if (patch.shoppingDay !== undefined)
       assertInt(patch.shoppingDay, 0, 6, "Jour des courses");
     if (patch.defaultPersons !== undefined)

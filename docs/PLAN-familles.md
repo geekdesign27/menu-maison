@@ -7,7 +7,8 @@ obligatoire) déployée le même jour. Lot A2 en partie : l'admin choisit les ps
 les liens d'activation et de mot de passe oublié, et nomme la famille (qui donne le lien).
 Reste de A2 : rôle admin ou membre réglable, changer son propre mot de passe. Lot B en
 production le 2026-10-28 : onglet « Familles » de `/gestion` (créer, nouveau lien d'admin,
-suspendre). Pas encore : supprimer une famille. Prochain : lot C (budget IA) avant tout pote.
+suspendre). Pas encore : supprimer une famille. Lot E (thèmes et polices) et fin de A2 (rôles, onglet « Famille » de la gestion) le même
+jour. Prochain : lot C (budget IA) avant tout pote.
 
 ## Décisions de PA (2026-10-27)
 

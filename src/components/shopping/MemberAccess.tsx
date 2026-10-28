@@ -7,7 +7,7 @@ import { useSession, type Member } from "../../lib/session";
 import { useRun, useToast } from "../../lib/toast";
 import { errorMessage } from "../../lib/format";
 import { appUrl, shareLink } from "../../lib/share";
-import { Button, TextInput } from "../ui";
+import { Button, Segmented, TextInput } from "../ui";
 
 /**
  * Sign-in of a profile: its pseudo, and for the family admins a one-time link
@@ -18,6 +18,7 @@ export function MemberAccess({ member }: { member: Member }) {
   const run = useRun();
   const toast = useToast();
   const setUsername = useMutation(api.access.setUsername);
+  const setRole = useMutation(api.access.setRole);
   const resetLink = useMutation(api.access.resetLink);
   const [pseudo, setPseudo] = useState(member.username ?? "");
   const [link, setLink] = useState<string | null>(null);
@@ -74,6 +75,34 @@ export function MemberAccess({ member }: { member: Member }) {
         onChange={(e) => setPseudo(e.target.value)}
         onBlur={savePseudo}
       />
+      {isMe || member.superadmin ? (
+        <p className="text-[15px]">
+          Rôle : <strong>{member.role === "admin" ? "admin" : "membre"}</strong>
+        </p>
+      ) : (
+        <div>
+          <span className="mb-1 block text-[15px] font-bold">Rôle</span>
+          <Segmented
+            label={`Rôle de ${member.name}`}
+            value={member.role === "admin" ? "admin" : "membre"}
+            onChange={(role) =>
+              void run(
+                () => setRole({ token, id: member._id, role }),
+                role === "admin"
+                  ? `${member.name} est admin`
+                  : `${member.name} est membre`,
+              )
+            }
+            options={[
+              { value: "membre", label: "Membre" },
+              { value: "admin", label: "Admin" },
+            ]}
+          />
+          <p className="mt-1 text-[15px] text-muted">
+            Un admin gère les profils, les accès et l'apparence de la famille.
+          </p>
+        </div>
+      )}
       <p className="text-[15px] text-muted">
         {member.hasPassword
           ? "Accès activé : mot de passe choisi."
@@ -87,8 +116,8 @@ export function MemberAccess({ member }: { member: Member }) {
       ) : link ? (
         <div className="grid gap-2">
           <p className="text-[15px]">
-            Lien prêt, valable {member.hasPassword ? "48 heures" : "14 jours"} et
-            utilisable une fois. Ses autres appareils sont déconnectés.
+            Lien prêt, valable {member.hasPassword ? "48 heures" : "14 jours"}{" "}
+            et utilisable une fois. Ses autres appareils sont déconnectés.
           </p>
           <Button onClick={() => share(link)}>
             <Share2 size={20} /> Envoyer le lien

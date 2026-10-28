@@ -263,6 +263,48 @@ describe("admin manages access", () => {
   });
 });
 
+describe("roles and look", () => {
+  it("an admin makes a member admin and back, never changes their own role", async () => {
+    const { t, admin, kid } = await setup();
+    const tk = await tokens(t);
+    await expect(
+      t.mutation(api.access.setRole, { token: tk.kid, id: kid, role: "admin" }),
+    ).rejects.toThrow("admins");
+    await expect(
+      t.mutation(api.access.setRole, { token: tk.admin, id: admin, role: "membre" }),
+    ).rejects.toThrow("propre rôle");
+    await t.mutation(api.access.setRole, { token: tk.admin, id: kid, role: "admin" });
+    expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({ role: "admin" });
+    // The new admin manages accounts too, but not the super-admin
+    await t.run((ctx) => ctx.db.patch(admin, { superadmin: true }));
+    await expect(
+      t.mutation(api.access.setRole, { token: tk.kid, id: admin, role: "membre" }),
+    ).rejects.toThrow("super-admin");
+    await t.mutation(api.access.setRole, { token: tk.admin, id: kid, role: "membre" });
+    expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({ role: "membre" });
+  });
+
+  it("the family look is chosen by an admin and reaches every phone", async () => {
+    const { t } = await setup();
+    const tk = await tokens(t);
+    expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({
+      look: { theme: "carotte", font: "nunito" },
+    });
+    await expect(
+      t.mutation(api.catalog.updateSettings, { token: tk.kid, theme: "sauge" }),
+    ).rejects.toThrow("admins");
+    await expect(
+      t.mutation(api.catalog.updateSettings, { token: tk.kid, font: "lexend" }),
+    ).rejects.toThrow("admins");
+    // Other settings stay open to every member
+    await t.mutation(api.catalog.updateSettings, { token: tk.kid, defaultPersons: 4 });
+    await t.mutation(api.catalog.updateSettings, { token: tk.admin, theme: "myrtille", font: "atkinson" });
+    expect(await t.query(api.access.check, { token: tk.kid })).toMatchObject({
+      look: { theme: "myrtille", font: "atkinson" },
+    });
+  });
+});
+
 describe("families", () => {
   it("creates a family with its catalog and an admin invitation", async () => {
     const { t } = await setup();

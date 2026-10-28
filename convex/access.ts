@@ -10,8 +10,11 @@ import {
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { ConvexError, v } from "convex/values";
+import { roleValidator } from "./schema";
 import {
   assertAdmin,
+  familyDb,
+  getSettings,
   readSession,
   requireMemberWriter,
   SESSION_DAYS,
@@ -203,6 +206,7 @@ export const check = query({
     const found = await readSession(ctx, token);
     if (!found) return null;
     const { member, family } = found;
+    const settings = await getSettings(familyDb(ctx.db, family._id));
     return {
       memberId: member._id,
       name: member.name,
@@ -210,6 +214,8 @@ export const check = query({
       role: member.role ?? "membre",
       superadmin: member.superadmin === true,
       family: { name: family.name, slug: family.slug },
+      // Applied as soon as the phone opens, before the rest of the data
+      look: { theme: settings.theme ?? "carotte", font: settings.font ?? "nunito" },
     };
   },
 });
@@ -324,6 +330,21 @@ export const setUsername = mutation({
       throw new ConvexError(`Le pseudo « ${username} » est déjà pris dans la famille.`);
     await me.db.patch(member._id, { username });
     return username;
+  },
+});
+
+/** Admin: makes a member admin of the family, or a plain member again. */
+export const setRole = mutation({
+  args: { token: v.string(), id: v.id("members"), role: roleValidator },
+  handler: async (ctx, args) => {
+    const me = await requireMemberWriter(ctx, args.token);
+    assertAdmin(me);
+    const member = await me.db.own(args.id, "Profil introuvable.");
+    // Nobody demotes themselves: the family always keeps an admin
+    if (member._id === me.member._id)
+      throw new ConvexError("Tu ne peux pas changer ton propre rôle : demande à un autre admin.");
+    assertCanManage(me.member, member);
+    await me.db.patch(member._id, { role: args.role });
   },
 });
 

@@ -11,6 +11,7 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { applyLook, rememberLook } from "./look";
 
 const TOKEN_KEY = "mm.token";
 const FAMILY_KEY = "mm.family";
@@ -96,6 +97,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (account) write(FAMILY_KEY, account.family.slug);
   }, [account]);
+  // The family look follows the admins' choice, live, and is kept for the next opening
+  const theme = account?.look.theme;
+  const font = account?.look.font;
+  useEffect(() => {
+    if (!theme || !font) return;
+    applyLook({ theme, font });
+    rememberLook({ theme, font });
+  }, [theme, font]);
 
   const ready = !!stored && !!account;
   const value = useMemo(

@@ -5,6 +5,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import "@fontsource-variable/nunito";
 import "./index.css";
 import { convex, convexConfigured } from "./lib/convex";
+import { applyRememberedLook } from "./lib/look";
 import { SessionProvider } from "./lib/session";
 import { ToastProvider } from "./lib/toast";
 import { WeekProvider } from "./lib/week";
@@ -34,6 +35,10 @@ import { ProductsSection } from "./gestion/ProductsSection";
 import { AislesSection } from "./gestion/AislesSection";
 import { StoresSection } from "./gestion/StoresSection";
 import { FamiliesSection } from "./gestion/FamiliesSection";
+import { FamilyAdminSection } from "./gestion/FamilyAdminSection";
+
+// The family colours and font, before the first paint
+applyRememberedLook();
 
 function App() {
   if (!convexConfigured) {
@@ -55,22 +60,45 @@ function App() {
                 <HashRouter>
                   <Routes>
                     <Route path="/gestion" element={<GestionLayout />}>
-                      <Route index element={<Navigate to="recettes" replace />} />
+                      <Route
+                        index
+                        element={<Navigate to="recettes" replace />}
+                      />
                       <Route path="recettes" element={<RecipesSection />} />
-                      <Route path="recette/nouvelle" element={<RecipeEditorPage />} />
-                      <Route path="recette/importer" element={<RecipeImportPage />} />
-                      <Route path="recette/:id/modifier" element={<RecipeEditorPage />} />
+                      <Route
+                        path="recette/nouvelle"
+                        element={<RecipeEditorPage />}
+                      />
+                      <Route
+                        path="recette/importer"
+                        element={<RecipeImportPage />}
+                      />
+                      <Route
+                        path="recette/:id/modifier"
+                        element={<RecipeEditorPage />}
+                      />
                       <Route path="produits" element={<ProductsSection />} />
                       <Route path="rayons" element={<AislesSection />} />
                       <Route path="magasins" element={<StoresSection />} />
                       <Route path="magasin/:id" element={<StoreEditorPage />} />
-                      <Route path="familles" element={<FamiliesSection />} />
-                      <Route path="*" element={<Navigate to="recettes" replace />} />
+                      <Route path="famille" element={<FamilyAdminSection />} />
+                      <Route path="super-admin" element={<FamiliesSection />} />
+                      <Route
+                        path="familles"
+                        element={<Navigate to="/gestion/super-admin" replace />}
+                      />
+                      <Route
+                        path="*"
+                        element={<Navigate to="recettes" replace />}
+                      />
                     </Route>
                     <Route element={<Layout />}>
                       <Route path="/" element={<WeekPage />} />
                       <Route path="/courses" element={<ShoppingPage />} />
-                      <Route path="/courses/ticket" element={<ReceiptScanPage />} />
+                      <Route
+                        path="/courses/ticket"
+                        element={<ReceiptScanPage />}
+                      />
                       <Route path="/recettes" element={<RecipesPage />} />
                       <Route
                         path="/recette/nouvelle"
