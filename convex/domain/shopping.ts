@@ -1,6 +1,7 @@
 // Shopping list built live from the week's meals, sorted by the chosen store's aisles.
 import type { BaseUnit, Unit } from "./quantities";
 import { formatQty, NBSP, sameFamily, toBase } from "./quantities";
+import type { Lang } from "./lang";
 
 /** Last receipt price per chain: `priceChf` buys `priceQty` of the product's unit (1 item for usual items). */
 export type ChainPrices = Partial<Record<string, { priceChf: number; priceQty: number }>>;
@@ -81,6 +82,8 @@ export interface ShoppingInput {
   skipped?: string[];
   /** Ingredients bought for a cancelled dish, still at home (« À utiliser »). */
   homeStock?: Record<string, HomeStockNote[]>;
+  /** Language of the computed texts (quantities, « Divers »…); French by default. */
+  lang?: Lang;
 }
 
 /** What is still at home from a cancelled dish, shown on the matching list item. */
@@ -155,6 +158,7 @@ export function mealNeeds(
 
 /** Label and emoji of the catch-all section (extras without a known aisle). */
 export const MISC_SECTION = { name: "Divers", emoji: "🛒" } as const;
+const MISC_NAME_DE = "Diverses";
 
 /** Rounds an amount to the nearest 0.05 CHF (Swiss rounding). */
 export function roundChf(amount: number): number {
@@ -260,6 +264,8 @@ export function packsFor(
 }
 
 export function buildShoppingList(input: ShoppingInput): ShoppingList {
+  const lang = input.lang ?? "fr";
+  const qty = (n: number, unit: Unit) => formatQty(n, unit, lang);
   const priceFactor = input.store?.priceFactor ?? 1;
   const chain = input.store?.chain;
   const overrides = new Map(
@@ -301,7 +307,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
   const push = (aisleId: string | undefined, item: ShoppingItem) => {
     const chains = item.onlyChains;
     if (chains?.length && input.store?.chain && !chains.includes(input.store.chain)) {
-      const label = [...chains].sort((a, b) => a.localeCompare(b, "fr")).join(" ou ");
+      const label = [...chains].sort((a, b) => a.localeCompare(b, "fr")).join(lang === "de" ? " oder " : " ou ");
       elsewhere.set(label, [...(elsewhere.get(label) ?? []), item]);
       return;
     }
@@ -324,9 +330,9 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       qty: entry.qty,
       unit: entry.unit,
       // Bought by the pack: « 2 paquets » to take from the shelf, « ≈ 14 tranches » needed
-      display: packs ? formatQty(packs, "paquet") : formatQty(entry.qty, entry.unit),
+      display: packs ? qty(packs, "paquet") : qty(entry.qty, entry.unit),
       packs,
-      packDetail: packs ? `≈${NBSP}${formatQty(entry.qty, entry.unit)}` : undefined,
+      packDetail: packs ? `≈${NBSP}${qty(entry.qty, entry.unit)}` : undefined,
       recipes: [...entry.recipes].sort((a, b) => a.localeCompare(b, "fr")),
       // Bought by the pack: the cost is that of the whole packs
       costChf: packs
@@ -354,7 +360,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
       qty: extra.qty,
       unit,
       display:
-        extra.qty !== undefined && unit ? formatQty(extra.qty, unit) : "",
+        extra.qty !== undefined && unit ? qty(extra.qty, unit) : "",
       recipes: [],
       // Usual items have a price per item
       costChf: (() => {
@@ -388,6 +394,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
     sections.push({
       aisleId: null,
       ...MISC_SECTION,
+      ...(lang === "de" && { name: MISC_NAME_DE }),
       items: misc.sort(compareItems),
     });
   }
@@ -395,7 +402,7 @@ export function buildShoppingList(input: ShoppingInput): ShoppingList {
   // Counted for this store; items bought elsewhere still count in the week's cost
   const here = sections.flatMap((s) => s.items);
   for (const [label, items] of [...elsewhere].sort((a, b) => a[0].localeCompare(b[0], "fr"))) {
-    sections.push({ aisleId: null, elsewhere: true, name: `À acheter chez ${label}`, emoji: "🏪", items: items.sort(compareItems) });
+    sections.push({ aisleId: null, elsewhere: true, name: lang === "de" ? `Bei ${label} kaufen` : `À acheter chez ${label}`, emoji: "🏪", items: items.sort(compareItems) });
   }
   const all = sections.flatMap((s) => s.items);
   return {

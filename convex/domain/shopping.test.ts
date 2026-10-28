@@ -366,6 +366,26 @@ describe("buildShoppingList", () => {
     expect(list.remaining).toBe(2);
   });
 
+  it("writes quantities and section names in German for a German profile", () => {
+    const list = buildShoppingList(
+      input({
+        lang: "de",
+        meals: [{ _id: "m1", recipeId: "curry", persons: 2 }],
+        ingredients: {
+          ...ingredients,
+          oignon: { ...ingredients.oignon, onlyChains: ["Coop", "Migros"] },
+        },
+        store: { chain: "Aldi", aisleOrder: [], overrides: [], priceFactor: 1 },
+        extras: [{ _id: "x1", label: "Café", qty: 2, unit: "paquet" }],
+      }),
+    );
+    expect(findItem(list, "ing:poulet:g")?.display).toBe(`300${NBSP}g`);
+    expect(findItem(list, "ing:oignon:pc")?.display).toBe(`1${NBSP}Stück`);
+    expect(findItem(list, "extra:x1")?.display).toBe(`2${NBSP}Packungen`);
+    expect(list.sections.map((s) => s.name)).toContain("Diverses");
+    expect(list.sections.at(-1)!.name).toBe("Bei Coop oder Migros kaufen");
+  });
+
   it("puts extras without known aisle in « Divers » at the end", () => {
     const list = buildShoppingList(
       input({
@@ -496,28 +516,63 @@ describe("chain prices read on receipts", () => {
   };
 
   it("uses the receipt price at that chain, without the store factor", () => {
-    expect(effectivePrice(spaghetti, "Lidl", 0.85)).toEqual({ priceChf: 1.19, priceQty: 1000, fromReceipt: true });
-    expect(effectivePrice(spaghetti, "Coop", 1.1)).toEqual({ priceChf: 2.2, priceQty: 500, fromReceipt: false });
-    expect(effectivePrice(spaghetti, undefined)).toEqual({ priceChf: 2, priceQty: 500, fromReceipt: false });
+    expect(effectivePrice(spaghetti, "Lidl", 0.85)).toEqual({
+      priceChf: 1.19,
+      priceQty: 1000,
+      fromReceipt: true,
+    });
+    expect(effectivePrice(spaghetti, "Coop", 1.1)).toEqual({
+      priceChf: 2.2,
+      priceQty: 500,
+      fromReceipt: false,
+    });
+    expect(effectivePrice(spaghetti, undefined)).toEqual({
+      priceChf: 2,
+      priceQty: 500,
+      fromReceipt: false,
+    });
   });
 
   it("prices recipes and the list with it", () => {
-    const recipe = { items: [{ ingredientId: "spag", qtyPerPerson: 100, unit: "g" as const }] };
-    expect(recipeCost(recipe, 5, { spag: spaghetti }, 0.85, "Lidl")).toEqual({ total: 0.6, complete: true });
-    expect(recipeCost(recipe, 5, { spag: spaghetti }, 0.85, "Aldi")).toEqual({ total: 1.7, complete: true });
+    const recipe = {
+      items: [{ ingredientId: "spag", qtyPerPerson: 100, unit: "g" as const }],
+    };
+    expect(recipeCost(recipe, 5, { spag: spaghetti }, 0.85, "Lidl")).toEqual({
+      total: 0.6,
+      complete: true,
+    });
+    expect(recipeCost(recipe, 5, { spag: spaghetti }, 0.85, "Aldi")).toEqual({
+      total: 1.7,
+      complete: true,
+    });
 
     const list = buildShoppingList({
       meals: [{ _id: "m1", recipeId: "r1", persons: 5 }],
       recipes: { r1: { name: "Bolo", ...recipe } },
       ingredients: { spag: spaghetti },
       aisles,
-      store: { chain: "Lidl", aisleOrder: [], overrides: [], priceFactor: 0.85 },
-      extras: [{ _id: "x1", label: "Papier toilette", qty: 2, priceChf: 8, chainPrices: { Lidl: { priceChf: 19.89, priceQty: 1 } } }],
+      store: {
+        chain: "Lidl",
+        aisleOrder: [],
+        overrides: [],
+        priceFactor: 0.85,
+      },
+      extras: [
+        {
+          _id: "x1",
+          label: "Papier toilette",
+          qty: 2,
+          priceChf: 8,
+          chainPrices: { Lidl: { priceChf: 19.89, priceQty: 1 } },
+        },
+      ],
       checks: {},
     });
     const items = list.sections.flatMap((s) => s.items);
     expect(items.find((i) => i.label === "Spaghetti")?.costChf).toBe(0.6);
-    expect(items.find((i) => i.label === "Papier toilette")?.costChf).toBe(39.8); // 2 × 19.89, rounded to 5 centimes
+    expect(items.find((i) => i.label === "Papier toilette")?.costChf).toBe(
+      39.8,
+    ); // 2 × 19.89, rounded to 5 centimes
   });
 });
 
@@ -533,7 +588,11 @@ describe("dishes not cooked", () => {
     );
     expect(findItem(list, "ing:poulet:g")?.qty).toBe(300);
     const onlyCancelled = buildShoppingList(
-      input({ meals: [{ _id: "m1", recipeId: "curry", persons: 3, status: "pas cuisiné" }] }),
+      input({
+        meals: [
+          { _id: "m1", recipeId: "curry", persons: 3, status: "pas cuisiné" },
+        ],
+      }),
     );
     expect(onlyCancelled.total).toBe(0);
   });
@@ -542,24 +601,38 @@ describe("dishes not cooked", () => {
     const list = buildShoppingList(
       input({
         meals: [{ _id: "m2", recipeId: "curry", persons: 2 }],
-        homeStock: { poulet: [{ display: "450 g", since: "2026-10-24", from: "Wok de légumes" }] },
+        homeStock: {
+          poulet: [
+            { display: "450 g", since: "2026-10-24", from: "Wok de légumes" },
+          ],
+        },
       }),
     );
     const poulet = findItem(list, "ing:poulet:g");
     expect(poulet?.qty).toBe(300);
-    expect(poulet?.homeStock).toEqual([{ display: "450 g", since: "2026-10-24", from: "Wok de légumes" }]);
+    expect(poulet?.homeStock).toEqual([
+      { display: "450 g", since: "2026-10-24", from: "Wok de légumes" },
+    ]);
     expect(findItem(list, "ing:riz:g")?.homeStock).toBeUndefined();
   });
 
   it("know what a dish needs and what was already bought", () => {
-    const needs = mealNeeds({ persons: 3 }, recipes.curry.items, { "ing:poulet:g": true });
+    const needs = mealNeeds({ persons: 3 }, recipes.curry.items, {
+      "ing:poulet:g": true,
+    });
     expect(needs).toEqual([
       { ingredientId: "poulet", qty: 450, unit: "g", bought: true },
       { ingredientId: "riz", qty: 240, unit: "g", bought: false },
       { ingredientId: "oignon", qty: 1.5, unit: "pc", bought: false },
     ]);
     // Extra portions for the fridge were bought too; kg and g add up
-    expect(mealNeeds({ persons: 2, extraPortions: 1 }, recipes.poeleeRiz.items, {})[0]).toEqual({
+    expect(
+      mealNeeds(
+        { persons: 2, extraPortions: 1 },
+        recipes.poeleeRiz.items,
+        {},
+      )[0],
+    ).toEqual({
       ingredientId: "riz",
       qty: 300,
       unit: "g",

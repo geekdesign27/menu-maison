@@ -218,7 +218,7 @@ export const generateUploadUrl = mutation({
 export const duplicate = mutation({
   args: { token: v.string(), id: v.id("recipes"), memberId: v.optional(v.id("members")) },
   handler: async (ctx, { token, id, memberId }) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const { db, member } = await requireMemberWriter(ctx, token);
     if (memberId) await db.own(memberId, "Profil introuvable.");
     const source = await db.get(id);
     if (!source) throw new ConvexError("Recette introuvable.");
@@ -227,7 +227,7 @@ export const duplicate = mutation({
     void _creationTime;
     return db.insert("recipes", {
       ...fields,
-      name: `${source.name} (copie)`.slice(0, 100),
+      name: `${source.name} (${member.lang === "de" ? "Kopie" : "copie"})`.slice(0, 100),
       saved: true,
       archived: false,
       createdBy: memberId,

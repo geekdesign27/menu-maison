@@ -14,7 +14,8 @@ export const list = query({
     storeId: v.optional(v.id("stores")),
   },
   handler: async (ctx, { token, start, storeId }) => {
-    const { db } = await requireMember(ctx, token);
+    const { db, member } = await requireMember(ctx, token);
+    const lang = member.lang ?? "fr";
     assertDate(start);
     const end = addDays(start, 6);
     const [eaten, ingredients, aisles, extras, checks, skips, stock] = await Promise.all([
@@ -34,7 +35,7 @@ export const list = query({
     // Bought for a dish that was not cooked: flagged on the list, never removed from it
     const homeStock: Record<string, HomeStockNote[]> = {};
     for (const s of stock)
-      (homeStock[s.ingredientId] ??= []).push({ display: formatQty(s.qty, s.unit), since: s.since, from: s.fromName });
+      (homeStock[s.ingredientId] ??= []).push({ display: formatQty(s.qty, s.unit, lang), since: s.since, from: s.fromName });
     const meals = eaten.filter((m) => m.cookedOn >= start && m.cookedOn <= end);
     const chainPrices = await loadChainPrices(db);
     const store = storeId ? await db.get(storeId) : null;
@@ -48,6 +49,7 @@ export const list = query({
     }
 
     const list = buildShoppingList({
+      lang,
       meals: meals.map((m) => ({
         _id: m._id,
         recipeId: m.recipeId,

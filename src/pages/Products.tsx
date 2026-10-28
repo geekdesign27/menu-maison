@@ -16,6 +16,7 @@ import type { Lang } from "../../convex/domain/lang";
 import { useBase, useSession, type Base } from "../lib/session";
 import { translate } from "../i18n";
 import { useT } from "../i18n/useT";
+import { serverText } from "../i18n/serverText";
 import { useRun, useToast } from "../lib/toast";
 import { formatChf, plural } from "../lib/format";
 import { amountLabel } from "../lib/units";
@@ -141,7 +142,7 @@ export function ProductsContent({
   const { token } = useSession();
   const run = useRun();
   const toast = useToast();
-  const { t } = useT();
+  const { t, lang } = useT();
   const removeIngredient = useMutation(api.catalog.removeIngredient);
   const removeStaple = useMutation(api.staples.remove);
   const [search, setSearch] = useState("");
@@ -190,7 +191,7 @@ export function ProductsContent({
   const askDelete = (row: Row) => {
     const blocker =
       row.kind === "ingredient" ? deletionBlocker(row.recipes) : null;
-    if (blocker) toast(blocker, "error");
+    if (blocker) toast(serverText(lang, blocker), "error");
     else setDeleting(row);
   };
 

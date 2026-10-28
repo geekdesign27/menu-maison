@@ -141,9 +141,13 @@ Serveurs de dev via Portly.
   `formatDayLong`, `formatDayShort`, `formatDateRange`, `formatQty` (point décimal et unités
   allemandes : Stück, EL, TL, Dose…) prennent la langue. Lot 2 (fait) : tous les écrans de
   l'app, Gestion et le guide, un fichier de textes par zone (`src/i18n/zones/`), les 16
-  styles de recettes fixes (`tagText`). Restent en français : la connexion, l'onglet Super
-  admin, les messages et quantités calculés par le serveur (lot 3), les données du catalogue
-  (lot 4), la page d'accueil (lot 5, sélecteur FR | DE, captures gardées en français).
+  styles de recettes fixes (`tagText`). Lot 3 (fait) : la liste de courses et « À utiliser »
+  calculent quantités, « Diverses » et « Bei Coop kaufen » dans la langue du profil
+  (`buildShoppingList({ lang })`) ; le serveur écrit ses messages d'erreur en français et
+  l'app les traduit à l'affichage (`src/i18n/serverText.ts`, appelé par `errorMessage`), un
+  test vérifie que chaque phrase du serveur y a son allemand. Restent en français : la
+  connexion, l'onglet Super admin, les données du catalogue (lot 4), la page d'accueil
+  (lot 5, sélecteur FR | DE, captures gardées en français).
 - **Guide pour les nouveaux** (depuis le 2026-10-28) : carte de bienvenue, tour en bulles
   (driver.js) et checklist « Premiers pas » dans Plus, pour les comptes activés après sa mise
   en route. Interrupteur des admins dans Gestion, Famille (`settings.onboarding`, activé pour

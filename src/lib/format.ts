@@ -1,5 +1,6 @@
 import { ConvexError } from "convex/values";
 import type { Lang } from "../../convex/domain/lang";
+import { serverText } from "../i18n/serverText";
 
 /** Swiss price format: « CHF 12.40 ». */
 export function formatChf(amount: number) {
@@ -23,7 +24,7 @@ export function errorMessage(e: unknown, lang: Lang = "fr") {
   const de = lang === "de";
   if (e instanceof ConvexError)
     return typeof e.data === "string"
-      ? e.data
+      ? serverText(lang, e.data)
       : de
         ? "Vom Server abgelehnt."
         : "Action refusée par le serveur.";

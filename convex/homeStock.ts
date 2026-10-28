@@ -11,7 +11,8 @@ import { formatQty } from "./domain/quantities";
 export const list = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const { db } = await requireMember(ctx, token);
+    const { db, member } = await requireMember(ctx, token);
+    const lang = member.lang ?? "fr";
     const stock = await db.query("homeStock").collect();
     if (!stock.length) return { items: [], ideas: [] };
     const rows = await Promise.all(
@@ -19,7 +20,7 @@ export const list = query({
         .sort((a, b) => a.since.localeCompare(b.since))
         .map(async (s) => {
           const ing = await db.get(s.ingredientId);
-          return ing && { _id: s._id, ingredientId: ing._id, name: ing.name, display: formatQty(s.qty, s.unit), since: s.since, from: s.fromName };
+          return ing && { _id: s._id, ingredientId: ing._id, name: ing.name, display: formatQty(s.qty, s.unit, lang), since: s.since, from: s.fromName };
         }),
     );
     const items = rows.filter((r) => r !== null);
