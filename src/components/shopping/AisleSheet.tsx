@@ -7,6 +7,7 @@ import { useSession } from "../../lib/session";
 import { useRun } from "../../lib/toast";
 import { Button, Sheet, TextInput } from "../ui";
 import { EmojiField } from "./EmojiField";
+import { useT } from "../../i18n/useT";
 
 const AISLE_EMOJIS = [
   "🥦",
@@ -41,6 +42,7 @@ export function AisleSheet({
 }) {
   const { token } = useSession();
   const run = useRun();
+  const { t } = useT();
   const renameAisle = useMutation(api.catalog.renameAisle);
   const addAisle = useMutation(api.catalog.addAisle);
   const [name, setName] = useState(aisle?.name ?? "");
@@ -59,7 +61,7 @@ export function AisleSheet({
   const create = async () => {
     const id = await run(
       () => addAisle({ token, name, emoji }),
-      "Rayon ajouté à la fin du parcours de chaque magasin.",
+      t("shopping.aisleAdded"),
     );
     if (id) onClose();
   };
@@ -68,22 +70,22 @@ export function AisleSheet({
     <Sheet
       open
       onClose={onClose}
-      title={aisle ? "Modifier le rayon" : "Nouveau rayon"}
+      title={aisle ? t("shopping.editAisle") : t("shopping.newAisle")}
       footer={
         aisle ? undefined : (
           <Button size="lg" onClick={create} disabled={!name.trim()}>
-            <Plus size={22} /> Ajouter le rayon
+            <Plus size={22} /> {t("shopping.addAisle")}
           </Button>
         )
       }
     >
       <div className="grid gap-5">
         <TextInput
-          label="Nom du rayon"
+          label={t("shopping.aisleName")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={() => save({ name, emoji })}
-          placeholder="Ex. Produits du monde"
+          placeholder={t("shopping.aislePlaceholder")}
           autoFocus={!aisle}
         />
         <EmojiField

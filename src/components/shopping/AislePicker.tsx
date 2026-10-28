@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Check, RotateCcw } from "lucide-react";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { cx } from "../ui";
+import { useT } from "../../i18n/useT";
 
 /**
  * Tappable list of aisles. `value` null means "usual aisle" (no store exception);
@@ -18,6 +19,7 @@ export function AislePicker({
   usualAisleId?: Id<"aisles">;
   onPick: (aisleId: Id<"aisles"> | null) => void;
 }) {
+  const { t } = useT();
   const usual = aisles.find((a) => a._id === usualAisleId);
   return (
     <ul className="grid gap-1.5">
@@ -27,7 +29,7 @@ export function AislePicker({
             selected={value === null}
             onClick={() => onPick(null)}
             emoji={<RotateCcw size={20} />}
-            label="Rayon habituel"
+            label={t("shopping.usualAisle")}
             hint={`${usual.emoji} ${usual.name}`}
           />
         </li>

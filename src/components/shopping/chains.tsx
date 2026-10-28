@@ -1,5 +1,7 @@
 import type { Doc } from "../../../convex/_generated/dataModel";
-import { NBSP } from "../../../convex/domain/quantities";
+import type { Lang } from "../../../convex/domain/lang";
+import { translate } from "../../i18n";
+import { useT } from "../../i18n/useT";
 import { cx } from "../ui";
 
 export type Chain = Doc<"stores">["chain"];
@@ -22,6 +24,11 @@ const CHAIN_STYLE: Record<Chain, { bg: string; fg: string; mark: string }> = {
   Denner: { bg: "#c8102e", fg: "#ffffff", mark: "D" },
   Autre: { bg: "#fde9da", fg: "#2b2420", mark: "🏪" },
 };
+
+/** Chain name as shown: brand names stay as they are, « Autre » is translated. */
+export function chainLabel(chain: Chain, lang: Lang = "fr"): string {
+  return chain === "Autre" ? translate(lang, "shopping.chainOther") : chain;
+}
 
 /** Round chain logo-like mark (initial on the chain colour). */
 export function ChainMark({
@@ -55,10 +62,14 @@ export function ChainMark({
 }
 
 /** « 18 % moins cher que la moyenne », « 5 % plus cher que la moyenne ». */
-export function priceLevelText(factor: number): string {
+export function priceLevelText(factor: number, lang: Lang = "fr"): string {
   const pct = Math.round(Math.abs(1 - factor) * 100);
-  if (pct === 0) return "Prix dans la moyenne";
-  return `${pct}${NBSP}% ${factor < 1 ? "moins cher" : "plus cher"} que la moyenne`;
+  if (pct === 0) return translate(lang, "shopping.priceAverage");
+  return translate(
+    lang,
+    factor < 1 ? "shopping.priceCheaper" : "shopping.priceDearer",
+    { pct },
+  );
 }
 
 /**
@@ -66,10 +77,11 @@ export function priceLevelText(factor: number): string {
  * Ticked chains restrict the product (julienne de légumes: Coop only).
  */
 export function ChainsPicker({ value, onChange }: { value: Chain[]; onChange: (chains: Chain[]) => void }) {
+  const { t } = useT();
   const toggle = (c: Chain) => onChange(value.includes(c) ? value.filter((x) => x !== c) : [...value, c]);
   return (
     <div>
-      <span className="mb-1 block text-[15px] font-bold">Disponible seulement chez</span>
+      <span className="mb-1 block text-[15px] font-bold">{t("shopping.onlyAt")}</span>
       <div className="flex flex-wrap gap-2">
         {CHAINS.filter((c) => c !== "Autre").map((c) => {
           const on = value.includes(c);
@@ -92,8 +104,10 @@ export function ChainsPicker({ value, onChange }: { value: Chain[]; onChange: (c
       </div>
       <p className="mt-1 text-[13px] text-muted">
         {value.length
-          ? `Dans les autres magasins, il apparaît à part en bas de la liste${NBSP}: «${NBSP}À acheter chez ${value.join(" ou ")}${NBSP}».`
-          : "Rien de coché : on le trouve partout."}
+          ? t("shopping.onlyAtHint", {
+              chains: value.join(` ${t("shopping.or")} `),
+            })
+          : t("shopping.everywhere")}
       </p>
     </div>
   );

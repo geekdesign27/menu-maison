@@ -11,6 +11,7 @@ import { Button, Select, Sheet, TextInput } from "../ui";
 import { ChainsPicker, type Chain } from "./chains";
 import { ProductPhotoField } from "./ProductPhotoField";
 import type { Staple } from "./StaplesSheet";
+import { useT } from "../../i18n/useT";
 
 export type EditableStaple = Pick<
   Staple,
@@ -32,6 +33,7 @@ export function StapleSheet({
   const { token } = useSession();
   const run = useRun();
   const toast = useToast();
+  const { t, lang } = useT();
   const update = useMutation(api.staples.update);
   const [name, setName] = useState(staple.name);
   const [aisleId, setAisleId] = useState<Id<"aisles"> | "">(
@@ -41,7 +43,7 @@ export function StapleSheet({
     staple.priceChf !== undefined ? staple.priceChf.toFixed(2) : "",
   );
   const [qtyText, setQtyText] = useState(
-    staple.qty !== undefined ? formatNumber(staple.qty) : "",
+    staple.qty !== undefined ? formatNumber(staple.qty, 2, lang) : "",
   );
   const [onlyChains, setOnlyChains] = useState<Chain[]>(
     staple.onlyChains ?? [],
@@ -56,10 +58,7 @@ export function StapleSheet({
     const price = parseAmount(priceText);
     const qty = parseAmount(qtyText);
     if (Number.isNaN(price) || Number.isNaN(qty)) {
-      toast(
-        "Le prix et la quantité doivent être des nombres positifs.",
-        "error",
-      );
+      toast(t("shopping.priceQtyNotNumber"), "error");
       return;
     }
     setBusy(true);
@@ -75,7 +74,7 @@ export function StapleSheet({
           qty: qty ?? null,
           imageId: image.id,
         }),
-      "Article enregistré",
+      t("shopping.itemSaved"),
     );
     setBusy(false);
     if (ok !== undefined) onClose();
@@ -88,22 +87,22 @@ export function StapleSheet({
       title={staple.name}
       footer={
         <Button size="lg" onClick={save} disabled={busy || !name.trim()}>
-          Enregistrer
+          {t("shopping.save")}
         </Button>
       }
     >
       <div className="grid gap-4">
         <TextInput
-          label="Nom"
+          label={t("shopping.name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <Select
-          label="Rayon"
+          label={t("shopping.aisle")}
           value={aisleId}
           onChange={(e) => setAisleId(e.target.value as Id<"aisles"> | "")}
         >
-          <option value="">🛒 Divers</option>
+          <option value="">🛒 {t("shopping.misc")}</option>
           {base?.aisles.map((a) => (
             <option key={a._id} value={a._id}>
               {a.emoji} {a.name}
@@ -112,25 +111,25 @@ export function StapleSheet({
         </Select>
         <div className="grid grid-cols-2 gap-3">
           <TextInput
-            label="Prix d'un article (CHF)"
+            label={t("shopping.pricePerItem")}
             value={priceText}
             onChange={(e) => setPriceText(e.target.value)}
             inputMode="decimal"
-            placeholder="Ex. 4.50"
+            placeholder={t("shopping.examplePrice")}
           />
           <TextInput
-            label="Quantité habituelle"
+            label={t("shopping.usualQty")}
             value={qtyText}
             onChange={(e) => setQtyText(e.target.value)}
             inputMode="numeric"
-            placeholder="Ex. 2"
+            placeholder={t("shopping.exampleTwo")}
           />
         </div>
         <ProductPhotoField imageUrl={image.url} onChange={(img) => setImage(img ? { id: img.id, url: img.url } : { id: null, url: null })} />
         <ChainsPicker value={onlyChains} onChange={setOnlyChains} />
         {onDelete && (
           <Button variant="danger" onClick={onDelete}>
-            <Trash2 size={18} /> Supprimer l'article
+            <Trash2 size={18} /> {t("shopping.deleteItem")}
           </Button>
         )}
       </div>

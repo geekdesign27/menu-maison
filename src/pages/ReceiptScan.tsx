@@ -11,6 +11,7 @@ import {
   packContentProblem,
   type Chain,
 } from "../../convex/domain/receipts";
+import type { Lang } from "../../convex/domain/lang";
 import { NBSP, type Unit } from "../../convex/domain/quantities";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useStoreChoice, useWeek } from "../lib/week";
@@ -19,6 +20,8 @@ import { errorMessage, formatChf, plural } from "../lib/format";
 import { photoToBase64 } from "../lib/image";
 import { parseAmount, unitName } from "../lib/units";
 import { BackButton } from "../components/Layout";
+import { chainLabel } from "../components/shopping/chains";
+import { useT } from "../i18n/useT";
 import {
   Badge,
   Button,
@@ -45,8 +48,9 @@ const encode = (t: ReadLine["target"]) =>
 
 export function ReceiptScanPage() {
   const base = useBase();
+  const { t } = useT();
   return (
-    <Page title="Ticket de caisse" back={<BackButton fallback="/courses" />}>
+    <Page title={t("shopping.receipt.title")} back={<BackButton fallback="/courses" />}>
       {base ? <ReceiptScan base={base} /> : <Loading />}
     </Page>
   );
@@ -59,6 +63,7 @@ function ReceiptScan({ base }: { base: Base }) {
   const navigate = useNavigate();
   const run = useRun();
   const toast = useToast();
+  const { t, lang } = useT();
   const read = useAction(api.receipts.read);
   const save = useMutation(api.receipts.save);
   const list = useQuery(
@@ -110,7 +115,7 @@ function ReceiptScan({ base }: { base: Base }) {
         })),
       );
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorMessage(e, lang));
     } finally {
       setReading(false);
     }
@@ -129,7 +134,7 @@ function ReceiptScan({ base }: { base: Base }) {
       const packQty = parseAmount(c.packText);
       if (Number.isNaN(packQty)) {
         toast(
-          `Le contenu du paquet de « ${line.label} » doit être un nombre positif.`,
+          t("shopping.receipt.packNotNumber", { label: line.label }),
           "error",
         );
         return;
@@ -137,7 +142,18 @@ function ReceiptScan({ base }: { base: Base }) {
       const unit = kind === "i" ? ingredientUnit(id) : undefined;
       const problem = unit && packQty !== undefined ? packContentProblem(unit, packQty) : null;
       if (problem) {
-        toast(`« ${line.label} » : ${problem}`, "error");
+        // The domain only detects the problem; its wording comes from the dictionary
+        toast(
+          t("shopping.receipt.lineProblem", {
+            label: line.label,
+            problem: t(
+              unit === "g"
+                ? "shopping.receipt.packInGrams"
+                : "shopping.receipt.packInMl",
+            ),
+          }),
+          "error",
+        );
         return;
       }
       lines.push({
@@ -159,12 +175,24 @@ function ReceiptScan({ base }: { base: Base }) {
     const done = await run(() => save({ token, chain, date, lines }));
     setSaving(false);
     if (done) {
+      const prices = plural(
+        done.prices,
+        t("shopping.receipt.priceOne"),
+        t("shopping.receipt.priceMany"),
+      );
+      const chainName = chainLabel(chain, lang);
       toast(
-        `${plural(done.prices, "prix enregistré", "prix enregistrés")} pour ${chain}` +
-          (done.staples
-            ? `, ${plural(done.staples, "article habituel ajouté", "articles habituels ajoutés")}`
-            : "") +
-          ".",
+        done.staples
+          ? t("shopping.receipt.savedWithStaples", {
+              prices,
+              chain: chainName,
+              staples: plural(
+                done.staples,
+                t("shopping.receipt.stapleOne"),
+                t("shopping.receipt.stapleMany"),
+              ),
+            })
+          : t("shopping.receipt.saved", { prices, chain: chainName }),
       );
       navigate("/courses");
     }
@@ -173,11 +201,7 @@ function ReceiptScan({ base }: { base: Base }) {
   if (!result) {
     return (
       <div className="grid gap-4">
-        <p className="text-[17px]">
-          Prends le ticket en photo, bien à plat et en entier. L'app lit les
-          articles et leurs prix, puis te montre ce qu'elle a compris avant
-          d'enregistrer quoi que ce soit.
-        </p>
+        <p className="text-[17px]">{t("shopping.receipt.intro")}</p>
         <input
           ref={input}
           type="file"
@@ -196,11 +220,13 @@ function ReceiptScan({ base }: { base: Base }) {
           disabled={reading}
         >
           <Camera size={22} />{" "}
-          {reading ? "Lecture du ticket…" : "Photographier le ticket"}
+          {reading
+            ? t("shopping.receipt.reading")
+            : t("shopping.receipt.takePhoto")}
         </Button>
         {reading && (
           <p className="text-center text-[15px] text-muted" role="status">
-            Ça prend 10 à 30 secondes.
+            {t("shopping.receipt.wait")}
           </p>
         )}
         {error && (
@@ -212,9 +238,7 @@ function ReceiptScan({ base }: { base: Base }) {
           </p>
         )}
         <p className="text-[13px] text-muted">
-          La photo est envoyée à Claude (Anthropic) pour la lecture, puis
-          oubliée : l'app ne garde que les articles et les prix. La partie
-          paiement du ticket est ignorée.
+          {t("shopping.receipt.privacy")}
         </p>
       </div>
     );
@@ -226,33 +250,37 @@ function ReceiptScan({ base }: { base: Base }) {
       <Card className="grid gap-3 p-4">
         <div className="grid grid-cols-2 gap-3">
           <Select
-            label="Enseigne"
+            label={t("shopping.chain")}
             value={chain}
             onChange={(e) => setChain(e.target.value as Chain)}
           >
             {CHAINS.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {chainLabel(c, lang)}
               </option>
             ))}
           </Select>
           <TextInput
-            label="Date"
+            label={t("shopping.receipt.date")}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
         </div>
         <p className="text-[15px]">
-          {plural(products, "article lu", "articles lus")}, total{" "}
-          {formatChf(result.total)}.
+          {t("shopping.receipt.summary", {
+            items: plural(
+              products,
+              t("shopping.receipt.readOne"),
+              t("shopping.receipt.readMany"),
+            ),
+            total: formatChf(result.total),
+          })}
         </p>
         {!result.totalMatches && (
           <p className="flex gap-2 rounded-xl bg-sun-soft p-3 text-[15px] font-semibold text-[#6b4d00]">
             <AlertTriangle size={20} className="shrink-0" />
-            La somme des lignes ({formatChf(result.sum)}) ne correspond pas au
-            total du ticket. Une ligne a peut-être été mal lue : vérifie les
-            prix avant d'enregistrer.
+            {t("shopping.receipt.mismatch", { sum: formatChf(result.sum) })}
           </p>
         )}
       </Card>
@@ -281,28 +309,33 @@ function ReceiptScan({ base }: { base: Base }) {
         disabled={saving || !/^\d{4}-\d{2}-\d{2}$/.test(date)}
       >
         <Check size={22} />{" "}
-        {saving ? "Enregistrement…" : "Enregistrer les prix"}
+        {saving
+          ? t("shopping.receipt.saving")
+          : t("shopping.receipt.savePrices")}
       </Button>
       <Button variant="ghost" onClick={() => setResult(null)}>
-        Recommencer avec une autre photo
+        {t("shopping.receipt.retry")}
       </Button>
     </div>
   );
 }
 
-function priceDetail(line: ReadLine) {
-  if (line.weightKg > 0 && line.pricePerKg > 0)
-    return `${String(line.weightKg).replace(".", ",")}${NBSP}kg × ${formatChf(line.pricePerKg)}/kg`;
+function priceDetail(line: ReadLine, lang: Lang) {
+  if (line.weightKg > 0 && line.pricePerKg > 0) {
+    // Decimal comma in French, decimal point in Swiss German
+    const kg = lang === "de" ? String(line.weightKg) : String(line.weightKg).replace(".", ",");
+    return `${kg}${NBSP}kg × ${formatChf(line.pricePerKg)}/kg`;
+  }
   if (line.quantity > 1)
     return `${line.quantity} × ${formatChf(line.unitPrice)}`;
   return "";
 }
 
-const IGNORED: Record<string, string> = {
-  bag: "Sac",
-  discount: "Rabais",
-  deposit: "Consigne",
-};
+const IGNORED = {
+  bag: "shopping.receipt.bag",
+  discount: "shopping.receipt.discount",
+  deposit: "shopping.receipt.deposit",
+} as const;
 
 function LineCard({
   line,
@@ -321,7 +354,8 @@ function LineCard({
   unitOf: (id: string) => Unit | undefined;
   onChange: (c: Choice) => void;
 }) {
-  const detail = priceDetail(line);
+  const { t, lang } = useT();
+  const detail = priceDetail(line, lang);
   const header = (
     <div className="flex items-baseline gap-2">
       <span className="min-w-0 flex-1 font-extrabold">{line.label}</span>
@@ -335,7 +369,7 @@ function LineCard({
       <Card className="p-3 opacity-60">
         {header}
         <span className="text-[13px] text-muted">
-          {IGNORED[line.kind]}, ignoré
+          {t("shopping.receipt.ignored", { kind: t(IGNORED[line.kind]) })}
         </span>
       </Card>
     );
@@ -353,17 +387,17 @@ function LineCard({
       {(detail || line.known) && (
         <div className="flex items-center gap-2 text-[13px] text-muted">
           {detail}
-          {line.known && <Badge tone="herb">Reconnu</Badge>}
+          {line.known && <Badge tone="herb">{t("shopping.receipt.known")}</Badge>}
         </div>
       )}
       <Select
-        aria-label={`Produit pour ${line.label}`}
+        aria-label={t("shopping.receipt.productFor", { label: line.label })}
         value={choice.target}
         onChange={(e) => onChange({ ...choice, target: e.target.value })}
       >
-        <option value="">Hors liste, ignorer</option>
-        <option value="new">Ajouter aux articles habituels…</option>
-        <optgroup label="Sur la liste de la semaine">
+        <option value="">{t("shopping.receipt.offList")}</option>
+        <option value="new">{t("shopping.receipt.addStaple")}</option>
+        <optgroup label={t("shopping.receipt.groupWeek")}>
           {base.ingredients.filter(listed).map((i) => (
             <option key={i._id} value={`i:${i._id}`}>
               {i.name}
@@ -375,7 +409,7 @@ function LineCard({
             </option>
           ))}
         </optgroup>
-        <optgroup label="Autres ingrédients">
+        <optgroup label={t("shopping.receipt.groupIngredients")}>
           {base.ingredients
             .filter((i) => !listed(i))
             .map((i) => (
@@ -384,7 +418,7 @@ function LineCard({
               </option>
             ))}
         </optgroup>
-        <optgroup label="Articles hors recette">
+        <optgroup label={t("shopping.receipt.groupNoRecipe")}>
           {staples
             .filter((s) => !listed(s))
             .sort((a, b) => a.name.localeCompare(b.name, "fr"))
@@ -397,7 +431,7 @@ function LineCard({
       </Select>
       {choice.target === "new" && (
         <TextInput
-          label="Nom de l'article habituel"
+          label={t("shopping.receipt.stapleName")}
           value={choice.newName}
           onChange={(e) => onChange({ ...choice, newName: e.target.value })}
         />
@@ -405,18 +439,21 @@ function LineCard({
       {askPack && unit && (
         <div>
           <TextInput
-            label={`Contenu d'un paquet (en ${unitName(unit, 2)})`}
+            label={t("shopping.receipt.packContent", {
+              unit: unitName(unit, 2, lang),
+            })}
             value={choice.packText}
             inputMode="decimal"
             placeholder={
-              unit === "pc" ? "Ex. 10 pour une boîte de 10" : "Ex. 500"
+              unit === "pc"
+                ? t("shopping.receipt.packExamplePc")
+                : t("shopping.receipt.packExample")
             }
             onChange={(e) => onChange({ ...choice, packText: e.target.value })}
           />
           {!choice.packText.trim() && (
             <p className="mt-1 text-[13px] text-muted">
-              Sans contenu, le prix de cette ligne n'est pas gardé. Une fois
-              indiqué, le contenu est retenu pour les prochains tickets.
+              {t("shopping.receipt.packHint")}
             </p>
           )}
         </div>

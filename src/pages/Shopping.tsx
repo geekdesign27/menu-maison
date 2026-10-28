@@ -38,6 +38,7 @@ import { QuickAdd } from "../components/shopping/QuickAdd";
 import { AislePicker } from "../components/shopping/AislePicker";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { ExtraQtySheet } from "../components/shopping/ExtraQtySheet";
+import { useT } from "../i18n/useT";
 
 type Filter = "all" | "todo";
 const FILTER_KEY = "mm.shoppingFilter";
@@ -65,6 +66,7 @@ export function ShoppingPage() {
   const { store, stores, choose } = useStoreChoice();
   const navigate = useNavigate();
   const run = useRun();
+  const { t, lang } = useT();
   const [filter, setFilter] = useState<Filter>(readFilter);
   const [moreItem, setMoreItem] = useState<ShoppingItem | null>(null);
   const [qtyItem, setQtyItem] = useState<ShoppingItem | null>(null);
@@ -138,15 +140,15 @@ export function ShoppingPage() {
           token,
           id: item.key.slice("extra:".length) as Id<"shoppingExtras">,
         }),
-      `« ${item.label} » retiré de la liste.`,
+      t("shopping.removed", { label: item.label }),
     );
 
   const weekNav = (
     <div className="flex items-center">
-      <IconButton label="Semaine précédente" onClick={week.prev}>
+      <IconButton label={t("shopping.prevWeek")} onClick={week.prev}>
         <ChevronLeft size={24} />
       </IconButton>
-      <IconButton label="Semaine suivante" onClick={week.next}>
+      <IconButton label={t("shopping.nextWeek")} onClick={week.next}>
         <ChevronRight size={24} />
       </IconButton>
     </div>
@@ -167,8 +169,8 @@ export function ShoppingPage() {
 
   return (
     <Page
-      title="Courses"
-      subtitle={formatDateRange(week.start, week.end)}
+      title={t("nav.shopping")}
+      subtitle={formatDateRange(week.start, week.end, lang)}
       action={weekNav}
     >
       {!week.isCurrent && (
@@ -177,14 +179,14 @@ export function ShoppingPage() {
           onClick={week.goToday}
           className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-sun-soft px-4 font-extrabold text-[#8a6200]"
         >
-          <CalendarDays size={18} /> Revenir à cette semaine
+          <CalendarDays size={18} /> {t("shopping.backToThisWeek")}
         </button>
       )}
 
       <StoreChips stores={stores} currentId={store?._id} onChoose={choose} />
 
       {!list || !base ? (
-        <Loading label="Chargement de la liste" />
+        <Loading label={t("shopping.loadingList")} />
       ) : (
         <>
           {list.total > 0 && (
@@ -203,36 +205,38 @@ export function ShoppingPage() {
             list.mealCount === 0 ? (
               <EmptyState
                 emoji="🧺"
-                title="Aucun plat prévu cette semaine"
-                text="Planifie quelques repas et la liste se remplit toute seule. Tu peux aussi ajouter des articles à la main."
+                title={t("shopping.noMealsTitle")}
+                text={t("shopping.noMealsText")}
                 action={
                   <Link
                     to="/"
                     className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-carrot px-4 font-extrabold text-white shadow-sm active:bg-carrot-dark"
                   >
-                    <CalendarDays size={20} /> Planifier la semaine
+                    <CalendarDays size={20} /> {t("shopping.planWeek")}
                   </Link>
                 }
               />
             ) : (
               <EmptyState
                 emoji="🧺"
-                title="Rien à acheter"
-                text="Les plats prévus n'ont pas d'ingrédients à acheter. Ajoute un article si besoin."
+                title={t("shopping.nothingTitle")}
+                text={t("shopping.nothingText")}
               />
             )
           ) : (
             <>
               <div className="mt-4">
                 <Segmented
-                  label="Articles affichés"
+                  label={t("shopping.filterLabel")}
                   value={filter}
                   onChange={changeFilter}
                   options={[
-                    { value: "all", label: "Tout" },
+                    { value: "all", label: t("shopping.filterAll") },
                     {
                       value: "todo",
-                      label: `Reste à acheter (${list.remaining})`,
+                      label: t("shopping.filterTodo", {
+                        count: list.remaining,
+                      }),
                     },
                   ]}
                 />
@@ -244,10 +248,10 @@ export function ShoppingPage() {
                     🛒
                   </span>
                   <p className="mt-2 text-xl font-black text-herb">
-                    Tout est dans le caddie 🎉
+                    {t("shopping.allInCart")}
                   </p>
                   <p className="mt-1 text-[15px] font-semibold text-muted">
-                    Bonne fin de courses et bon appétit !
+                    {t("shopping.allInCartText")}
                   </p>
                 </Card>
               )}
@@ -310,7 +314,7 @@ export function ShoppingPage() {
 
               <div className="mt-8 flex justify-center">
                 <Button variant="secondary" onClick={() => navigate("/courses/ticket")}>
-                  <ScanLine size={18} /> Scanner le ticket de caisse
+                  <ScanLine size={18} /> {t("shopping.scanReceipt")}
                 </Button>
               </div>
 
@@ -320,7 +324,7 @@ export function ShoppingPage() {
                     variant="secondary"
                     onClick={() => setConfirmReset(true)}
                   >
-                    <RotateCcw size={18} /> Tout décocher
+                    <RotateCcw size={18} /> {t("shopping.uncheckAll")}
                   </Button>
                 </div>
               )}
@@ -333,7 +337,7 @@ export function ShoppingPage() {
       {/* Product photo in large, to pick the right brand or size on the shelf */}
       <Sheet open={!!photoItem} onClose={() => setPhotoItem(null)} title={photoItem?.label ?? ""}>
         {photoItem?.imageUrl && (
-          <img src={photoItem.imageUrl} alt={`Photo du produit\u00a0: ${photoItem.label}`} className="w-full rounded-[var(--radius-card)] object-contain" />
+          <img src={photoItem.imageUrl} alt={t("shopping.photoAlt", { label: photoItem.label })} className="w-full rounded-[var(--radius-card)] object-contain" />
         )}
         {photoItem?.display && <p className="mt-3 text-center text-lg font-black text-carrot-dark">{photoItem.display}</p>}
       </Sheet>
@@ -349,13 +353,19 @@ export function ShoppingPage() {
       <ConfirmSheet
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
-        title="Tout décocher ?"
-        text={`Les ${plural(checkedCount, "article coché", "articles cochés")} repasseront dans « Reste à acheter », pour tout le monde.`}
-        confirmLabel="Tout décocher"
+        title={t("shopping.uncheckAllTitle")}
+        text={t("shopping.uncheckAllText", {
+          items: plural(
+            checkedCount,
+            t("shopping.checkedOne"),
+            t("shopping.checkedMany"),
+          ),
+        })}
+        confirmLabel={t("shopping.uncheckAll")}
         onConfirm={() =>
           run(
             () => resetChecks({ token, start: week.start }),
-            "Liste remise à zéro.",
+            t("shopping.listReset"),
           )
         }
       />
@@ -372,6 +382,7 @@ function StoreChips({
   currentId?: string;
   onChoose: (id: string) => void;
 }) {
+  const { t } = useT();
   return (
     <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1" data-tour="stores">
       {stores.map((s) => (
@@ -390,7 +401,7 @@ function StoreChips({
         className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-[15px] font-extrabold whitespace-nowrap text-carrot-dark active:bg-carrot-soft"
       >
         <Settings2 size={18} />
-        {stores.length ? "Gérer" : "Ajouter un magasin"}
+        {stores.length ? t("shopping.manageStores") : t("shopping.addStore")}
       </Link>
     </div>
   );
@@ -405,6 +416,7 @@ function Progress({
   total: number;
   costChf: number;
 }) {
+  const { t } = useT();
   const pct = Math.round((checked / total) * 100);
   const remaining = total - checked;
   return (
@@ -417,25 +429,30 @@ function Progress({
           </div>
           <div className="mt-1 text-[15px] font-bold text-muted">
             {remaining
-              ? `${plural(remaining, "article", "articles")} à prendre`
-              : "Tout est pris"}
+              ? t("shopping.toTake", {
+                  items: plural(
+                    remaining,
+                    t("shopping.itemOne"),
+                    t("shopping.itemMany"),
+                  ),
+                })
+              : t("shopping.allTaken")}
           </div>
         </div>
         {costChf > 0 && (
           <div className="text-right">
             <div className="text-[13px] font-extrabold tracking-wider text-muted uppercase">
-              Coût estimé
+              {t("shopping.estimatedCost")}
             </div>
             <div className="text-xl font-black whitespace-nowrap tabular-nums">
-              env.{" "}
-              {formatChf(costChf)}
+              {t("shopping.approx", { amount: formatChf(costChf) })}
             </div>
           </div>
         )}
       </div>
       <div
         role="progressbar"
-        aria-label="Articles cochés"
+        aria-label={t("shopping.progressLabel")}
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={checked}
@@ -468,6 +485,7 @@ function AisleOverrideSheet({
   const base = useBase();
   const run = useRun();
   const setOverride = useMutation(api.catalog.setOverride);
+  const { t } = useT();
   if (!base || !item.ingredientId) return null;
   const ingredientId = item.ingredientId as Id<"ingredients">;
   const ingredient = base.ingredients.find((i) => i._id === ingredientId);
@@ -480,14 +498,14 @@ function AisleOverrideSheet({
     onClose();
     await run(
       () => setOverride({ token, storeId, ingredientId, aisleId }),
-      `C'est noté pour ${storeName}.`,
+      t("shopping.overrideSaved", { store: storeName }),
     );
   };
 
   return (
     <Sheet open onClose={onClose} title={item.label}>
       <p className="mb-3 text-[17px]">
-        Dans ce magasin ({storeName}), cet article est au rayon…
+        {t("shopping.overrideQuestion", { store: storeName })}
       </p>
       <AislePicker
         aisles={base.aisles}
@@ -505,6 +523,7 @@ function AtHomeSection({ start, items }: { start: string; items: ShoppingItem[] 
   const run = useRun();
   const setOne = useMutation(api.shopping.setOneAtHome);
   const [open, setOpen] = useState(false);
+  const { t } = useT();
   return (
     <section className="mt-8">
       <button
@@ -516,7 +535,7 @@ function AtHomeSection({ start, items }: { start: string; items: ShoppingItem[] 
         <span className="text-2xl" aria-hidden>
           🏠
         </span>
-        <span className="min-w-0 flex-1 text-lg font-black">Déjà à la maison</span>
+        <span className="min-w-0 flex-1 text-lg font-black">{t("shopping.atHome")}</span>
         <Badge tone="herb">{items.length}</Badge>
         <ChevronDown size={22} className={open ? "rotate-180 text-muted transition" : "text-muted transition"} />
       </button>
@@ -532,9 +551,9 @@ function AtHomeSection({ start, items }: { start: string; items: ShoppingItem[] 
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={() => run(() => setOne({ token, start, itemKey: item.key, atHome: false }), `${item.label} remis sur la liste`)}
+                  onClick={() => run(() => setOne({ token, start, itemKey: item.key, atHome: false }), t("shopping.putBackDone", { label: item.label }))}
                 >
-                  Remettre
+                  {t("shopping.putBack")}
                 </Button>
               </li>
             ))}
