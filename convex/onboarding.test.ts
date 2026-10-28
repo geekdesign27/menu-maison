@@ -139,6 +139,17 @@ describe("end of the tour", () => {
   });
 });
 
+describe("completed checklist", () => {
+  it("makes the member a habitué for good", async () => {
+    const { t, member: max } = await setup();
+    await t.mutation(api.onboarding.finish, { token: "token-Max", checklistDone: true });
+    expect((await member(t, max))?.onboardingDoneAt).toBe(ONBOARDING_HABITUAL);
+    // Replaying the guide afterwards keeps it that way
+    await t.mutation(api.onboarding.finish, { token: "token-Max" });
+    expect((await member(t, max))?.onboardingDoneAt).toBe(ONBOARDING_HABITUAL);
+  });
+});
+
 describe("facts for the « Premiers pas » checklist", () => {
   it("counts the member's own actions only", async () => {
     const { t, admin, member: max } = await setup();
@@ -213,6 +224,21 @@ describe("facts for the « Premiers pas » checklist", () => {
         statusesSet: 1,
       },
     );
+  });
+
+  it("counts the dishes put on the week from a usual week", async () => {
+    const { t } = await setup();
+    const recipes = await t.query(api.recipes.list, { token: "token-Ada" });
+    await t.mutation(api.meals.add, {
+      token: "token-Ada",
+      date: DATE,
+      slot: "soir",
+      recipeId: recipes[0]._id,
+      persons: 3,
+    });
+    const id = await t.mutation(api.templates.saveWeek, { token: "token-Ada", name: "Semaine A", start: DATE });
+    await t.mutation(api.templates.apply, { token: "token-Max", id, start: "2026-10-31", replace: false });
+    expect((await t.query(api.onboarding.facts, { token: "token-Max" })).mealsAdded).toBe(1);
   });
 
   it("does not count a dish put back to « prévu »", async () => {

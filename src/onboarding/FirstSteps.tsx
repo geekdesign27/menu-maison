@@ -1,11 +1,13 @@
 // Loaded on demand in Plus: the « Premiers pas » checklist, ticked from what the
 // member did in the app, and « Revoir le guide ».
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Check, ChevronRight } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import {
   firstSteps,
+  ONBOARDING_HABITUAL,
   showChecklist,
   type FirstStepId,
 } from "../../convex/domain/onboarding";
@@ -66,9 +68,20 @@ export default function FirstSteps() {
   const { token } = useSession();
   const base = useBase();
   const me = useMe();
-  const facts = useQuery(api.onboarding.facts, token ? { token } : "skip");
-  if (!base || !me) return null;
+  const finish = useMutation(api.onboarding.finish);
+  // Habitués never see the checklist: no need to count their actions
+  const habitual = me?.onboardingDoneAt === ONBOARDING_HABITUAL;
+  const facts = useQuery(api.onboarding.facts, token && me && !habitual ? { token } : "skip");
   const steps = facts ? firstSteps(facts, homeScreenState()) : [];
+  const complete = steps.length > 0 && steps.every((s) => s.done);
+
+  // Complete once is complete for good: undoing an action later does not bring it back.
+  // A failed save is retried at the next visit; the card is hidden meanwhile.
+  useEffect(() => {
+    if (complete && token) void finish({ token, checklistDone: true }).catch(() => undefined);
+  }, [complete, token, finish]);
+
+  if (!base || !me) return null;
   const visible =
     facts &&
     showChecklist(base.settings.onboarding, me.onboardingDoneAt, steps);

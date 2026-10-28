@@ -73,17 +73,20 @@ export function runTour({
 
   async function prepare(index: number) {
     const step = steps[index];
+    // Each wait can outlive the tour (« Passer », unmount): stop touching the app then
     await closeSheets();
+    if (stopped) return;
     if (currentPath() !== step.route) navigate(step.route);
     if (step.open) {
       const button = await waitFor(step.open, 1000);
+      if (stopped) return;
       // Nothing to open (no dish planned yet): the bubble shows in the middle
       if (!(button instanceof HTMLElement)) return;
       button.click();
     }
     if (!step.target) return;
     const target = await waitFor(step.target, step.open ? 2500 : 1500);
-    if (target) await waitStill(target);
+    if (target && !stopped) await waitStill(target);
   }
 
   // « Suivant » tapped twice while the next screen loads: one move only
@@ -95,8 +98,11 @@ export function runTour({
       return;
     }
     moving = true;
-    await prepare(index);
-    moving = false;
+    try {
+      await prepare(index);
+    } finally {
+      moving = false;
+    }
     if (!stopped) drv.moveTo(index);
   }
 
@@ -132,7 +138,8 @@ export function runTour({
       skip.addEventListener("click", () => drv?.destroy());
       popover.footer.prepend(skip);
     },
-    onNextClick: (_el, _step, { index }) => void goTo((index ?? 0) + 1),
+    onNextClick: (_el, _step, { index }) =>
+      void goTo((index ?? 0) + 1).catch(() => drv?.destroy()),
     // Late images or data can still shift the screen: place the bubble again
     onHighlighted: () => {
       for (const ms of [400, 1200]) setTimeout(() => drv?.isActive() && drv.refresh(), ms);
@@ -146,7 +153,14 @@ export function runTour({
   });
 
   window.addEventListener("keydown", keepSheetsOnEscape, true);
-  void prepare(0).then(() => !stopped && drv?.drive(0));
+  prepare(0).then(
+    () => !stopped && drv?.drive(0),
+    // A screen that cannot be prepared must not leave the listener behind
+    () => {
+      stopped = true;
+      window.removeEventListener("keydown", keepSheetsOnEscape, true);
+    },
+  );
 
   return () => {
     stopped = true;

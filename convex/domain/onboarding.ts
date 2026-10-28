@@ -2,8 +2,9 @@
 // checklist, worked out from what the member already did in the app.
 
 /**
- * `members.onboardingDoneAt` value for accounts that already used the app when
- * the family switched the guide on: no tour, no checklist ("habitué").
+ * `members.onboardingDoneAt` value of a "habitué": no welcome, no checklist.
+ * Accounts already in use when the family switched the guide on, and members
+ * who completed « Premiers pas ».
  */
 export const ONBOARDING_HABITUAL = 0;
 

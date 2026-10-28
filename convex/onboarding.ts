@@ -43,14 +43,20 @@ export const facts = query({
   },
 });
 
-/** The member finished or skipped the tour (also « Plus tard » on the welcome card). */
+/**
+ * The member finished or skipped the tour (also « Plus tard » on the welcome
+ * card). With `checklistDone`, « Premiers pas » is complete: the member becomes a
+ * habitué, so undoing an action later (a like removed…) does not bring it back.
+ */
 export const finish = mutation({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
+  args: { token: v.string(), checklistDone: v.optional(v.boolean()) },
+  handler: async (ctx, { token, checklistDone }) => {
     const { db, member } = await requireMemberWriter(ctx, token);
     // Habitués stay habitués when they replay the guide: no checklist for them
     if (member.onboardingDoneAt === ONBOARDING_HABITUAL) return;
-    await db.patch(member._id, { onboardingDoneAt: Date.now() });
+    await db.patch(member._id, {
+      onboardingDoneAt: checklistDone ? ONBOARDING_HABITUAL : Date.now(),
+    });
   },
 });
 

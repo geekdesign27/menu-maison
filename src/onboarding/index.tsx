@@ -6,8 +6,11 @@ import { shouldWelcome } from "../../convex/domain/onboarding";
 import { useBase, useMe } from "../lib/session";
 import { useTourRequests } from "./replay";
 
-const OnboardingHost = lazy(() => import("./OnboardingHost"));
-const FirstSteps = lazy(() => import("./FirstSteps"));
+// A chunk that cannot load (old cached page after a deploy, offline) shows
+// nothing: the guide must never break the app
+const Nothing = { default: () => null };
+const OnboardingHost = lazy(() => import("./OnboardingHost").catch(() => Nothing));
+const FirstSteps = lazy(() => import("./FirstSteps").catch(() => Nothing));
 
 /** Welcome card at the first sign-in, then the tour; mounted once, beside the routes. */
 export function OnboardingGate() {

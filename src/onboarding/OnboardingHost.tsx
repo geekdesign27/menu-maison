@@ -36,7 +36,8 @@ export default function OnboardingHost({ welcome }: { welcome: boolean }) {
         account?.role === "admin",
         window.matchMedia("(min-width: 1024px)").matches,
       ),
-      navigate,
+      // Replace: after the tour, « Retour » does not walk back through its screens
+      navigate: (to) => navigate(to, { replace: true }),
       currentPath: () => path.current,
       onEnd: end,
     });

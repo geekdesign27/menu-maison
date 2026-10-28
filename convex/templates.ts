@@ -78,7 +78,7 @@ export const apply = mutation({
     replace: v.boolean(),
   },
   handler: async (ctx, { token, id, start, replace }) => {
-    const { db } = await requireMemberWriter(ctx, token);
+    const { db, member } = await requireMemberWriter(ctx, token);
     assertDate(start);
     const template = await db.get(id);
     if (!template) throw new ConvexError("Menu type introuvable.");
@@ -105,6 +105,7 @@ export const apply = mutation({
         cookedOn: addDays(start, e.cookedDayOffset),
         status: "prévu",
         leftoverPortions: e.extraPortions ?? 0,
+        addedBy: member._id,
       });
     }
     // Archived recipes are skipped: tell the UI what was really added

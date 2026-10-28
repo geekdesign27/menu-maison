@@ -417,6 +417,10 @@ Objectif : guider un nouveau sans gêner les habitués, et pouvoir le couper.
 - En l'activant, les comptes **déjà activés** sont marqués « habitués » : ni carte, ni tour,
   ni checklist (ils gardent « Revoir le guide »). Seuls les comptes activés ensuite voient
   la bienvenue.
+- Une checklist complète le reste : la personne passe « habituée », même si elle retire un
+  cœur ou décoche un article ensuite.
+- Cas limite : couper puis réactiver le guide marque aussi « habitué » un compte activé
+  entre-temps qui n'a pas encore ouvert l'app. Il garde « Revoir le guide » dans Plus.
 
 ### Comment c'est fait
 
