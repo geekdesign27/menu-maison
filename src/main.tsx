@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import "@fontsource-variable/nunito";
 import "./index.css";
 import { hasStoredToken } from "./lib/device";
+// Listens for Chrome's install prompt from the start: it fires once, early
+import "./lib/install";
 import { applyLook, applyRememberedLook, DEFAULT_LOOK } from "./lib/look";
 import { entryFor, LANDING_TITLE, type Entry } from "./landing/entry";
 

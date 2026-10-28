@@ -34,6 +34,7 @@ import { StoresSection } from "./gestion/StoresSection";
 import { FamiliesSection } from "./gestion/FamiliesSection";
 import { FamilyAdminSection } from "./gestion/FamilyAdminSection";
 import { OnboardingGate } from "./onboarding";
+import { InstallPrompt } from "./components/InstallPrompt";
 
 /** The shared pieces (components/ui) speak the signed-in member's language. */
 function MemberLang({ children }: { children: ReactNode }) {
@@ -62,6 +63,7 @@ export function App() {
                 <WeekProvider>
                   <HashRouter>
                     <OnboardingGate />
+                    <InstallPrompt />
                     <Routes>
                       <Route path="/gestion" element={<GestionLayout />}>
                         <Route

@@ -17,6 +17,7 @@ import { Card, cx } from "../components/ui";
 import { requestTour } from "./replay";
 import { useT } from "../i18n/useT";
 import type { MessageKey } from "../i18n";
+import { isInstalled, OPEN_INSTALL } from "../lib/install";
 
 const STEP_TEXT: Record<
   FirstStepId,
@@ -60,10 +61,7 @@ const STEP_TEXT: Record<
 
 /** The home screen step only makes sense on a phone; it is known on this device only. */
 function homeScreenState(): "done" | "todo" | "n/a" {
-  const installed =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as { standalone?: boolean }).standalone === true;
-  if (installed) return "done";
+  if (isInstalled()) return "done";
   return window.matchMedia("(pointer: coarse)").matches ? "todo" : "n/a";
 }
 
@@ -159,6 +157,15 @@ export default function FirstSteps() {
                     <Link to={text.to} className={row}>
                       {content}
                     </Link>
+                  ) : !step.done && step.id === "homeScreen" ? (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new Event(OPEN_INSTALL))}
+                      className={cx(row, "w-full text-left")}
+                    >
+                      {content}
+                      <ChevronRight className="text-muted" aria-hidden />
+                    </button>
                   ) : (
                     <div className={row}>{content}</div>
                   )}
