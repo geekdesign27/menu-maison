@@ -1,9 +1,10 @@
 # Menu Maison : brief, flux et tutoriel
 
 Document de référence pour présenter l'app, former un nouveau membre et préparer
-l'onboarding. Captures faites le 28 octobre 2026 sur une famille de démonstration
+l'onboarding (section 6). Captures faites le 28 octobre 2026 sur une famille de démonstration
 (« Martin » : Julie admin, Marc admin, Léa membre), données fictives, thème Carotte.
-Smartphone en 390 × 844, ordinateur en 1440 × 900.
+Smartphone en 390 × 844, ordinateur en 1440 × 900. Captures de l'onboarding (`ob-*`) :
+famille de démonstration « Démo Guide » (Alex admin, Sam membre), 390 × 844 et 1280 × 800.
 
 ---
 
@@ -352,46 +353,85 @@ Magasins, éditeur de recette, import) et `captures/m-*.png`.
 
 ---
 
-## 6. Proposition : onboarding activable
+## 6. Onboarding des nouveaux (en place depuis le 2026-10-28)
 
 Objectif : guider un nouveau sans gêner les habitués, et pouvoir le couper.
 
-### Ce que verrait l'utilisateur
+### Ce que voit un nouveau
 
-- À la **première connexion** : une carte de bienvenue (« 1 minute pour faire le tour ? »,
-  « Commencer » ou « Plus tard »).
-- Puis **6 étapes courtes**, une bulle posée sur l'élément réel de l'écran, avec
-  « Suivant » et « Passer » :
-  1. Semaine : « Ici, les repas de la semaine. Touche + Ajouter pour poser un plat. »
-  2. Choix du plat : « Tes envies et les restes à finir sont en haut. »
-  3. Fiche du plat : « Après le repas : Mangé, Pas mangé, Il en reste ou Pas cuisiné. »
+- À la **première connexion** : une carte de bienvenue (« 1 minute pour faire le tour ? »),
+  « Commencer » ou « Plus tard ».
+- Puis **6 bulles** posées sur les vrais écrans, avec « Suivant » et « Passer » (Échap
+  aussi) :
+  1. Semaine : « Ici, les repas de la semaine. Touche « + Ajouter » pour poser un plat. »
+  2. Choix du plat (le tour l'ouvre lui-même, rien n'est enregistré) : « Tes envies et les
+     restes à finir sont en haut. »
+  3. Fiche du plat (premier plat de la semaine ; s'il n'y en a pas, la bulle est au milieu
+     de l'écran) : « Après le repas : Mangé, Pas mangé, Il en reste ou Pas cuisiné. »
   4. Courses : « La liste se fait toute seule, dans l'ordre des rayons de ton magasin. »
-  5. Frigo : « Les restes et ce qu'il faut utiliser avant que ça se perde. »
-  6. Recettes : « Like ce que tu aimes, ça aide à choisir. »
-- Une **checklist « Premiers pas »** dans Plus (les 7 étapes du tutoriel membre), cochée
-  automatiquement quand l'action est faite, qui disparaît une fois complète.
-- Pour un admin, 3 étapes de plus : profils et liens, jour des courses, apparence.
+  5. Frigo : « Les restes, et ce qu'il faut utiliser avant que ça se perde. »
+  6. Recettes : « Dans Découvrir, like ce que tu aimes : ça aide à choisir les plats de la
+     semaine. »
+- Pour un admin, **3 bulles de plus** : profils et liens (Réglages), jour des courses
+  (Réglages), apparence (Gestion, Famille sur ordinateur ; sur téléphone, la bulle dit où
+  la trouver).
+- Dans **Plus**, la checklist **« Premiers pas »**, cochée toute seule d'après ce que la
+  personne a fait, qui disparaît une fois complète : ajouter l'app à l'écran d'accueil
+  (téléphone seulement, vu sur cet appareil), mettre sa photo, mettre un cœur à 5 recettes,
+  noter une envie, ajouter un plat, cocher un article des courses, dire comment s'est passé
+  un plat.
+
+<p>
+<img src="captures/ob-00-bienvenue.png" width="230" alt="Carte de bienvenue">
+<img src="captures/ob-01-etape-1.png" width="230" alt="Bulle 1, Semaine">
+<img src="captures/ob-02-etape-2.png" width="230" alt="Bulle 2, choix du plat">
+<img src="captures/ob-03-etape-3.png" width="230" alt="Bulle 3, fiche du plat">
+</p>
+<p>
+<img src="captures/ob-04-etape-4.png" width="230" alt="Bulle 4, Courses">
+<img src="captures/ob-05-etape-5.png" width="230" alt="Bulle 5, Frigo">
+<img src="captures/ob-06-etape-6.png" width="230" alt="Bulle 6, Recettes">
+<img src="captures/ob-10-premiers-pas.png" width="230" alt="Premiers pas dans Plus">
+</p>
+<p>
+<img src="captures/ob-07-etape-7.png" width="230" alt="Bulle admin, profils et liens">
+<img src="captures/ob-08-etape-8.png" width="230" alt="Bulle admin, jour des courses">
+<img src="captures/ob-09-etape-9.png" width="230" alt="Bulle admin, apparence sur téléphone">
+<img src="captures/ob-11-theme-myrtille.png" width="230" alt="Bulle dans le thème Myrtille">
+</p>
+
+<img src="captures/ob-d-03-fiche-plat.png" width="720" alt="Bulle sur la fiche du plat, ordinateur">
+<img src="captures/ob-d-09-apparence.png" width="720" alt="Bulle apparence dans Gestion, Famille">
 
 ### Les deux interrupteurs
 
 | Niveau | Où | Effet |
 |---|---|---|
-| **Famille** | Gestion, Famille, « Guide pour les nouveaux » (admins) | Active ou coupe l'onboarding pour tous les nouveaux de la famille |
+| **Famille** | Gestion, Famille, « Guide pour les nouveaux » (admins) | Active ou coupe l'onboarding pour la famille. Coupé : l'app est celle d'avant, rien n'est chargé |
 | **Personne** | Plus, « Revoir le guide » | Relance le tour à la demande, même si c'est déjà fait |
 
-### Ce que ça demanderait techniquement (à valider avant de coder)
+<img src="captures/ob-d-20-interrupteur.png" width="720" alt="Interrupteur Guide pour les nouveaux">
 
-- `settings.onboarding` (booléen, activé par défaut pour les nouvelles familles).
-- `members.onboardingDoneAt` (date) et les étapes de checklist faites, calculées depuis
-  les données existantes (photo posée, like, envie, plat ajouté…), sans nouvelle table.
-- Un composant de bulles maison (pas de bibliothèque externe), mobile d'abord, cibles de
-  44 px, texte en français, qui s'appuie sur des attributs `data-tour` posés sur les
-  éléments visés.
-- Tests : logique de la checklist dans `convex/domain/` avec Vitest ; isolation des
-  nouvelles fonctions dans `convex/isolation.test.ts`.
-- Environ 8 à 10 fichiers touchés : à planifier et valider avant toute écriture.
+- Activé d'office pour les **nouvelles familles**. Les familles d'avant le 2026-10-28 l'ont
+  coupé tant qu'un admin ne l'active pas.
+- En l'activant, les comptes **déjà activés** sont marqués « habitués » : ni carte, ni tour,
+  ni checklist (ils gardent « Revoir le guide »). Seuls les comptes activés ensuite voient
+  la bienvenue.
 
----
+### Comment c'est fait
+
+- Librairie **driver.js 1.10.2** (MIT), choisie le 2026-10-28 face à Shepherd.js et Intro.js
+  (AGPL ou licence payante), react-joyride (3 fois plus lourd) et Reactour (plus maintenu).
+- Tout est dans `src/onboarding/`. Un seul branchement dans l'app : `<OnboardingGate />`
+  dans `src/main.tsx`. Il décide avec les données déjà chargées (`catalog.base`) et ne
+  télécharge le tour (environ 10 Ko gzip, CSS compris à part) que pour un nouveau ou sur
+  « Revoir le guide ». « Premiers pas » est aussi chargé à la demande, dans Plus.
+- Les bulles visent des attributs `data-tour` posés sur les écrans, sans changer leur
+  structure ni leurs styles. Elles suivent le thème (`var(--color-…)`), texte de 16 px,
+  boutons de 44 px.
+- Données : `settings.onboarding`, `members.onboardingDoneAt` (0 = habitué),
+  `meals.addedBy` et `meals.statusBy` (qui a ajouté le plat, qui a dit ce qui s'est passé).
+  Logique dans `convex/domain/onboarding.ts`, fonctions dans `convex/onboarding.ts`.
 
 ## 7. Remarques relevées en faisant les captures
 
