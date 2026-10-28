@@ -39,11 +39,15 @@ avec prix estimés, recettes à découvrir, 5 magasins autour de Fribourg, artic
 - Convex : projet `menu-maison` (équipe `pierre-alain-schutz`), déploiement de production
   `resolute-squid-776`, région Europe (Irlande). Mis en place le 2026-10-24.
 - Clé de déploiement : secret GitHub `CONVEX_DEPLOY_KEY` (clé « github-actions »).
+- **Attention : sur ce Mac, `--prod` vise le déploiement local**, pas la production. Toujours
+  nommer la production : `--deployment resolute-squid-776`. Vérifier au besoin quel
+  backend le site appelle (`resolute-squid-776.eu-west-1.convex.cloud`).
+- Sauvegarde avant toute opération sur les données :
+  `npx convex export --deployment resolute-squid-776 --include-file-storage --path backups/<nom>.zip`
+  (`backups/` est ignoré par git).
 - Comptes : voir « Accès » dans SPEC.md. Nouvelle famille en production :
-  `npx convex run families:create '{"name":"…","admin":"…"}' --prod`, puis envoyer à l'admin
-  le lien `https://menumaison.ch/#/activer/<invite>`.
-  (sans valeur, la CLI la demande sans l'écrire dans l'historique). Changer le code
-  déconnecte tous les téléphones.
+  `npx convex run families:create '{"name":"…","admin":"…"}' --deployment resolute-squid-776`,
+  puis envoyer à l'admin le lien `https://menumaison.ch/#/activer/<invite>`.
 
 ## Mise en ligne (GitHub Pages + Convex Cloud, comme evacecole)
 

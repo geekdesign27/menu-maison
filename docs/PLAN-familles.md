@@ -1,7 +1,9 @@
 # Plan : Menu Maison pour plusieurs familles
 
-État : validé par PA le 2026-10-27. Lot D en production (menumaison.ch). Lot A1 codé et
-vérifié en local sur une copie de la production, en attente de mise en production.
+État : validé par PA le 2026-10-27. Lot D en production (menumaison.ch). Lot A1 en
+production le 2026-10-28 : famille Schütz migrée (456 documents, aucun sans famille),
+sauvegarde dans `backups/prod-avant-familles-2026-10-28.zip`. Reste l'étape 3 de la
+migration (`familyId` obligatoire) une fois les comptes activés.
 
 ## Décisions de PA (2026-10-27)
 
