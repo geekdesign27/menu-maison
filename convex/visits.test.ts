@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { hashPassword } from "./domain/auth";
-import { MAX_VISIT_ROWS, STATS_LIMIT } from "./domain/visits";
+import { MAX_VISIT_ROWS, reportWeeks, STATS_LIMIT } from "./domain/visits";
+import { zurichToday } from "./domain/dates";
 
 const modules = import.meta.glob("./**/*.ts");
 const PASSWORD = "carottes-rapees";
@@ -156,5 +157,21 @@ describe("visits.summary", () => {
     expect(s.visitsByDay).toHaveLength(7);
     expect(s.funnel[0]).toEqual({ event: "visit", count: 1, rate: null });
     expect(s.sources).toEqual([{ key: "direct", count: 1 }]);
+  });
+});
+
+describe("visits.sendWeeklyReport", () => {
+  it("sends last week's report to PA once, however many times it runs", async () => {
+    const { t } = await setup();
+    process.env.ADMIN_ALERT_EMAIL = "pa@example.ch";
+    const { week } = reportWeeks(zurichToday());
+    await t.run((ctx) =>
+      ctx.db.insert("visitStats", { day: week[2], event: "visit", source: "direct", lang: "fr", device: "mobile", count: 4 }),
+    );
+    await t.mutation(internal.visits.sendWeeklyReport, {});
+    await t.mutation(internal.visits.sendWeeklyReport, {});
+    const sent = await t.run((ctx) => ctx.db.query("emailLog").collect());
+    delete process.env.ADMIN_ALERT_EMAIL;
+    expect(sent.map((m) => [m.kind, m.key])).toEqual([["adminWeekly", `weekly:${week[0]}`]]);
   });
 });

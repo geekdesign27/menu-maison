@@ -208,6 +208,21 @@ export const emailPreviews = query({
       loginLink: `${site}/#/f/dupont`,
       email: "marc@exemple.ch",
       subscribers: 12,
+      report: {
+        funnel: [
+          { event: "visit" as const, count: 42, previous: 31 },
+          { event: "trial" as const, count: 5, previous: 2 },
+          { event: "checkout" as const, count: 3, previous: 1 },
+          { event: "trialStarted" as const, count: 1, previous: 0 },
+          { event: "paid" as const, count: 0, previous: 0 },
+        ],
+        sources: [
+          { key: "google", count: 20 },
+          { key: "direct", count: 15 },
+          { key: "utm:flyer", count: 7 },
+        ],
+        families: { trial: 1, subscribed: 5, pastDue: 0, ended: 1, offered: 3 },
+      },
     };
     const day = { fr: "mercredi 4 novembre", de: "Mittwoch, 4. November" } as const;
     return {
@@ -220,7 +235,11 @@ export const emailPreviews = query({
         (["fr", "de"] as const).map((lang) => ({
           kind,
           lang,
-          ...renderEmail(kind, { ...sample, date: day[lang], lang }, lang),
+          ...renderEmail(
+            kind,
+            { ...sample, date: kind === "adminWeekly" ? "26 octobre au 1er novembre" : day[lang], lang },
+            lang,
+          ),
         })),
       ),
     };

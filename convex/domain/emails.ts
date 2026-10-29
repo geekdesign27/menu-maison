@@ -2,6 +2,7 @@
 // family's language. Pure functions, tested with Vitest; convex/email.ts sends.
 // Mail programs ignore stylesheets: everything is inline, in tables.
 import type { Lang } from "./lang";
+import type { FamilyCounts, FUNNEL } from "./visits";
 
 export type EmailKind =
   | "welcome"
@@ -18,7 +19,8 @@ export type EmailKind =
   | "emailConfirm"
   | "emailChanged"
   | "familyDeleted"
-  | "adminDeleted";
+  | "adminDeleted"
+  | "adminWeekly";
 
 export interface EmailData {
   familyName: string;
@@ -36,6 +38,14 @@ export interface EmailData {
   subscribers?: number;
   /** The member's pseudo, in a reset e-mail. */
   pseudo?: string;
+  /** PA's Monday report, in figures (domain/visits.ts, weeklyReport). */
+  report?: WeeklyReport;
+}
+
+export interface WeeklyReport {
+  funnel: { event: (typeof FUNNEL)[number]; count: number; previous: number }[];
+  sources: { key: string; count: number }[];
+  families: FamilyCounts;
 }
 
 export interface Email {
@@ -63,6 +73,48 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/** « 1 visite », « 0 visite », « 2 visites » (French: singular below 2). */
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n >= 2 ? "s" : ""}`;
+}
+
+const STEP_LABELS: Record<(typeof FUNNEL)[number], string> = {
+  visit: "Visites",
+  trial: `Clics «${NBSP}Essayer${NBSP}»`,
+  checkout: "Paiements Stripe ouverts",
+  trialStarted: "Essais démarrés",
+  paid: "Abonnements payés",
+};
+
+function stepCount(d: EmailData, event: (typeof FUNNEL)[number]): number {
+  return d.report?.funnel.find((s) => s.event === event)?.count ?? 0;
+}
+
+/** The report's three paragraphs; a paragraph's first line is its title. */
+function weeklySections(report: WeeklyReport | undefined): string[] {
+  if (!report) return [];
+  const { funnel, sources, families: f } = report;
+  const line = (label: string, value: number | string) => `${label}${NBSP}: ${value}`;
+  return [
+    [
+      "Entonnoir de la semaine, entre parenthèses la semaine d'avant",
+      ...funnel.map((s) => line(STEP_LABELS[s.event], `${s.count} (${s.previous})`)),
+    ].join("\n"),
+    line(
+      "Provenance",
+      sources.length ? `${sources.map((s) => `${s.key} ${s.count}`).join(", ")}.` : "aucune visite.",
+    ),
+    [
+      "Familles aujourd'hui",
+      line("En essai", f.trial),
+      line("Abonnées", f.subscribed),
+      line("Paiement en échec", f.pastDue),
+      line("Terminées", f.ended),
+      line("Offertes", f.offered),
+    ].join("\n"),
+  ];
 }
 
 interface Body {
@@ -141,9 +193,7 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
       button: d.link
         ? { label: "Choisir un nouveau mot de passe", url: d.link }
         : undefined,
-      after: [
-        `Si ce n'est pas toi, ignore cet e-mail${NBSP}: rien ne change.`,
-      ],
+      after: [`Si ce n'est pas toi, ignore cet e-mail${NBSP}: rien ne change.`],
     }),
     passwordChanged: (d) => ({
       subject: "Ton mot de passe Menu Maison a changé",
@@ -236,6 +286,15 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
         `La famille «${NBSP}${d.familyName}${NBSP}» (${d.email ?? "e-mail inconnu"}) a été supprimée par ${d.adminName} le ${d.date}. Son abonnement Stripe a été arrêté.`,
       ],
     }),
+    adminWeekly: (d) => ({
+      subject: `Menu Maison, semaine du ${d.date}${NBSP}: ${plural(stepCount(d, "visit"), "visite")}, ${plural(stepCount(d, "trialStarted"), "essai")}`,
+      title: "Bilan de la semaine",
+      paragraphs: weeklySections(d.report),
+      button: {
+        label: "Ouvrir les statistiques",
+        url: `${SITE}/#/gestion/statistiques`,
+      },
+    }),
   },
   de: {
     welcome: (d) => ({
@@ -301,7 +360,9 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
       button: d.link
         ? { label: "Neues Passwort wählen", url: d.link }
         : undefined,
-      after: ["Falls das nicht du warst, ignoriere diese E-Mail: Es ändert sich nichts."],
+      after: [
+        "Falls das nicht du warst, ignoriere diese E-Mail: Es ändert sich nichts.",
+      ],
     }),
     passwordChanged: (d) => ({
       subject: "Dein Passwort für Menu Maison wurde geändert",
@@ -325,7 +386,8 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
       after: ["Falls du nichts angefordert hast, ignoriere diese E-Mail."],
     }),
     emailChanged: (d) => ({
-      subject: "Die E-Mail-Adresse deines Profils bei Menu Maison wurde geändert",
+      subject:
+        "Die E-Mail-Adresse deines Profils bei Menu Maison wurde geändert",
       title: "E-Mail-Adresse geändert",
       paragraphs: [
         `Die E-Mail-Adresse deines Profils in der Familie «${d.familyName}» wurde geändert oder entfernt. E-Mails von Menu Maison kommen nicht mehr hierhin.`,
@@ -346,6 +408,7 @@ const TEXTS: Record<Lang, Record<EmailKind, (d: EmailData) => Body>> = {
     adminCanceled: (d) => TEXTS.fr.adminCanceled(d),
     adminPaymentFailed: (d) => TEXTS.fr.adminPaymentFailed(d),
     adminDeleted: (d) => TEXTS.fr.adminDeleted(d),
+    adminWeekly: (d) => TEXTS.fr.adminWeekly(d),
   },
 };
 
@@ -366,12 +429,24 @@ export function renderEmail(
     adminName: escapeHtml(data.adminName),
     email: data.email && escapeHtml(data.email),
     pseudo: data.pseudo && escapeHtml(data.pseudo),
+    report: data.report && {
+      ...data.report,
+      sources: data.report.sources.map((s) => ({ ...s, key: escapeHtml(s.key) })),
+    },
   };
   const b = TEXTS[lang][kind](safe);
   const plain = TEXTS[lang][kind](data);
   const c = COLORS;
+  // The weekly report's paragraphs have several lines, the first one is their
+  // title; elsewhere a « \n » typed in a name stays plain text
+  const lines = (text: string) => {
+    const [head, ...rest] = text.split("\n");
+    return kind === "adminWeekly" && rest.length
+      ? [`<strong>${head}</strong>`, ...rest].join("<br>")
+      : head;
+  };
   const p = (text: string) =>
-    `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:${c.ink}">${text}</p>`;
+    `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:${c.ink}">${lines(text)}</p>`;
   const button = b.button
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0"><tr><td style="background:${c.accent};border-radius:999px">` +
       `<a href="${escapeHtml(b.button.url)}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:800;color:#ffffff;text-decoration:none">${b.button.label}</a>` +
@@ -394,11 +469,11 @@ export function renderEmail(
   const text = [
     plain.title,
     "",
-    ...plain.paragraphs,
+    ...plain.paragraphs.flatMap((text, i) => (i ? ["", text] : [text])),
     ...(plain.button
       ? ["", `${plain.button.label} : ${plain.button.url}`]
       : []),
-    ...(plain.after?.length ? ["", ...plain.after] : []),
+    ...(plain.after ?? []).flatMap((text) => ["", text]),
     "",
     "--",
     FOOTER[lang],
@@ -424,4 +499,5 @@ export const EMAIL_KINDS: EmailKind[] = [
   "emailChanged",
   "familyDeleted",
   "adminDeleted",
+  "adminWeekly",
 ];

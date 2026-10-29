@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   deviceOf,
+  familyCounts,
   isBot,
   isClientEvent,
+  reportWeeks,
   sourceOf,
   statsUrlOf,
   summarize,
+  weeklyReport,
   type StatRow,
 } from "./visits";
 
@@ -139,5 +142,73 @@ describe("summarize", () => {
   it("has no rate after an empty step", () => {
     const s = summarize([row("2026-10-29", "trial", 2)], ["2026-10-29"]);
     expect(s.funnel[1]).toEqual({ event: "trial", count: 2, rate: null });
+  });
+});
+
+describe("weekly report", () => {
+  const row = (day: string, event: string, count: number, source = ""): StatRow => ({
+    day,
+    event,
+    source,
+    lang: source ? "fr" : "",
+    device: source ? "mobile" : "",
+    count,
+  });
+
+  it("covers Monday to Sunday of last week, whatever day it runs", () => {
+    // Monday 2 November 2026, and the Sunday after
+    for (const today of ["2026-11-02", "2026-11-08"]) {
+      const { week, previous } = reportWeeks(today);
+      expect([week[0], week[6]]).toEqual(["2026-10-26", "2026-11-01"]);
+      expect([previous[0], previous[6]]).toEqual(["2026-10-19", "2026-10-25"]);
+    }
+  });
+
+  it("counts families by state, offered ones apart and deleted ones left out", () => {
+    expect(
+      familyCounts([
+        {},
+        { offered: true, billing: { status: "active" } },
+        { billing: { status: "trialing" } },
+        { billing: { status: "active" } },
+        { billing: { status: "active" } },
+        { billing: { status: "past_due" } },
+        { billing: { status: "canceled" } },
+        { billing: { status: "unpaid" } },
+        { billing: { status: "active" }, deleting: true },
+      ]),
+    ).toEqual({ trial: 1, subscribed: 2, pastDue: 1, ended: 2, offered: 2 });
+  });
+
+  it("compares last week with the week before, top sources first", () => {
+    const report = weeklyReport(
+      [
+        row("2026-10-26", "visit", 20, "google"),
+        row("2026-11-01", "visit", 15, "direct"),
+        row("2026-10-30", "visit", 7, "utm:flyer"),
+        row("2026-10-30", "visit", 1, "bing"),
+        row("2026-10-28", "trialStarted", 1),
+        row("2026-10-20", "visit", 31, "direct"),
+        // Outside both weeks: ignored
+        row("2026-11-02", "visit", 99, "direct"),
+        row("2026-10-18", "visit", 99, "direct"),
+      ],
+      "2026-11-02",
+      { trial: 1, subscribed: 5, pastDue: 0, ended: 1, offered: 3 },
+    );
+    expect(report.range).toBe("26 octobre au 1er novembre");
+    expect(report.funnel.map((s) => [s.event, s.count, s.previous])).toEqual([
+      ["visit", 43, 31],
+      ["trial", 0, 0],
+      ["checkout", 0, 0],
+      ["trialStarted", 1, 0],
+      ["paid", 0, 0],
+    ]);
+    expect(report.sources).toEqual([
+      { key: "google", count: 20 },
+      { key: "direct", count: 15 },
+      { key: "utm:flyer", count: 7 },
+    ]);
+    expect(report.families.subscribed).toBe(5);
   });
 });

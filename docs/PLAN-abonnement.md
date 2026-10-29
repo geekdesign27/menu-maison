@@ -232,7 +232,7 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   (Chrome) : vue seulement sur un téléphone simulé.
 - [ ] Parcours d'inscription complet sur un vrai téléphone, page Stripe comprise.
 
-**Lots encore à faire** : bilan de la semaine par e-mail (reste de S6b).
+**Lots encore à faire** : aucun.
 
 **Ménage** : familles de test locales « Test Stripe » et « Rochat Test », et leurs abonnements
 de test chez Stripe.
@@ -251,7 +251,7 @@ de test chez Stripe.
 | S4 | **Fait le 2026-10-29.** Page d'accueil : section Tarif (20 CHF par an, essai de 7 jours), section Formation, « Tarif » dans le menu, « Je n'ai pas de compte » vers `#/tarif`, fenêtre « carnet d'invitations » retirée, FR et DE. Inscriptions fermées en production jusqu'à S7 : `SIGNUP_OPEN` (Convex, verrou serveur) et `VITE_SIGNUP_OPEN` (bouton) | `landing/`, `SignupScreens`, `stripeNode.ts` |
 | S5 | Légal : conditions générales, confidentialité, mentions légales (**fait le 2026-10-29** : `#/conditions`, `#/confidentialite`, `#/mentions-legales`, FR et DE ; reste à PA : les adresses dans Stripe, Informations publiques) | `landing/`, réglages Stripe |
 | S6 | Super admin : statut par famille, revenus de l'année, essais, échecs, bouton Offrir / Retirer l'offre | `superadmin.ts`, `FamiliesSection` |
-| S6b | Statistiques : visites, clics, entonnoir de conversion (**fait le 2026-10-29** : route `/stats`, `convex/visits.ts`, écran Gestion, Statistiques ; le bilan de la semaine par e-mail reste à faire) | `visits.ts`, `landing/`, `gestion/` |
+| S6b | Statistiques : visites, clics, entonnoir de conversion (**fait le 2026-10-29** : route `/stats`, `convex/visits.ts`, écran Gestion, Statistiques ; bilan de la semaine par e-mail chaque lundi, fait le 2026-10-29) | `visits.ts`, `landing/`, `gestion/` |
 | S7 | **Fait le 2026-10-29.** Essai réel de bout en bout (inscription, webhook, e-mails, résiliation), puis ouverture : `SIGNUP_OPEN=1` sur `resolute-squid-776` et variable GitHub `VITE_SIGNUP_OPEN=1`. Les abonnements portent le libellé de relevé `MENU MAISON` (produit Stripe), pas celui du compte | réglages Convex et GitHub |
 
 Chaque lot : tests, typecheck, build, revue sécurité (paiement et comptes), vérification

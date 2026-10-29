@@ -27,4 +27,11 @@ crons.hourly(
   internal.recipeImport.purgeAudio,
 );
 
+// 7 h in winter, 8 h in summer (Zurich)
+crons.weekly(
+  "weekly report to PA",
+  { dayOfWeek: "monday", hourUTC: 6, minuteUTC: 0 },
+  internal.visits.sendWeeklyReport,
+);
+
 export default crons;

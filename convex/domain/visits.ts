@@ -2,6 +2,8 @@
 // event; visits also by source, language and kind of device. Nothing identifies
 // a visitor (no IP, no id), and a known list of sources keeps the table small.
 import type { Limit } from "./auth";
+import { isOffered, type Billing } from "./billing";
+import { addDays, formatDateRange, weekStart } from "./dates";
 
 /** Sent by the landing page. */
 export const CLIENT_EVENTS = [
@@ -163,5 +165,62 @@ export function summarize(rows: StatRow[], days: string[]) {
     langs: sorted(langs),
     devices: sorted(devices),
     funnel,
+  };
+}
+
+/** The Monday to Sunday week before the one of `today`, and the week before it. */
+export function reportWeeks(today: string) {
+  const start = weekStart(addDays(today, -7), 1);
+  const days = (from: string) => Array.from({ length: 7 }, (_, i) => addDays(from, i));
+  return { week: days(start), previous: days(addDays(start, -7)) };
+}
+
+export interface FamilyCounts {
+  trial: number;
+  subscribed: number;
+  pastDue: number;
+  ended: number;
+  offered: number;
+}
+
+/**
+ * Families by state today, as Stripe last told it (a trial ends when its
+ * webhook arrives; a resigned subscription stays subscribed until its end);
+ * those being deleted are left out.
+ */
+export function familyCounts(
+  families: { offered?: boolean; billing?: Billing; deleting?: boolean }[],
+): FamilyCounts {
+  const counts: FamilyCounts = { trial: 0, subscribed: 0, pastDue: 0, ended: 0, offered: 0 };
+  for (const family of families) {
+    if (family.deleting) continue;
+    if (isOffered(family)) counts.offered++;
+    else if (family.billing?.status === "trialing") counts.trial++;
+    else if (family.billing?.status === "active") counts.subscribed++;
+    else if (family.billing?.status === "past_due") counts.pastDue++;
+    else counts.ended++;
+  }
+  return counts;
+}
+
+const TOP_SOURCES = 3;
+
+/**
+ * PA's Monday report, in figures (domain/emails.ts writes it): last week's
+ * funnel against the week before, where the visits came from, the families today.
+ */
+export function weeklyReport(rows: StatRow[], today: string, families: FamilyCounts) {
+  const { week, previous } = reportWeeks(today);
+  const now = summarize(rows, week);
+  const before = summarize(rows, previous);
+  return {
+    range: formatDateRange(week[0], week[6]),
+    funnel: now.funnel.map((step, i) => ({
+      event: step.event,
+      count: step.count,
+      previous: before.funnel[i].count,
+    })),
+    sources: now.sources.slice(0, TOP_SOURCES),
+    families,
   };
 }

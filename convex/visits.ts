@@ -6,12 +6,16 @@ import { reserve } from "./access";
 import { requireSuperadmin } from "./superadmin";
 import { addDays, zurichToday } from "./domain/dates";
 import { sha256 } from "./lib";
+import { sendOnce } from "./email";
 import {
   CLIENT_EVENTS,
+  familyCounts,
   MAX_VISIT_ROWS,
   OTHER_SOURCE,
   STATS_LIMIT,
+  reportWeeks,
   summarize,
+  weeklyReport,
   type StatEvent,
 } from "./domain/visits";
 
@@ -95,5 +99,26 @@ export const summary = query({
       .collect();
     const range = Array.from({ length: days }, (_, i) => addDays(first, i));
     return summarize(rows, range);
+  },
+});
+
+/** Every Monday morning (crons.ts): last week's report to PA, once per week. */
+export const sendWeeklyReport = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const today = zurichToday();
+    const { week, previous } = reportWeeks(today);
+    const rows = await ctx.db
+      .query("visitStats")
+      .withIndex("by_day", (q) => q.gte("day", previous[0]).lte("day", week[6]))
+      .collect();
+    const families = familyCounts(await ctx.db.query("families").collect());
+    const { range, ...report } = weeklyReport(rows, today, families);
+    await sendOnce(ctx, {
+      kind: "adminWeekly",
+      key: `weekly:${week[0]}`,
+      lang: "fr",
+      data: { familyName: "", adminName: "", date: range, report },
+    });
   },
 });

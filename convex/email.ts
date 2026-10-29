@@ -11,6 +11,7 @@ import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { renderEmail, type EmailData, type EmailKind } from "./domain/emails";
 import type { Lang } from "./domain/lang";
+import { FUNNEL } from "./domain/visits";
 
 const RESEND_URL = "https://api.resend.com/emails";
 const DEFAULT_FROM = "Menu Maison <bonjour@menumaison.ch>";
@@ -33,6 +34,7 @@ const kindValidator = v.union(
   v.literal("emailChanged"),
   v.literal("familyDeleted"),
   v.literal("adminDeleted"),
+  v.literal("adminWeekly"),
 );
 
 export const dataValidator = v.object({
@@ -45,6 +47,25 @@ export const dataValidator = v.object({
   lang: v.optional(v.union(v.literal("fr"), v.literal("de"))),
   subscribers: v.optional(v.number()),
   pseudo: v.optional(v.string()),
+  report: v.optional(
+    v.object({
+      funnel: v.array(
+        v.object({
+          event: v.union(...FUNNEL.map((e) => v.literal(e))),
+          count: v.number(),
+          previous: v.number(),
+        }),
+      ),
+      sources: v.array(v.object({ key: v.string(), count: v.number() })),
+      families: v.object({
+        trial: v.number(),
+        subscribed: v.number(),
+        pastDue: v.number(),
+        ended: v.number(),
+        offered: v.number(),
+      }),
+    }),
+  ),
 });
 
 /** The app's address in links (SITE_URL), https://menumaison.ch by default. */
