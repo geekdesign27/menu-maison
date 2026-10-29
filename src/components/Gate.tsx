@@ -9,7 +9,7 @@ import { useT } from "../i18n/useT";
 import { LangSwitch } from "./LangSwitch";
 import { Button, ErrorBox, Loading, TextInput } from "./ui";
 import { AppIcon } from "./Logo";
-import { NO_INVITE_HASH } from "../landing/entry";
+import { PRICING_HASH } from "../landing/entry";
 import { SignupScreen, WelcomeScreen } from "./SignupScreens";
 import { EmailConfirmScreen, ForgotScreen } from "./AccountScreens";
 
@@ -231,7 +231,7 @@ function LoginScreen({
       </p>
       {!knownFamily && (
         <a
-          href={NO_INVITE_HASH}
+          href={PRICING_HASH}
           className="mx-auto mt-2 inline-flex min-h-11 items-center px-3 text-[15px] font-bold text-carrot-dark underline underline-offset-4"
         >
           {t("gate.login.noAccount")}

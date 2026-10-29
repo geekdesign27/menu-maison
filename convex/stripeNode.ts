@@ -14,6 +14,9 @@ import {
   LIVE_STRIPE_STATUSES,
   PRICE_CHF,
   PRICE_LOOKUP_KEY,
+  PAYMENTS_CLOSED,
+  SIGNUP_CLOSED,
+  signupOpen,
   signupProblem,
   TRIAL_DAYS,
 } from "./domain/billing";
@@ -90,6 +93,7 @@ export const startCheckout = action({
     lang: v.union(v.literal("fr"), v.literal("de")),
   },
   handler: async (ctx, args): Promise<{ url: string; claimSecret: string }> => {
+    if (!signupOpen(process.env.SIGNUP_OPEN)) throw new ConvexError(SIGNUP_CLOSED);
     const problem = signupProblem(args);
     if (problem) throw new ConvexError(problem);
     const client = stripe();
@@ -112,7 +116,7 @@ export const startCheckout = action({
       locale: args.lang,
       expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_MINUTES * 60,
       success_url: `${site}/#/bienvenue?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${site}/#/decouvrir`,
+      cancel_url: `${site}/#/tarif`,
     });
     if (!session.url)
       throw new ConvexError(
@@ -136,6 +140,7 @@ export const startFamilyCheckout = action({
   args: { token: v.string() },
   handler: async (ctx, { token }): Promise<{ url: string }> => {
     const family = await ctx.runQuery(internal.billing.familyForBilling, { token });
+    if (!signupOpen(process.env.SIGNUP_OPEN)) throw new ConvexError(PAYMENTS_CLOSED);
     // One subscription per family: a second one would charge twice
     if (family.status && family.status !== "canceled") throw new ConvexError(ALREADY_SUBSCRIBED);
     const client = stripe();

@@ -174,6 +174,8 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
 - [ ] Production : clé live, `SITE_URL=https://menumaison.ch`, webhook live vers
   `https://resolute-squid-776.eu-west-1.convex.site/stripe/webhook`, `STRIPE_PRICE_ID` et
   `STRIPE_PORTAL_CONFIG_ID` live, puis un vrai paiement de 20 CHF remboursé.
+- [ ] Ouvrir les inscriptions, en dernier : `npx convex env set SIGNUP_OPEN 1 --prod` et la
+  variable GitHub `VITE_SIGNUP_OPEN=1`, puis un déploiement (voir DEV.md).
 
 **E-mails**
 - [x] Compte Resend, domaine menumaison.ch vérifié (SPF, DKIM, DMARC chez Infomaniak),
@@ -216,7 +218,7 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   (Chrome) : vue seulement sur un téléphone simulé.
 - [ ] Parcours d'inscription complet sur un vrai téléphone, page Stripe comprise.
 
-**Lots encore à faire** : page d'accueil (S4), pages légales (S5), statistiques (S6b), essai complet (S7).
+**Lots encore à faire** : pages légales (S5), statistiques (S6b), essai complet (S7).
 
 **Ménage** : familles de test locales « Test Stripe » et « Rochat Test », et leurs abonnements
 de test chez Stripe.
@@ -232,7 +234,7 @@ de test chez Stripe.
 | S3b | **Fait le 2026-10-28** (inactif sans clé Resend). E-mails HTML de marque liés à l'abonnement (bienvenue avec lien de 7 jours, fin d'essai, confirmé, paiement échoué, résilié) et 4 alertes à PA, une seule fois chacun, aperçus dans Super admin. Les e-mails de mot de passe et de suppression viennent avec S3c | `domain/emails.ts`, `email.ts` |
 | S3c | **Fait le 2026-10-28** (e-mails inactifs sans clé Resend). Mot de passe oublié par e-mail, e-mail de chaque membre confirmé par lien, changement de mot de passe, déconnexion des autres appareils, export JSON, suppression de la famille (Stripe arrêté d'abord), suivi de l'e-mail de facturation, 6 nouveaux e-mails FR/DE | `account.ts`, `familyData.ts`, `passwordCheck.ts`, `AccountPanel.tsx`, `AccountScreens.tsx` |
 | S3d | **Fait le 2026-10-29.** Trois questions avant le tour d'un nouvel admin (jour, magasin, personnes), « Premiers pas » de l'admin (e-mail, membres, un membre connecté, première semaine, première liste), étape e-mail pour les membres | `onboarding/`, `FamilySetup.tsx`, i18n |
-| S4 | Page d'accueil : section Tarif, section Formation, boutons, traductions | `landing/` |
+| S4 | **Fait le 2026-10-29.** Page d'accueil : section Tarif (20 CHF par an, essai de 7 jours), section Formation, « Tarif » dans le menu, « Je n'ai pas de compte » vers `#/tarif`, fenêtre « carnet d'invitations » retirée, FR et DE. Inscriptions fermées en production jusqu'à S7 : `SIGNUP_OPEN` (Convex, verrou serveur) et `VITE_SIGNUP_OPEN` (bouton) | `landing/`, `SignupScreens`, `stripeNode.ts` |
 | S5 | Légal : conditions générales, confidentialité, mentions légales | `landing/`, réglages Stripe |
 | S6 | Super admin : statut par famille, revenus de l'année, essais, échecs, bouton Offrir / Retirer l'offre | `superadmin.ts`, `FamiliesSection` |
 | S6b | Statistiques : visites, clics, entonnoir de conversion, bilan de la semaine | `analytics.ts`, `landing/`, `gestion/` |

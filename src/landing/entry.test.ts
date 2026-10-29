@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contactHref, entryFor, opensNoInvite } from "./entry";
+import { contactHref, entryFor, opensPricing, signupVisible } from "./entry";
 
 describe("entryFor", () => {
   it("shows the landing page on the bare address to visitors", () => {
@@ -24,15 +24,16 @@ describe("entryFor", () => {
   });
 
   it("always shows the landing paths, signed in or not", () => {
-    for (const hash of ["#/decouvrir", "#/decouvrir/", "#/sans-invitation"]) {
+    for (const hash of ["#/decouvrir", "#/decouvrir/", "#/tarif", "#/sans-invitation"]) {
       expect(entryFor(hash, false), hash).toBe("landing");
       expect(entryFor(hash, true), hash).toBe("landing");
     }
   });
 
-  it("opens the no-invitation message only on its own path", () => {
-    expect(opensNoInvite("#/sans-invitation")).toBe(true);
-    expect(opensNoInvite("#/decouvrir")).toBe(false);
+  it("opens at the price on its path and on the former no-invitation path", () => {
+    expect(opensPricing("#/tarif")).toBe(true);
+    expect(opensPricing("#/sans-invitation")).toBe(true);
+    expect(opensPricing("#/decouvrir")).toBe(false);
   });
 });
 
@@ -52,5 +53,16 @@ describe("contactHref", () => {
     expect(contactHref("javascript:alert(1)")).toBeNull();
     expect(contactHref("http://example.ch")).toBeNull();
     expect(contactHref("pa@example.ch")).toBeNull();
+  });
+});
+
+describe("signupVisible", () => {
+  it("shows the trial button while developing", () => {
+    expect(signupVisible(undefined, true)).toBe(true);
+  });
+
+  it("hides it in production until VITE_SIGNUP_OPEN is 1", () => {
+    for (const raw of [undefined, "", "0", "true"]) expect(signupVisible(raw, false), String(raw)).toBe(false);
+    expect(signupVisible("1", false)).toBe(true);
   });
 });

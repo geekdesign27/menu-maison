@@ -1,6 +1,6 @@
 // Public landing page of menumaison.ch: static content and local examples only.
 // It loads no Convex client and reads no family data.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import "@fontsource-variable/nunito/wght-italic.css";
 import "./landing.css";
 import { hasStoredToken } from "../lib/device";
@@ -8,7 +8,7 @@ import { useDeviceLang } from "../lib/deviceLang";
 import { localeOf } from "../../convex/domain/lang";
 import { UiLangProvider } from "../components/ui";
 import { landingText, LandingLangContext } from "./lang";
-import { contactHref, LANDING_HASH, opensNoInvite } from "./entry";
+import { contactHref, opensPricing, signupVisible } from "./entry";
 import { LandingContext, type LandingValue } from "./parts";
 import { Budget } from "./sections/Budget";
 import { FinalCta, Footer } from "./sections/Closing";
@@ -18,7 +18,7 @@ import { Header } from "./sections/Header";
 import { Hero } from "./sections/Hero";
 import { HowItWorks } from "./sections/HowItWorks";
 import { Leftovers } from "./sections/Leftovers";
-import { NoInviteDialog, PrivateAccess } from "./sections/PrivateAccess";
+import { Pricing, Training } from "./sections/Offer";
 import { Problem } from "./sections/Problem";
 import { RecipesWishes } from "./sections/RecipesWishes";
 import { StoreJourney } from "./sections/StoreJourney";
@@ -27,34 +27,32 @@ import { Themes } from "./sections/Themes";
 const CONTACT = contactHref(
   import.meta.env.VITE_CONTACT_URL as string | undefined,
 );
+const SIGNUP_OPEN = signupVisible(
+  import.meta.env.VITE_SIGNUP_OPEN as string | undefined,
+  import.meta.env.DEV,
+);
 
 export function Landing() {
   const lang = useDeviceLang();
-  const [noInvite, setNoInvite] = useState(() =>
-    opensNoInvite(window.location.hash),
-  );
-
-  // Linked from the sign-in screen: #/sans-invitation opens the message
+  // « Je n'ai pas de compte » (sign-in screen) and Stripe's cancel link: #/tarif opens at the price
   useEffect(() => {
-    const onChange = () => {
-      if (opensNoInvite(window.location.hash)) setNoInvite(true);
+    const toPricing = () => {
+      // A plain scroll: no focus ring on a heading nobody tabbed to
+      if (opensPricing(window.location.hash))
+        requestAnimationFrame(() =>
+          document.getElementById("tarif")?.scrollIntoView({ block: "start" }),
+        );
     };
-    window.addEventListener("hashchange", onChange);
-    return () => window.removeEventListener("hashchange", onChange);
+    toPricing();
+    window.addEventListener("hashchange", toPricing);
+    return () => window.removeEventListener("hashchange", toPricing);
   }, []);
-
-  const close = () => {
-    setNoInvite(false);
-    // A reload must not reopen it
-    if (opensNoInvite(window.location.hash))
-      history.replaceState(null, "", LANDING_HASH);
-  };
 
   const value = useMemo<LandingValue>(
     () => ({
       signedIn: hasStoredToken(),
       contact: CONTACT,
-      openNoInvite: () => setNoInvite(true),
+      signupOpen: SIGNUP_OPEN,
     }),
     [],
   );
@@ -92,11 +90,11 @@ export function Landing() {
               <FamilySync />
               <Themes />
               <Features />
-              <PrivateAccess />
+              <Pricing />
+              <Training />
               <FinalCta />
             </main>
             <Footer />
-            <NoInviteDialog open={noInvite} onClose={close} />
           </div>
         </LandingContext.Provider>
       </UiLangProvider>

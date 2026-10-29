@@ -1,7 +1,6 @@
 // Hand-drawn marks of the landing page: drawn with a round pen, like notes on
 // a shopping list. Decorative only (aria-hidden).
 import type { CSSProperties } from "react";
-import { LogoSymbol } from "../components/Logo";
 
 interface DoodleProps {
   className?: string;
@@ -101,23 +100,3 @@ export function Toque({ className, style }: DoodleProps) {
   );
 }
 
-/** « Club privé. Cuisine ouverte. », as a rubber stamp. */
-export function Stamp({ className, style }: DoodleProps) {
-  return (
-    <svg viewBox="0 0 200 200" className={className} style={style} role="img" aria-label="Club privé. Cuisine ouverte.">
-      <defs>
-        <path id="lp-stamp-ring" d="M100 100m-72 0a72 72 0 1 1 144 0a72 72 0 1 1-144 0" />
-      </defs>
-      <circle cx="100" cy="100" r="94" fill="none" stroke="currentColor" strokeWidth="4" />
-      <circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" strokeWidth="2.5" strokeDasharray="2 6" strokeLinecap="round" />
-      <text fill="currentColor" fontSize="19" fontWeight="900" letterSpacing="3.2">
-        <textPath href="#lp-stamp-ring" startOffset="0">
-          CLUB PRIVÉ · CUISINE OUVERTE ·
-        </textPath>
-      </text>
-      <g transform="translate(70 66)" color="currentColor">
-        <LogoSymbol size={60} />
-      </g>
-    </svg>
-  );
-}

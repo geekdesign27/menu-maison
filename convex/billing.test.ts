@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { sha256 } from "./lib";
+import { hashPassword } from "./domain/auth";
 import { accessOf } from "./domain/billing";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -403,5 +404,41 @@ describe("e-mails of the subscription", () => {
     await t.mutation(internal.billing.trialReminders, {});
     await t.mutation(internal.billing.trialReminders, {});
     expect((await kinds(t)).filter((k) => k === "trialEnding")).toHaveLength(1);
+  });
+});
+
+describe("closed sign-ups and payments (no SIGNUP_OPEN)", () => {
+  it("refuses a new sign-up before calling Stripe", async () => {
+    delete process.env.SIGNUP_OPEN;
+    const t = convexTest(schema, modules);
+    expect(await t.query(api.billing.signupStatus, {})).toEqual({ open: false });
+    await expect(
+      t.action(api.stripeNode.startCheckout, { familyName: "Dupont", adminName: "Marc", lang: "fr" }),
+    ).rejects.toThrow("Les inscriptions ouvrent bientôt.");
+    expect(await t.run((ctx) => ctx.db.query("signups").collect())).toHaveLength(0);
+  });
+
+  it("refuses an existing family's subscription", async () => {
+    delete process.env.SIGNUP_OPEN;
+    const t = convexTest(schema, modules);
+    const passwordHash = await hashPassword("carottes-rapees", 1000);
+    await t.run(async (ctx) => {
+      const familyId = await ctx.db.insert("families", { name: "Famille Test", slug: "test", suspended: false, createdAt: 0 });
+      await ctx.db.insert("members", {
+        familyId, name: "Ada", emoji: "🙂", color: "#A8C8E8", order: 0, username: "ada", passwordHash, role: "admin",
+      });
+    });
+    const res = await t.action(api.access.login, { family: "test", username: "ada", password: "carottes-rapees" });
+    if (!res.ok) throw new Error(res.error);
+    await expect(t.action(api.stripeNode.startFamilyCheckout, { token: res.token })).rejects.toThrow(
+      "Le paiement en ligne ouvre bientôt.",
+    );
+  });
+
+  it("opens with SIGNUP_OPEN=1", async () => {
+    process.env.SIGNUP_OPEN = "1";
+    const t = convexTest(schema, modules);
+    expect(await t.query(api.billing.signupStatus, {})).toEqual({ open: true });
+    delete process.env.SIGNUP_OPEN;
   });
 });

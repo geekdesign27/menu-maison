@@ -216,6 +216,8 @@ const DE: Record<string, string> = {
   "L'abonnement de ta famille est terminé : l'app est en lecture seule. L'admin peut le réactiver.":
     "Das Abo deiner Familie ist abgelaufen: Die App ist nur noch lesbar. Der Admin kann es wieder aktivieren.",
   "Le paiement n'est pas encore configuré.": "Die Zahlung ist noch nicht eingerichtet.",
+  "Les inscriptions ouvrent bientôt.": "Die Anmeldung öffnet bald.",
+  "Le paiement en ligne ouvre bientôt.": "Die Online-Zahlung öffnet bald.",
   "La page de paiement n'a pas pu s'ouvrir. Réessaie dans un moment.":
     "Die Zahlungsseite konnte nicht geöffnet werden. Versuch es gleich nochmals.",
   "Lien invalide.": "Ungültiger Link.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessOf, daysLeft, GRACE_DAYS, inTrial, isOffered, numberedFamilyName, signupProblem, statusFromStripe } from "./billing";
+import { accessOf, daysLeft, GRACE_DAYS, inTrial, isOffered, numberedFamilyName, signupOpen, signupProblem, statusFromStripe } from "./billing";
 import { slugFromName } from "./auth";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -82,5 +82,13 @@ describe("subscription of a family", () => {
       expect(slug.endsWith(`-${n}`), slug).toBe(true);
       expect(slug.length).toBeLessThanOrEqual(30);
     }
+  });
+});
+
+describe("sign-ups", () => {
+  it("stay closed unless SIGNUP_OPEN is 1", () => {
+    for (const flag of [undefined, "", "0", "true", "oui", "yes"]) expect(signupOpen(flag), String(flag)).toBe(false);
+    expect(signupOpen("1")).toBe(true);
+    expect(signupOpen(" 1 ")).toBe(true);
   });
 });

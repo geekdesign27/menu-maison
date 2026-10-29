@@ -1,13 +1,16 @@
 import { LogoSymbol } from "../../components/Logo";
 import { cx } from "../../components/ui";
 import { Carrot, ListPad, Pot, Star } from "../doodles";
-import { Heading, pill, Reveal, SectionLink, useLogin } from "../parts";
+import { PRICE_CHF, TRIAL_DAYS } from "../../../convex/domain/billing";
+import { SIGNUP_HASH } from "../entry";
+import { Heading, pill, Reveal, SectionLink, useLanding, useLogin } from "../parts";
 import { useL } from "../lang";
 import type { LandingKey } from "../i18n";
 import { NAV, Wordmark } from "./Header";
 
 export function FinalCta() {
   const { l } = useL();
+  const { signupOpen } = useLanding();
   const login = useLogin(l("closing.login"));
   return (
     <section id="fin" aria-labelledby="fin-titre" className="relative overflow-hidden bg-carrot-soft py-24 sm:py-32">
@@ -26,10 +29,19 @@ export function FinalCta() {
         <p className="mx-auto mt-6 max-w-lg text-lg leading-relaxed text-ink/80 sm:text-xl">
           {l("closing.lead")}
         </p>
-        <a href={login.href} className={cx(pill.primary, pill.large, "mt-10")}>
-          {login.label}
-        </a>
-        <p className="mt-4 text-[15px] font-bold text-muted">{l("closing.private")}</p>
+        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          {signupOpen && (
+            <a href={SIGNUP_HASH} className={cx(pill.primary, pill.large)}>
+              {l("closing.trial", { days: TRIAL_DAYS })}
+            </a>
+          )}
+          <a href={login.href} className={cx(signupOpen ? pill.secondary : pill.primary, pill.large)}>
+            {login.label}
+          </a>
+        </div>
+        <p className="mt-4 text-[15px] font-bold text-muted">
+          {signupOpen ? l("closing.price", { price: PRICE_CHF, days: TRIAL_DAYS }) : l("closing.soon")}
+        </p>
       </Reveal>
     </section>
   );
@@ -38,7 +50,10 @@ export function FinalCta() {
 export function Footer() {
   const { l } = useL();
   const login = useLogin();
-  const links: { to: string; labelKey: LandingKey }[] = [{ to: "haut", labelKey: "closing.top" }, NAV[0], NAV[2]];
+  const links: { to: string; labelKey: LandingKey }[] = [
+    { to: "haut", labelKey: "closing.top" },
+    ...NAV.filter((link) => link.to !== "astuces"),
+  ];
   return (
     <footer className="bg-cream pt-14 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]">
       <div className="mx-auto flex max-w-[1160px] flex-col gap-8 px-4 sm:px-6 md:flex-row md:items-start md:justify-between">

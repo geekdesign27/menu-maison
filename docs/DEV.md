@@ -56,8 +56,10 @@ déjà connectés. Le code est dans `src/landing/`, chargé à part de l'app (pa
 
 - `#/connexion` : écran de connexion (bouton « Se connecter »).
 - `#/decouvrir` : la page de présentation, même connecté.
-- `#/sans-invitation` : la page avec le message « pas encore dans le carnet d'invitations »
-  (lien « Je n'ai pas de compte » de l'écran de connexion).
+- `#/tarif` : la page ouverte à la section Tarif (lien « Je n'ai pas de compte » de l'écran
+  de connexion, retour d'un paiement Stripe abandonné). L'ancienne adresse `#/sans-invitation`
+  y mène aussi.
+- `#/essai` : le formulaire d'inscription, puis Stripe Checkout.
 - Les liens `#/f/<famille>` et `#/activer/<lien>` ouvrent l'app comme avant.
 
 Les démos (magasins, portions, coût des lasagnes) tournent sur `buildShoppingList` et le
@@ -68,6 +70,14 @@ WebP dans `public/landing/`.
 Bouton « En parler avec P-A » : variable GitHub (Settings, Secrets and variables, Actions,
 onglet Variables) `VITE_CONTACT_URL`, au format `mailto:…`, `tel:…` ou `https://…`. Sans elle,
 le bouton est masqué et la page invite à passer par la personne qui a fait découvrir l'app.
+
+**Ouverture des inscriptions** : fermées par défaut, deux interrupteurs à basculer ensemble.
+- `SIGNUP_OPEN=1` dans Convex (`npx convex env set SIGNUP_OPEN 1`, en dev et, le jour venu,
+  `--prod`) : sans lui, `startCheckout` refuse avec « Les inscriptions ouvrent bientôt. » et
+  `#/essai` affiche ce message au lieu du formulaire.
+- `VITE_SIGNUP_OPEN=1`, variable GitHub comme `VITE_CONTACT_URL` : sans elle, la section Tarif
+  affiche « Ouverture prochaine » au lieu de « Essayer 7 jours gratuits ». En local
+  (`npm run dev`) le bouton est toujours visible.
 
 ## Tests
 

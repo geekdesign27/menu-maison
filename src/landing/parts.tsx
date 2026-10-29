@@ -18,13 +18,14 @@ export interface LandingValue {
   signedIn: boolean;
   /** « En parler avec P-A », or null while no contact is configured. */
   contact: string | null;
-  openNoInvite: () => void;
+  /** « Essayer 7 jours gratuits » is shown (see signupVisible). */
+  signupOpen: boolean;
 }
 
 export const LandingContext = createContext<LandingValue>({
   signedIn: false,
   contact: null,
-  openNoInvite: () => undefined,
+  signupOpen: false,
 });
 
 export function useLanding() {

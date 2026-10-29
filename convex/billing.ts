@@ -24,6 +24,7 @@ import {
   FAMILY_CHECKOUT_LIMIT,
   isOffered,
   numberedFamilyName,
+  signupOpen,
   signupProblem,
   statusFromStripe,
 } from "./domain/billing";
@@ -35,6 +36,12 @@ const HOUR = 3600 * 1000;
 const DAY = 24 * HOUR;
 
 const langValidator = v.union(v.literal("fr"), v.literal("de"));
+
+/** Whether the sign-up form may open Stripe (« #/essai », before anyone is signed in). */
+export const signupStatus = query({
+  args: {},
+  handler: async () => ({ open: signupOpen(process.env.SIGNUP_OPEN) }),
+});
 
 /** Whether a family name is still free (sign-up form, before paying). */
 export const nameAvailable = query({

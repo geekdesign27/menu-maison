@@ -123,6 +123,19 @@ export function signupProblem(input: { familyName: string; adminName: string }):
   return problem ? `Ce nom ne donne pas un lien valable : ${problem.toLowerCase()}` : null;
 }
 
+/** Shown while sign-ups are closed (S4 to S7: legal pages and live Stripe keys first). */
+export const SIGNUP_CLOSED = "Les inscriptions ouvrent bientôt.";
+/** Same lock for an existing family that would subscribe: no payment on test keys. */
+export const PAYMENTS_CLOSED = "Le paiement en ligne ouvre bientôt.";
+
+/**
+ * Sign-ups and payments open only once SIGNUP_OPEN is « 1 » in Convex's
+ * environment: closed by default.
+ */
+export function signupOpen(flag: string | undefined): boolean {
+  return flag?.trim() === "1";
+}
+
 /**
  * « Dupont », then « Dupont 2 », « Dupont 3 »… The base is shortened so that the
  * number still changes the sign-in link (links stop at 30 characters).

@@ -9,7 +9,7 @@ import { useL } from "../lang";
 export const NAV = [
   { to: "fonctionnement", labelKey: "shell.navHow" },
   { to: "astuces", labelKey: "shell.navTips" },
-  { to: "acces", labelKey: "shell.navAccess" },
+  { to: "tarif", labelKey: "shell.navPricing" },
 ] as const satisfies readonly { to: string; labelKey: LandingKey }[];
 
 /** Logo and name, as on the app icon: the smiling « m » with its fork. */

@@ -20,6 +20,7 @@ export function SignupScreen() {
   const { t, lang } = useT();
   const { account } = useSession();
   const startCheckout = useAction(api.stripeNode.startCheckout);
+  const status = useQuery(api.billing.signupStatus);
   const [familyName, setFamilyName] = useState("");
   const [adminName, setAdminName] = useState("");
   const [error, setError] = useState("");
@@ -71,6 +72,25 @@ export function SignupScreen() {
             {t("gate.signup.openApp")}
           </a>
         </div>
+      </Screen>
+    );
+
+  if (status === undefined) return <Loading />;
+  // Until S7 (legal pages, live Stripe keys) the form stays closed
+  if (!status.open)
+    return (
+      <Screen>
+        <Brand subtitle={t("gate.signup.subtitle")} />
+        <div className="grid gap-3 rounded-2xl bg-paper p-4 text-center ring-1 ring-line">
+          <p className="text-[17px] font-extrabold">{t("gate.signup.closedTitle")}</p>
+          <p className="text-[16px] text-muted">{t("gate.signup.closed")}</p>
+          <a href="#/decouvrir" className="inline-flex min-h-11 items-center justify-center font-extrabold text-carrot-dark underline">
+            {t("gate.signup.closedBack")}
+          </a>
+        </div>
+        <a href="#/connexion" className="mt-6 inline-flex min-h-11 items-center justify-center font-bold text-carrot-dark underline">
+          {t("gate.signup.haveAccount")}
+        </a>
       </Screen>
     );
 

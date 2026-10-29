@@ -6,8 +6,12 @@
 export const LOGIN_HASH = "#/connexion";
 /** The landing page, even on a signed-in phone. */
 export const LANDING_HASH = "#/decouvrir";
-/** The landing page with the « no invitation » message open (linked from the sign-in screen). */
-export const NO_INVITE_HASH = "#/sans-invitation";
+/** The landing page at its price (« Je n'ai pas de compte » on the sign-in screen). */
+export const PRICING_HASH = "#/tarif";
+/** Former address of the « no invitation » message: now the price as well. */
+const OLD_NO_INVITE_HASH = "#/sans-invitation";
+/** Sign-up form of the app (convex/stripeNode.ts startCheckout). */
+export const SIGNUP_HASH = "#/essai";
 
 export const LANDING_TITLE =
   "Menu Maison · Les menus de la semaine, les recettes et les courses en famille";
@@ -24,13 +28,23 @@ function pathOf(hash: string) {
  */
 export function entryFor(hash: string, signedIn: boolean): Entry {
   const path = pathOf(hash);
-  if (path === pathOf(LANDING_HASH) || path === pathOf(NO_INVITE_HASH))
+  if ([LANDING_HASH, PRICING_HASH, OLD_NO_INVITE_HASH].some((h) => path === pathOf(h)))
     return "landing";
   return path === "/" && !signedIn ? "landing" : "app";
 }
 
-export function opensNoInvite(hash: string) {
-  return pathOf(hash) === pathOf(NO_INVITE_HASH);
+/** The landing page opens scrolled to its price. */
+export function opensPricing(hash: string) {
+  const path = pathOf(hash);
+  return path === pathOf(PRICING_HASH) || path === pathOf(OLD_NO_INVITE_HASH);
+}
+
+/**
+ * The « Essayer 7 jours gratuits » button: always while developing, in
+ * production once VITE_SIGNUP_OPEN is « 1 » (with SIGNUP_OPEN in Convex, S7).
+ */
+export function signupVisible(raw: string | undefined, dev: boolean): boolean {
+  return dev || raw?.trim() === "1";
 }
 
 /**
