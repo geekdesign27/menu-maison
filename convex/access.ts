@@ -231,7 +231,9 @@ export const login = action({
     if (!slug || !username || !args.password || args.password.length > 200)
       return { ok: false, error: WRONG };
     // The key does not reveal whether the family or the pseudo exists
-    const key = `${slug}:${username}`;
+    // Prefixed: a family and pseudo typed by anyone never land on another guard
+    // (« billing:checkout », « stats:* »…) and lock it
+    const key = `login:${slug}:${username}`;
     const slot = await ctx.runMutation(internal.access.beginAttempt, { key });
     if (!slot.allowed) return { ok: false, error: tooMany(slot.retryAt) };
     const target = await ctx.runQuery(internal.access.loginTarget, { slug, username });

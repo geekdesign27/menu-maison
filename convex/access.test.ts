@@ -89,6 +89,18 @@ describe("sign-in", () => {
     // Another pseudo of the family is not locked
     expect((await login(t, "leo", PASSWORD)).ok).toBe(true);
   });
+
+  it("never locks the sign-ups or another guard, whatever family and pseudo are typed", async () => {
+    const { t } = await setup();
+    for (const [family, username] of [
+      ["billing", "checkout"],
+      ["billing", "claim"],
+    ])
+      for (let i = 0; i < 8; i++)
+        await t.action(api.access.login, { family, username, password: "x" });
+    expect(await t.mutation(internal.billing.allowAttempt, { kind: "checkout" })).toBe(true);
+    expect(await t.mutation(internal.billing.allowAttempt, { kind: "claim" })).toBe(true);
+  });
 });
 
 describe("rights", () => {
