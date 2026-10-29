@@ -168,7 +168,8 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   fin d'essai sans paiement.
 - [ ] Bouton « Réactiver » avec un vrai abonnement terminé.
 - [ ] Bandeaux « paiement échoué » et « lecture seule » vus à l'écran (seuls les tests les couvrent).
-- [ ] TWINT activé dans Stripe et un abonnement de test payé avec.
+- Paiement par carte via Stripe (Apple Pay et Google Pay compris si Stripe les propose). TWINT
+  pas nécessaire (décision de PA, 2026-10-29).
 - [ ] Nom affiché sur la page de paiement : « Entreprise 1 » à remplacer (réglages publics du
   compte, ou second compte Stripe).
 - [ ] Production : clé live, `SITE_URL=https://menumaison.ch`, webhook live vers

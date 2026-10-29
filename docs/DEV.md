@@ -33,8 +33,8 @@ ou d'avance avec `npx convex run stripeNode:ensurePrice` (l'identifiant rendu pe
 `STRIPE_PRICE_ID`). Le portail client a sa propre configuration (carte, factures, résiliation
 en fin d'année, jamais de changement d'offre) : `npx convex run stripeNode:ensurePortalConfig`,
 identifiant dans `STRIPE_PORTAL_CONFIG_ID`. Webhook en local : Stripe CLI
-`stripe listen --forward-to http://127.0.0.1:3211/stripe/webhook` (3211 : port par défaut
-du site Convex local, à vérifier dans `.env.local`, `CONVEX_SITE_URL` ; le secret `whsec_…`
+`stripe listen --forward-to http://127.0.0.1:3212/stripe/webhook` (3212 : site HTTP du Convex
+local sur ce Mac, 3211 étant l'API ; à vérifier dans `.env.local`, `CONVEX_SITE_URL` ; le secret `whsec_…`
 affiché va dans `STRIPE_WEBHOOK_SECRET`). En production, l'adresse du webhook est
 `https://<déploiement>.convex.site/stripe/webhook`, événements `checkout.session.completed`,
 `customer.subscription.*` et `customer.updated` (e-mail changé dans le portail). Sans clé, l'inscription répond « Le paiement n'est pas encore
