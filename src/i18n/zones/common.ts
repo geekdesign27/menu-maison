@@ -10,6 +10,14 @@ export const fr = {
   "common.less": "Moins ({label})",
   "common.more": "Plus ({label})",
   "common.linkCopied": "Lien copié, colle-le dans un message.",
+  // Legal pages (components/LegalLinks.tsx), before and after sign-in
+  "common.legal.accept": "En continuant, tu acceptes les",
+  "common.legal.terms": "conditions générales",
+  "common.legal.and": "et la",
+  "common.legal.privacy": "politique de confidentialité",
+  "common.legal.termsLink": "Conditions générales",
+  "common.legal.privacyLink": "Confidentialité",
+  "common.legal.mentionsLink": "Mentions légales",
 
   // Last-resort screen
   "common.crash.text":
@@ -273,6 +281,13 @@ export const de: { [K in keyof typeof fr]: string } = {
   "common.less": "Weniger ({label})",
   "common.more": "Mehr ({label})",
   "common.linkCopied": "Link kopiert, füge ihn in eine Nachricht ein.",
+  "common.legal.accept": "Wenn du weiterfährst, akzeptierst du die",
+  "common.legal.terms": "AGB",
+  "common.legal.and": "und die",
+  "common.legal.privacy": "Datenschutzerklärung",
+  "common.legal.termsLink": "AGB",
+  "common.legal.privacyLink": "Datenschutz",
+  "common.legal.mentionsLink": "Impressum",
 
   "common.crash.text":
     "Auf diesem Bildschirm ist ein Problem aufgetreten. Deine Daten sind sicher.",

@@ -7,6 +7,7 @@ import { Heading, pill, Reveal, SectionLink, useLanding, useLogin } from "../par
 import { useL } from "../lang";
 import type { LandingKey } from "../i18n";
 import { NAV, Wordmark } from "./Header";
+import { LegalNav } from "../legal/LegalPage";
 
 export function FinalCta() {
   const { l } = useL();
@@ -87,6 +88,7 @@ export function Footer() {
       <div className="mx-auto mt-10 max-w-[1160px] border-t border-line px-4 pt-6 text-[15px] text-muted sm:px-6">
         <p className="font-bold text-ink/80">{l("closing.credit")}</p>
         <p className="mt-1">{l("closing.coffee")}</p>
+        <LegalNav className="mt-3 -ml-3" />
       </div>
     </footer>
   );

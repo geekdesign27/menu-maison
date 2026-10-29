@@ -9,6 +9,7 @@ import { rememberedFamily, useSession } from "../lib/session";
 import { serverText } from "../i18n/serverText";
 import { useT } from "../i18n/useT";
 import { Brand, Screen } from "./Gate";
+import { LegalConsent } from "./LegalLinks";
 import { Button, ErrorBox, Loading, TextInput } from "./ui";
 
 // The secret of the sign-up started on this phone: only it gets the admin's
@@ -137,6 +138,7 @@ export function SignupScreen() {
         <p className="flex items-center justify-center gap-1.5 text-center text-[14px] text-muted">
           <Lock size={14} aria-hidden /> {t("gate.signup.secure")}
         </p>
+        <LegalConsent />
       </form>
       <a
         href="#/connexion"

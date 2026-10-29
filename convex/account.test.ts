@@ -272,14 +272,21 @@ describe("the family's data", () => {
       token,
       confirmName: "famille test", password: PASSWORD });
     expect(await t.query(api.access.check, { token })).toBeNull();
+    // Its sign-up record (Checkout long finished) goes with it
+    await t.run((ctx) =>
+      ctx.db.insert("signups", {
+        sessionId: "cs_test_deleted", familyName: "Famille Test", adminName: "Ana",
+        lang: "fr", claimHash: "x", createdAt: Date.now(), familyId }),
+    );
     await t.mutation(internal.familyData.purgeFamily, { familyId });
     const left = await t.run(async (ctx) => ({
       family: await ctx.db.get(familyId),
       members: (await ctx.db.query("members").collect()).length,
       recipes: (await ctx.db.query("recipes").collect()).length,
       sessions: (await ctx.db.query("sessions").collect()).length,
+      signups: (await ctx.db.query("signups").collect()).length,
     }));
-    expect(left).toEqual({ family: null, members: 0, recipes: 0, sessions: 0 });
+    expect(left).toEqual({ family: null, members: 0, recipes: 0, sessions: 0, signups: 0 });
   });
 
   it("never deletes PA's own family from the app", async () => {

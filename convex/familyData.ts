@@ -197,6 +197,9 @@ export const purgeFamily = internalMutation({
       });
       return;
     }
+    // Its sign-up record (family name, admin's first name) goes too
+    for (const signup of (await ctx.db.query("signups").collect()).filter((s) => s.familyId === familyId))
+      await ctx.db.delete(signup._id);
     await ctx.db.delete(familyId);
   },
 });

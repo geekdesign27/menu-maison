@@ -13,6 +13,14 @@ const OLD_NO_INVITE_HASH = "#/sans-invitation";
 /** Sign-up form of the app (convex/stripeNode.ts startCheckout). */
 export const SIGNUP_HASH = "#/essai";
 
+/** The three legal pages, open to everyone (landing surface, no Convex). */
+export const LEGAL_HASHES = {
+  mentions: "#/mentions-legales",
+  conditions: "#/conditions",
+  confidentialite: "#/confidentialite",
+} as const;
+export type LegalDoc = keyof typeof LEGAL_HASHES;
+
 export const LANDING_TITLE =
   "Menu Maison · Les menus de la semaine, les recettes et les courses en famille";
 
@@ -20,6 +28,13 @@ export type Entry = "landing" | "app";
 
 function pathOf(hash: string) {
   return hash.replace(/^#/, "").replace(/\/+$/, "") || "/";
+}
+
+/** The legal page an address opens, or null. */
+export function legalDocFor(hash: string): LegalDoc | null {
+  const path = pathOf(hash);
+  const found = Object.entries(LEGAL_HASHES).find(([, h]) => pathOf(h) === path);
+  return found ? (found[0] as LegalDoc) : null;
 }
 
 /**
@@ -30,6 +45,7 @@ export function entryFor(hash: string, signedIn: boolean): Entry {
   const path = pathOf(hash);
   if ([LANDING_HASH, PRICING_HASH, OLD_NO_INVITE_HASH].some((h) => path === pathOf(h)))
     return "landing";
+  if (legalDocFor(hash)) return "landing";
   return path === "/" && !signedIn ? "landing" : "app";
 }
 

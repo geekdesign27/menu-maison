@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contactHref, entryFor, opensPricing, signupVisible } from "./entry";
+import { contactHref, entryFor, legalDocFor, opensPricing, signupVisible } from "./entry";
 
 describe("entryFor", () => {
   it("shows the landing page on the bare address to visitors", () => {
@@ -64,5 +64,22 @@ describe("signupVisible", () => {
   it("hides it in production until VITE_SIGNUP_OPEN is 1", () => {
     for (const raw of [undefined, "", "0", "true"]) expect(signupVisible(raw, false), String(raw)).toBe(false);
     expect(signupVisible("1", false)).toBe(true);
+  });
+});
+
+describe("legal pages", () => {
+  it("open on the landing surface, signed in or not", () => {
+    for (const hash of ["#/mentions-legales", "#/conditions", "#/confidentialite/"]) {
+      expect(entryFor(hash, false), hash).toBe("landing");
+      expect(entryFor(hash, true), hash).toBe("landing");
+    }
+  });
+
+  it("are found by their address only", () => {
+    expect(legalDocFor("#/conditions")).toBe("conditions");
+    expect(legalDocFor("#/confidentialite")).toBe("confidentialite");
+    expect(legalDocFor("#/mentions-legales")).toBe("mentions");
+    expect(legalDocFor("#/")).toBeNull();
+    expect(legalDocFor("#/conditions/x")).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import { useSession } from "../lib/session";
 import { useRun } from "../lib/toast";
 import { useT } from "../i18n/useT";
 import { Badge, Button } from "./ui";
+import { LegalLinksRow } from "./LegalLinks";
 
 const DAY = 24 * 60 * 60 * 1000;
 const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -108,6 +109,7 @@ export function SubscriptionPanel() {
           {t("billing.panel.manageHelp")}
         </p>
       )}
+      <LegalLinksRow />
     </div>
   );
 }

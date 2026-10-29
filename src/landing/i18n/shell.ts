@@ -13,6 +13,11 @@ export const fr = {
   "shell.openApp": "Ouvrir Menu Maison",
   "shell.openShort": "Ouvrir",
   "shell.demo": "Exemple, données fictives",
+  "legal.nav": "Informations légales",
+  "legal.home": "Retour à l'accueil",
+  "legal.app": "Retour à l'app",
+  "legal.version": "Version du {date}",
+  "legal.binding": "Ce texte existe aussi en allemand ; la version française fait foi.",
 } as const;
 
 export const de: { [K in keyof typeof fr]: string } = {
@@ -27,4 +32,9 @@ export const de: { [K in keyof typeof fr]: string } = {
   "shell.openApp": "Menu Maison öffnen",
   "shell.openShort": "Öffnen",
   "shell.demo": "Beispiel, erfundene Daten",
+  "legal.nav": "Rechtliches",
+  "legal.home": "Zurück zur Startseite",
+  "legal.app": "Zurück zur App",
+  "legal.version": "Fassung vom {date}",
+  "legal.binding": "Dieser Text ist eine Übersetzung; massgebend ist die französische Fassung.",
 };

@@ -1,6 +1,6 @@
 // Public landing page of menumaison.ch: static content and local examples only.
 // It loads no Convex client and reads no family data.
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "@fontsource-variable/nunito/wght-italic.css";
 import "./landing.css";
 import { hasStoredToken } from "../lib/device";
@@ -8,7 +8,9 @@ import { useDeviceLang } from "../lib/deviceLang";
 import { localeOf } from "../../convex/domain/lang";
 import { UiLangProvider } from "../components/ui";
 import { landingText, LandingLangContext } from "./lang";
-import { contactHref, opensPricing, signupVisible } from "./entry";
+import { contactHref, legalDocFor, opensPricing, signupVisible } from "./entry";
+import { LegalPage } from "./legal/LegalPage";
+import { LEGAL } from "./legal/content";
 import { LandingContext, type LandingValue } from "./parts";
 import { Budget } from "./sections/Budget";
 import { FinalCta, Footer } from "./sections/Closing";
@@ -34,9 +36,12 @@ const SIGNUP_OPEN = signupVisible(
 
 export function Landing() {
   const lang = useDeviceLang();
+  // A legal page or the landing page itself, from the address
+  const [legal, setLegal] = useState(() => legalDocFor(window.location.hash));
   // « Je n'ai pas de compte » (sign-in screen) and Stripe's cancel link: #/tarif opens at the price
   useEffect(() => {
     const toPricing = () => {
+      setLegal(legalDocFor(window.location.hash));
       // A plain scroll: no focus ring on a heading nobody tabbed to
       if (opensPricing(window.location.hash))
         requestAnimationFrame(() =>
@@ -57,16 +62,27 @@ export function Landing() {
     [],
   );
 
+  // Another page of the same surface starts at the top (main.tsx does it between
+  // surfaces), or at the price for #/tarif, once the landing page is drawn again
+  useEffect(() => {
+    if (opensPricing(window.location.hash))
+      document.getElementById("tarif")?.scrollIntoView({ block: "start" });
+    else window.scrollTo(0, 0);
+  }, [legal]);
+
   // Tab title and page language follow the FR | DE switch
   useEffect(() => {
-    document.title = landingText(lang, "shell.title");
+    document.title = legal ? `${LEGAL[lang][legal].title} · Menu Maison` : landingText(lang, "shell.title");
     document.documentElement.lang = localeOf(lang);
-  }, [lang]);
+  }, [lang, legal]);
 
   return (
     <LandingLangContext.Provider value={lang}>
       <UiLangProvider lang={lang}>
         <LandingContext.Provider value={value}>
+          {legal ? (
+            <LegalPage doc={legal} />
+          ) : (
           <div className="lp bg-cream text-ink">
             <a
               href="#contenu"
@@ -96,6 +112,7 @@ export function Landing() {
             </main>
             <Footer />
           </div>
+          )}
         </LandingContext.Provider>
       </UiLangProvider>
     </LandingLangContext.Provider>

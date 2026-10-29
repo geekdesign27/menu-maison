@@ -467,7 +467,7 @@ function randomHex() {
 }
 
 /**
- * Daily: the e-mail 2 days before the end of a free trial (Stripe sends none
+ * Daily: the e-mail 2 to 3 days before the end of a free trial (Stripe sends none
  * for so short a trial), once per subscription.
  */
 export const trialReminders = internalMutation({
