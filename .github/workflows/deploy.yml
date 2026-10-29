@@ -1,5 +1,8 @@
-name: Deploy to GitHub Pages
+name: Deploy (dev, then production after approval)
 
+# Every push on main: tests, then the online test version (dev.menumaison.ch,
+# its own Convex project), then production (menumaison.ch) only once PA has
+# approved the run in GitHub (environment « production », required reviewer).
 on:
   push:
     branches: [main]
@@ -10,12 +13,13 @@ permissions:
   pages: write
   id-token: write
 
+# A newer push replaces a run still waiting for approval: only the latest goes on
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +30,55 @@ jobs:
       - run: npm ci
       - run: npx vitest run
       - run: npx tsc -b
+
+  dev:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: https://dev.menumaison.ch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Deploys the Convex functions to the dev project, then builds Vite with its URL
+      - run: npx convex deploy --cmd 'npx vite build' --cmd-url-env-var-name VITE_CONVEX_URL
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_DEV }}
+          VITE_SITE_ENV: dev
+          VITE_CONTACT_URL: ${{ vars.VITE_CONTACT_URL }}
+          # Sign-ups always open on dev: Stripe there is in test mode
+          VITE_SIGNUP_OPEN: "1"
+      # Kept out of search engines
+      - run: |
+          printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt
+          sed -i 's|<head>|<head><meta name="robots" content="noindex, nofollow">|' dist/index.html
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          deploy_key: ${{ secrets.DEV_SITE_DEPLOY_KEY }}
+          external_repository: geekdesign27/menu-maison-dev
+          publish_branch: gh-pages
+          publish_dir: dist
+          cname: dev.menumaison.ch
+          force_orphan: true
+
+  build:
+    needs: dev
+    runs-on: ubuntu-latest
+    # Waits here for PA's approval in GitHub (Review deployments, Approve)
+    environment:
+      name: production
+      url: https://menumaison.ch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       # Deploys Convex functions to production, then builds Vite with the production URL
       - run: npx convex deploy --cmd 'npx vite build' --cmd-url-env-var-name VITE_CONVEX_URL
         env:

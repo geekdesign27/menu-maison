@@ -1,6 +1,7 @@
 // Public landing page of menumaison.ch: static content and local examples only.
 // It loads no Convex client and reads no family data.
 import { useEffect, useMemo, useState } from "react";
+import { siteTitle } from "../lib/siteEnv";
 import "@fontsource-variable/nunito/wght-italic.css";
 import "./landing.css";
 import { hasStoredToken } from "../lib/device";
@@ -94,7 +95,7 @@ export function Landing() {
 
   // Tab title and page language follow the FR | DE switch
   useEffect(() => {
-    document.title = legal ? `${LEGAL[lang][legal].title} · Menu Maison` : landingText(lang, "shell.title");
+    document.title = siteTitle(legal ? `${LEGAL[lang][legal].title} · Menu Maison` : landingText(lang, "shell.title"));
     document.documentElement.lang = localeOf(lang);
   }, [lang, legal]);
 

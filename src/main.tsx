@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@fontsource-variable/nunito";
 import "./index.css";
 import { hasStoredToken } from "./lib/device";
+import { IS_DEV_SITE, siteTitle } from "./lib/siteEnv";
 // Listens for Chrome's install prompt from the start: it fires once, early
 import "./lib/install";
 import { applyLook, applyRememberedLook, DEFAULT_LOOK } from "./lib/look";
@@ -22,10 +23,10 @@ function prepare(entry: Entry) {
   if (entry === "landing") {
     // The public face stays Carotte and Nunito, whatever look this phone remembers
     applyLook(DEFAULT_LOOK);
-    document.title = LANDING_TITLE;
+    document.title = siteTitle(LANDING_TITLE);
   } else {
     applyRememberedLook();
-    document.title = "Menu Maison";
+    document.title = siteTitle("Menu Maison");
   }
 }
 
@@ -46,7 +47,20 @@ function Root() {
     first.current = false;
   }, [entry]);
 
-  return <Suspense fallback={null}>{entry === "landing" ? <Landing /> : <App />}</Suspense>;
+  return (
+    <>
+      <Suspense fallback={null}>{entry === "landing" ? <Landing /> : <App />}</Suspense>
+      {/* Test version: a yellow line on top and a badge low on the left, both letting clicks through */}
+      {IS_DEV_SITE && (
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-[1000]">
+          <div className="h-1 bg-sun" />
+          <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+6rem)] left-2 rounded-full bg-ink/85 px-3 py-1 text-[16px] font-black text-white">
+            DEV · test
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 createRoot(document.getElementById("root")!).render(
