@@ -7,6 +7,7 @@ export const fr = {
   "hero.titleHighlight": "une réponse",
   "hero.lead":
     "Planifie les repas de la semaine, retrouve tes recettes, écoute les envies de toute la famille et prépare tes courses sans te prendre la tête. Même les restes ont leur place.",
+  "hero.trial": "Débuter mon essai gratuit de {days} jours",
   "hero.discover": "Découvrir comment ça marche",
   "hero.note": "Attention : risque élevé de savoir ce qu'on mange jeudi.",
   "hero.phoneAlt":
@@ -88,6 +89,7 @@ export const de: { [K in keyof typeof fr]: string } = {
   "hero.titleHighlight": "eine Antwort",
   "hero.lead":
     "Plane die Mahlzeiten der Woche, finde deine Rezepte wieder, hör auf die Wünsche der ganzen Familie und bereite deinen Einkauf vor, ganz ohne Kopfzerbrechen. Sogar die Reste haben ihren Platz.",
+  "hero.trial": "Meinen {days}-tägigen Gratis-Test starten",
   "hero.discover": "Schau, wie es funktioniert",
   "hero.note":
     "Achtung: hohes Risiko, dass du schon weisst, was es am Donnerstag gibt.",

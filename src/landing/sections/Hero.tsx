@@ -3,7 +3,9 @@ import { Check } from "lucide-react";
 import { ChainMark } from "../../components/shopping/chains";
 import { cx } from "../../components/ui";
 import { CurlyArrow, Squiggle, Star } from "../doodles";
-import { pill, Phone, SectionLink, useLogin } from "../parts";
+import { pill, Phone, SectionLink, useLanding, useLogin } from "../parts";
+import { PRICING_ID } from "../entry";
+import { TRIAL_DAYS } from "../../../convex/domain/billing";
 import { useL } from "../lang";
 import { typo } from "../typo";
 
@@ -76,6 +78,7 @@ function PortionsBadge() {
 
 export function Hero() {
   const login = useLogin();
+  const { signedIn, signupOpen } = useLanding();
   const { l } = useL();
   return (
     <section id="haut" aria-labelledby="haut-titre" className="relative overflow-hidden pt-6 pb-20 sm:pt-10 sm:pb-28">
@@ -103,10 +106,18 @@ export function Hero() {
           <p className="mt-7 max-w-[33rem] text-lg leading-relaxed text-muted sm:text-xl">
             {l("hero.lead")}
           </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a href={login.href} className={cx(pill.primary, pill.large)}>
-              {login.label}
-            </a>
+          {/* Each button on one line from tablets up: the second one wraps below when needed */}
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center [&>a]:sm:whitespace-nowrap">
+            {/* A visitor goes to the price first; a family already signed in opens its app */}
+            {signupOpen && !signedIn ? (
+              <SectionLink to={PRICING_ID} className={cx(pill.primary, pill.large)}>
+                {l("hero.trial", { days: TRIAL_DAYS })}
+              </SectionLink>
+            ) : (
+              <a href={login.href} className={cx(pill.primary, pill.large)}>
+                {login.label}
+              </a>
+            )}
             <SectionLink to="fonctionnement" className={cx(pill.secondary, pill.large)}>
               {l("hero.discover")}
             </SectionLink>
