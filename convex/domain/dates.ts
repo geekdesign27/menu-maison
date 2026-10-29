@@ -149,6 +149,14 @@ export function formatDayLong(date: string, lang: Lang = "fr"): string {
   return `${DAY_NAMES[dayOfWeek(date)]} ${dayNumber(day)} ${MONTH_NAMES[month]}`;
 }
 
+/**
+ * « vendredi 29 octobre 2027 », « Freitag, 29. Oktober 2027 »: billing dates,
+ * often a year away, so the year is always written.
+ */
+export function formatDayWithYear(date: string, lang: Lang = "fr"): string {
+  return [formatDayLong(date, lang), parts(date).year].join(" ");
+}
+
 /** « sam. 24 », « Sa. 24. » */
 export function formatDayShort(date: string, lang: Lang = "fr"): string {
   const { day } = parts(date);

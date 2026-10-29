@@ -168,13 +168,17 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   inscription avec 4242 (`trialing`, bienvenue et alerte envoyées) ; fin d'essai payée (`active`
   jusqu'en 2027, e-mail confirmé) ; résiliation en fin de période (drapeau posé, e-mail résilié) puis
   annulation immédiate (`canceled`) ; fin d'essai avec 4000 0000 0000 0341 (`past_due`, e-mail
-  paiement échoué, bandeau vu à l'écran). Pas joué : la résiliation cliquée dans le portail
-  (mêmes événements que par l'API) et le renouvellement après un an (même événement).
+  paiement échoué, bandeau vu à l'écran). Puis, le même jour : résiliation **cliquée dans le
+  portail** (elle pose `cancel_at`, pas `cancel_at_period_end` : bug trouvé et corrigé,
+  `subscriptionEnd`), retour en arrière (« renouveler »), et **renouvellement après un an** avec
+  une horloge de test Stripe (facture annuelle payée, fin repoussée à 2028 dans l'app).
 - Le compte Stripe a la version d'API par défaut **2015-10-16** : créer le webhook de production
   avec la version la plus récente. Le code relit chaque abonnement par le SDK, il ne dépend pas
   du format de l'événement.
-- [ ] Bouton « Réactiver » avec un vrai abonnement terminé.
-- [ ] Bandeau « lecture seule » vu à l'écran (« paiement échoué » vu le 2026-10-29).
+- [x] Bouton « Réactiver » avec un vrai abonnement terminé : Checkout sans essai, 20 CHF, retour
+  « Abonnement enregistré », lecture seule levée (2026-10-29).
+- [x] Bandeaux « paiement échoué » et « lecture seule » vus à l'écran, écriture refusée par le
+  serveur en lecture seule (2026-10-29).
 - Paiement par carte via Stripe (Apple Pay et Google Pay compris si Stripe les propose). TWINT
   pas nécessaire (décision de PA, 2026-10-29).
 - [ ] Nom affiché sur la page de paiement : « Entreprise 1 » à remplacer (réglages publics du

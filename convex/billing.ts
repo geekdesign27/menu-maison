@@ -13,7 +13,7 @@ import { createInvite, reserve } from "./access";
 import { createFamily } from "./families";
 import { assertAdmin, requireMember, sha256 } from "./lib";
 import { sendOnce, siteUrl } from "./email";
-import { formatDayLong } from "./domain/dates";
+import { formatDayWithYear } from "./domain/dates";
 import type { EmailData, EmailKind } from "./domain/emails";
 import type { Lang } from "./domain/lang";
 import { slugFromName } from "./domain/auth";
@@ -163,7 +163,7 @@ async function familyContact(ctx: MutationCtx, familyId: Id<"families">) {
 }
 
 const dayIn = (ms: number | undefined, lang: Lang) =>
-  ms ? formatDayLong(new Date(ms).toISOString().slice(0, 10), lang) : "";
+  ms ? formatDayWithYear(new Date(ms).toISOString().slice(0, 10), lang) : "";
 
 /**
  * E-mails on a change of subscription, to the family and to PA: paid after the

@@ -18,6 +18,7 @@ import {
   SIGNUP_CLOSED,
   signupOpen,
   signupProblem,
+  subscriptionEnd,
   TRIAL_DAYS,
 } from "./domain/billing";
 import { deleteConfirmMatches } from "./domain/account";
@@ -257,18 +258,20 @@ export const openPortal = action({
 
 /** The subscription's details as stored on the family. */
 function subscriptionFields(sub: Stripe.Subscription, email?: string | null) {
-  // From this API version, the period lives on the subscription's items
-  const itemEnd = sub.items.data[0]?.current_period_end;
-  const end =
-    sub.status === "trialing" && sub.trial_end ? sub.trial_end : itemEnd;
   return {
     customerId:
       typeof sub.customer === "string" ? sub.customer : sub.customer.id,
     subscriptionId: sub.id,
     email: email ?? undefined,
     stripeStatus: sub.status,
-    periodEnd: end ? end * 1000 : undefined,
-    cancelAtPeriodEnd: sub.cancel_at_period_end,
+    ...subscriptionEnd({
+      status: sub.status,
+      trialEnd: sub.trial_end,
+      // From this API version, the period lives on the subscription's items
+      periodEnd: sub.items.data[0]?.current_period_end ?? null,
+      cancelAt: sub.cancel_at,
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+    }),
   };
 }
 

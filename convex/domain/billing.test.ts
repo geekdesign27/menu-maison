@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessOf, daysLeft, GRACE_DAYS, inTrial, isOffered, numberedFamilyName, signupOpen, signupProblem, statusFromStripe } from "./billing";
+import { accessOf, daysLeft, GRACE_DAYS, inTrial, isOffered, numberedFamilyName, signupOpen, signupProblem, statusFromStripe, subscriptionEnd } from "./billing";
 import { slugFromName } from "./auth";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -90,5 +90,26 @@ describe("sign-ups", () => {
     for (const flag of [undefined, "", "0", "true", "oui", "yes"]) expect(signupOpen(flag), String(flag)).toBe(false);
     expect(signupOpen("1")).toBe(true);
     expect(signupOpen(" 1 ")).toBe(true);
+  });
+});
+
+describe("subscriptionEnd", () => {
+  const base = { status: "active", trialEnd: null, periodEnd: 2_000, cancelAt: null, cancelAtPeriodEnd: false };
+
+  it("runs to the period's end, not set to stop", () => {
+    expect(subscriptionEnd(base)).toEqual({ periodEnd: 2_000_000, cancelAtPeriodEnd: false });
+  });
+
+  it("ends with the trial while trialing", () => {
+    expect(subscriptionEnd({ ...base, status: "trialing", trialEnd: 1_500 }).periodEnd).toBe(1_500_000);
+  });
+
+  it("sees a cancellation from the old flag", () => {
+    expect(subscriptionEnd({ ...base, cancelAtPeriodEnd: true })).toEqual({ periodEnd: 2_000_000, cancelAtPeriodEnd: true });
+  });
+
+  it("sees a cancellation from the portal's date (cancel_at), the earlier date ending it", () => {
+    expect(subscriptionEnd({ ...base, cancelAt: 2_000 })).toEqual({ periodEnd: 2_000_000, cancelAtPeriodEnd: true });
+    expect(subscriptionEnd({ ...base, cancelAt: 1_800 })).toEqual({ periodEnd: 1_800_000, cancelAtPeriodEnd: true });
   });
 });

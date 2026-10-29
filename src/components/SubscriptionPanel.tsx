@@ -3,7 +3,7 @@ import { useAction, useQuery } from "convex/react";
 import { CreditCard, ExternalLink } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { accessOf, GRACE_DAYS } from "../../convex/domain/billing";
-import { formatDayLong } from "../../convex/domain/dates";
+import { formatDayWithYear } from "../../convex/domain/dates";
 import { useSession } from "../lib/session";
 import { useRun } from "../lib/toast";
 import { useT } from "../i18n/useT";
@@ -27,7 +27,7 @@ export function SubscriptionPanel() {
   if (!sub) return null;
 
   const day = (ms: number | null) =>
-    ms ? formatDayLong(isoDay(ms), lang) : "";
+    ms ? formatDayWithYear(isoDay(ms), lang) : "";
   const go = async (open: () => Promise<{ url: string }>) => {
     setBusy(true);
     const r = await run(open);

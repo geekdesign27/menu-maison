@@ -123,6 +123,27 @@ export function signupProblem(input: { familyName: string; adminName: string }):
   return problem ? `Ce nom ne donne pas un lien valable : ${problem.toLowerCase()}` : null;
 }
 
+/**
+ * When the subscription stops serving, and whether it is set to stop. Stripe's
+ * portal no longer sets `cancel_at_period_end`: it sets a date, `cancel_at`
+ * (seconds, like every Stripe time). The earlier of that date and the period's
+ * end is the last day; either one means « résilié, s'arrête le… ».
+ */
+export function subscriptionEnd(sub: {
+  status: string;
+  trialEnd: number | null;
+  periodEnd: number | null;
+  cancelAt: number | null;
+  cancelAtPeriodEnd: boolean;
+}): { periodEnd?: number; cancelAtPeriodEnd: boolean } {
+  const end = sub.status === "trialing" && sub.trialEnd ? sub.trialEnd : sub.periodEnd;
+  const last = end && sub.cancelAt ? Math.min(end, sub.cancelAt) : (end ?? sub.cancelAt);
+  return {
+    periodEnd: last ? last * 1000 : undefined,
+    cancelAtPeriodEnd: sub.cancelAtPeriodEnd || sub.cancelAt !== null,
+  };
+}
+
 /** Shown while sign-ups are closed (S4 to S7: legal pages and live Stripe keys first). */
 export const SIGNUP_CLOSED = "Les inscriptions ouvrent bientôt.";
 /** Same lock for an existing family that would subscribe: no payment on test keys. */

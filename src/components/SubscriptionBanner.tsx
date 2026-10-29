@@ -1,5 +1,5 @@
 import { accessOf, daysLeft, GRACE_DAYS, isOffered } from "../../convex/domain/billing";
-import { formatDayLong } from "../../convex/domain/dates";
+import { formatDayWithYear } from "../../convex/domain/dates";
 import { useSession } from "../lib/session";
 import { useT } from "../i18n/useT";
 import { cx } from "./ui";
@@ -37,14 +37,14 @@ export function SubscriptionBanner() {
     tone = "bad";
   } else if (access === "grace") {
     text = t("billing.pastDue", {
-      date: formatDayLong(isoDay((sub.pastDueSince ?? now) + GRACE_DAYS * DAY), lang),
+      date: formatDayWithYear(isoDay((sub.pastDueSince ?? now) + GRACE_DAYS * DAY), lang),
     });
     tone = "warn";
   } else if (admin && sub.status === "trialing" && !sub.cancelAtPeriodEnd) {
     const days = daysLeft(sub.periodEnd ?? undefined, now);
     text = days <= 1 ? t("billing.trialLastDay") : t("billing.trial", { days });
   } else if (admin && sub.cancelAtPeriodEnd && sub.periodEnd) {
-    text = t("billing.ending", { date: formatDayLong(isoDay(sub.periodEnd), lang) });
+    text = t("billing.ending", { date: formatDayWithYear(isoDay(sub.periodEnd), lang) });
     tone = "warn";
   }
   if (!text) return null;

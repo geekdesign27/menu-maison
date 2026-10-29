@@ -5,6 +5,7 @@ import {
   daysBetween,
   formatDateRange,
   formatDayLong,
+  formatDayWithYear,
   formatDayShort,
   weekDays,
   weekStart,
@@ -104,5 +105,13 @@ describe("day formats, French and German", () => {
       formatDateRange("2026-10-31", "2026-11-06") + formatDayLong("2026-10-24");
     const dashes = new RegExp(`[${String.fromCharCode(0x2013, 0x2014)}]`);
     expect(text).not.toMatch(dashes);
+  });
+});
+
+describe("formatDayWithYear", () => {
+  it("writes the year, for billing dates a year away", () => {
+    expect(formatDayWithYear("2027-10-29")).toBe("vendredi 29 octobre 2027");
+    expect(formatDayWithYear("2027-11-01")).toBe("lundi 1er novembre 2027");
+    expect(formatDayWithYear("2027-10-29", "de")).toBe("Freitag, 29. Oktober 2027");
   });
 });
