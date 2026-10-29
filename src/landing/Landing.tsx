@@ -8,8 +8,9 @@ import { useDeviceLang } from "../lib/deviceLang";
 import { localeOf } from "../../convex/domain/lang";
 import { UiLangProvider } from "../components/ui";
 import { landingText, LandingLangContext } from "./lang";
-import { contactHref, legalDocFor, opensPricing, signupVisible } from "./entry";
+import { contactHref, legalDocFor, opensPricing, PRICING_ID, signupVisible } from "./entry";
 import { LegalPage } from "./legal/LegalPage";
+import { clickEventOf, track } from "../lib/visits";
 import { LEGAL } from "./legal/content";
 import { LandingContext, type LandingValue } from "./parts";
 import { Budget } from "./sections/Budget";
@@ -45,7 +46,7 @@ export function Landing() {
       // A plain scroll: no focus ring on a heading nobody tabbed to
       if (opensPricing(window.location.hash))
         requestAnimationFrame(() =>
-          document.getElementById("tarif")?.scrollIntoView({ block: "start" }),
+          document.getElementById(PRICING_ID)?.scrollIntoView({ block: "start" }),
         );
     };
     toPricing();
@@ -62,11 +63,32 @@ export function Landing() {
     [],
   );
 
+  // Visit statistics (lib/visits.ts), on the landing page itself (not the legal
+  // pages): a visit per page load, and the counted buttons
+  useEffect(() => {
+    if (legal) return;
+    track("visit", lang);
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      // A press on the active language changes nothing: not counted
+      const switched = target?.closest("[data-lang-switch] button");
+      if (switched) {
+        if (switched.getAttribute("aria-pressed") !== "true") track("lang", lang);
+        return;
+      }
+      const event = clickEventOf(target?.closest("a")?.getAttribute("href") ?? null, CONTACT);
+      if (event) track(event, lang);
+    };
+    // Capture: the in-page links stop the default action, not the event
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [legal, lang]);
+
   // Another page of the same surface starts at the top (main.tsx does it between
   // surfaces), or at the price for #/tarif, once the landing page is drawn again
   useEffect(() => {
     if (opensPricing(window.location.hash))
-      document.getElementById("tarif")?.scrollIntoView({ block: "start" });
+      document.getElementById(PRICING_ID)?.scrollIntoView({ block: "start" });
     else window.scrollTo(0, 0);
   }, [legal]);
 

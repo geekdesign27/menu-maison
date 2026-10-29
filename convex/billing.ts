@@ -28,6 +28,7 @@ import {
   signupProblem,
   statusFromStripe,
 } from "./domain/billing";
+import { bump, bumpOnce } from "./visits";
 
 // How long the return page may still hand out the admin's first link (a Checkout page lasts 24 h)
 const CLAIM_HOURS = 24;
@@ -104,6 +105,8 @@ export const recordSignup = internalMutation({
       adminName: args.adminName.trim(),
       createdAt: Date.now(),
     });
+    // A new family on its way to Stripe (not an existing one subscribing again)
+    if (!args.familyId) await bump(ctx, "checkout");
   },
 });
 
@@ -193,6 +196,9 @@ async function notifyChange(
   if (after.status === "active" && (!before || before.status === "trialing" || before.status === "canceled")) {
     const subscribers = (await ctx.db.query("families").collect()).filter((f) => f.billing?.status === "active").length;
     await send("confirmed", "adminConverted", sub, { date: dayIn(after.periodEnd, lang), link: `${site}/#/`, subscribers });
+    // Without subscription id (never seen from Stripe), counted each time rather than once for all
+    if (after.subscriptionId) await bumpOnce(ctx, "paid", after.subscriptionId);
+    else await bump(ctx, "paid");
   }
   if (after.status === "past_due" && before?.status !== "past_due")
     await send("paymentFailed", "adminPaymentFailed", `${sub}:${after.pastDueSince}`, {
@@ -263,6 +269,7 @@ export const completeSignup = internalMutation({
       data: { ...data, date: dayIn(sub.periodEnd, "fr"), link: undefined },
       familyId,
     });
+    await bump(ctx, "trialStarted");
     return familyId;
   },
 });

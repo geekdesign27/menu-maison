@@ -7,7 +7,7 @@ import {
   ShoppingBasket,
   House,
   ShieldCheck,
-  Store, CreditCard } from "lucide-react";
+  Store, CreditCard, ChartColumn } from "lucide-react";
 import { GestionContext } from "../lib/paths";
 import { useMe, useSession } from "../lib/session";
 import { Avatar, cx } from "../components/ui";
@@ -48,6 +48,7 @@ export function GestionLayout() {
             label: "Super admin",
             icon: ShieldCheck,
           },
+          { to: "/gestion/statistiques", label: "Statistiques", icon: ChartColumn },
         ]
       : []),
   ];

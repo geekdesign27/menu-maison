@@ -6,6 +6,8 @@
 export const LOGIN_HASH = "#/connexion";
 /** The landing page, even on a signed-in phone. */
 export const LANDING_HASH = "#/decouvrir";
+/** The price section's id on the landing page (nav « Tarif », #/tarif). */
+export const PRICING_ID = "tarif";
 /** The landing page at its price (« Je n'ai pas de compte » on the sign-in screen). */
 export const PRICING_HASH = "#/tarif";
 /** Former address of the « no invitation » message: now the price as well. */

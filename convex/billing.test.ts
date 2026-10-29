@@ -179,6 +179,13 @@ describe("subscription updates from Stripe", () => {
       sub({ stripeStatus: "active" }),
     );
     expect((await familyOf(t)).billing?.status).toBe("active");
+    // Counted once each for the statistics' funnel, whatever the events received twice
+    await complete(t);
+    await t.mutation(internal.billing.updateSubscription, sub({ stripeStatus: "active" }));
+    const funnel = await t.run(async (ctx) =>
+      Object.fromEntries((await ctx.db.query("visitStats").collect()).map((r) => [r.event, r.count])),
+    );
+    expect(funnel).toEqual({ checkout: 1, trialStarted: 1, paid: 1 });
 
     await t.mutation(
       internal.billing.updateSubscription,

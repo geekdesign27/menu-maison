@@ -14,7 +14,7 @@ import { assertInt, assertPositive } from "./lib";
  * read `ctx.db` across families on purpose, and return counts and names only,
  * never a family's recipes, lists or receipts.
  */
-async function requireSuperadmin(ctx: QueryCtx, token: string) {
+export async function requireSuperadmin(ctx: QueryCtx, token: string) {
   const me = await requireMember(ctx, token);
   if (me.member.superadmin !== true)
     throw new ConvexError("Réservé au super-admin.");

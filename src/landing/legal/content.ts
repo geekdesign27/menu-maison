@@ -197,7 +197,7 @@ const FR: Record<LegalDoc, LegalText> = {
       {
         heading: "6. Cookies et suivi",
         paragraphs: [
-          "Menu Maison n'utilise aucun cookie publicitaire et aucun outil de pistage. Le téléphone garde seulement, dans son stockage local, la session de connexion et quelques préférences d'affichage (langue, thème).",
+          "Menu Maison n'utilise aucun cookie et aucun outil de pistage. Le téléphone garde seulement, dans son stockage local, la session de connexion et quelques préférences d'affichage (langue, thème). Les visites du site sont comptées de façon anonyme : un simple compteur par jour, avec la langue, le site de provenance et le type d'appareil (téléphone ou ordinateur), sans adresse IP ni identifiant de visiteur. Les téléphones des familles connectées ne sont pas comptés.",
         ],
       },
       {
@@ -390,7 +390,7 @@ const DE: Record<LegalDoc, LegalText> = {
       {
         heading: "6. Cookies und Tracking",
         paragraphs: [
-          "Menu Maison verwendet keine Werbe-Cookies und kein Tracking. Das Handy speichert lokal nur die Anmeldung und einige Anzeigeeinstellungen (Sprache, Design).",
+          "Menu Maison verwendet keine Cookies und kein Tracking. Das Handy speichert lokal nur die Anmeldung und einige Anzeigeeinstellungen (Sprache, Design). Die Besuche der Website werden anonym gezählt: ein einfacher Zähler pro Tag, mit Sprache, Herkunftsseite und Gerätetyp (Handy oder Computer), ohne IP-Adresse und ohne Besucherkennung. Die Handys angemeldeter Familien werden nicht gezählt.",
         ],
       },
       {

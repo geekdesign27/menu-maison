@@ -35,6 +35,7 @@ import type * as domain_sort from "../domain/sort.js";
 import type * as domain_stats from "../domain/stats.js";
 import type * as domain_tags from "../domain/tags.js";
 import type * as domain_text from "../domain/text.js";
+import type * as domain_visits from "../domain/visits.js";
 import type * as email from "../email.js";
 import type * as families from "../families.js";
 import type * as familyData from "../familyData.js";
@@ -58,6 +59,7 @@ import type * as stats from "../stats.js";
 import type * as stripeNode from "../stripeNode.js";
 import type * as superadmin from "../superadmin.js";
 import type * as templates from "../templates.js";
+import type * as visits from "../visits.js";
 import type * as wishes from "../wishes.js";
 
 import type {
@@ -94,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   "domain/stats": typeof domain_stats;
   "domain/tags": typeof domain_tags;
   "domain/text": typeof domain_text;
+  "domain/visits": typeof domain_visits;
   email: typeof email;
   families: typeof families;
   familyData: typeof familyData;
@@ -117,6 +120,7 @@ declare const fullApi: ApiFromModules<{
   stripeNode: typeof stripeNode;
   superadmin: typeof superadmin;
   templates: typeof templates;
+  visits: typeof visits;
   wishes: typeof wishes;
 }>;
 

@@ -5,11 +5,12 @@ import { pill, SectionLink, useLogin } from "../parts";
 import { LangSwitch } from "../../components/LangSwitch";
 import type { LandingKey } from "../i18n";
 import { useL } from "../lang";
+import { PRICING_ID } from "../entry";
 
 export const NAV = [
   { to: "fonctionnement", labelKey: "shell.navHow" },
   { to: "astuces", labelKey: "shell.navTips" },
-  { to: "tarif", labelKey: "shell.navPricing" },
+  { to: PRICING_ID, labelKey: "shell.navPricing" },
 ] as const satisfies readonly { to: string; labelKey: LandingKey }[];
 
 /** Logo and name, as on the app icon: the smiling « m » with its fork. */

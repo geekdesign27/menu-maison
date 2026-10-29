@@ -447,6 +447,24 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_member", ["memberId"]),
 
+  /**
+   * Visit statistics (convex/visits.ts): a counter per Swiss day and event;
+   * visits also by source, language and device. No IP, no visitor id.
+   */
+  visitStats: defineTable({
+    day: v.string(), // « 2026-10-29 », Swiss time
+    event: v.string(),
+    source: v.string(), // « direct », « google », « utm:… » ; empty for server events
+    lang: v.string(), // « fr », « de » ; empty for server events
+    device: v.string(), // « mobile », « desktop » ; empty for server events
+    count: v.number(),
+  })
+    .index("by_key", ["day", "event", "source", "lang", "device"])
+    .index("by_day", ["day"]),
+
+  /** Server events already counted (SHA-256 of « paid:<subscription> »), so a Stripe event replayed counts once. */
+  visitOnce: defineTable({ key: v.string() }).index("by_key", ["key"]),
+
   /** Brute-force guard per sign-in name: « <family link name>:<username> ». */
   loginGuards: defineTable({
     key: v.string(),

@@ -11,6 +11,7 @@ export function LangSwitch({ className }: { className?: string }) {
     <div
       role="group"
       aria-label="Langue · Sprache"
+      data-lang-switch
       className={cx("inline-flex shrink-0 rounded-full bg-paper p-1 ring-1 ring-line", className)}
     >
       {LANGS.map((l) => (

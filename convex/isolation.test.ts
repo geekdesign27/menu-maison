@@ -365,6 +365,7 @@ describe("writes on another family's ids are refused", () => {
     ],
     // A family admin is not the super-admin: the whole space is refused
     ["superadmin.families", () => s.t.query(api.superadmin.families, { token: s.b.token })],
+    ["visits.summary", () => s.t.query(api.visits.summary, { token: s.b.token, days: 7 })],
     [
       "superadmin.createOne",
       () => s.t.mutation(api.superadmin.createOne, { token: s.b.token, name: "Pirates", admin: "Jack" }),

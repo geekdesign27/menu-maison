@@ -3,7 +3,7 @@ import { LogoSymbol } from "../../components/Logo";
 import { cx } from "../../components/ui";
 import { PRICE_CHF, TRIAL_DAYS } from "../../../convex/domain/billing";
 import { Toque } from "../doodles";
-import { SIGNUP_HASH } from "../entry";
+import { PRICING_ID, SIGNUP_HASH } from "../entry";
 import { Heading, pill, Reveal, Section, useLanding, useLogin } from "../parts";
 import { useL } from "../lang";
 
@@ -44,12 +44,12 @@ export function Pricing() {
   const login = useLogin();
 
   return (
-    <Section id="tarif" tone="paper">
+    <Section id={PRICING_ID} tone="paper">
       <Reveal>
         <div className="relative rounded-[2.4rem] border-2 border-dashed border-carrot/30 bg-cream p-6 sm:p-12 lg:p-16">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-16">
             <div>
-              <Heading id="tarif">{l("pricing.title")}</Heading>
+              <Heading id={PRICING_ID}>{l("pricing.title")}</Heading>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink/80">
                 {l("pricing.lead")}
               </p>
