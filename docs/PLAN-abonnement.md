@@ -163,11 +163,18 @@ complété pour une famille qui arrive seule, sans P-A pour l'aider :
 Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au public.
 
 **Paiement (Stripe)**
-- [ ] Webhook de bout en bout en mode test (Stripe CLI, `STRIPE_WEBHOOK_SECRET`) :
-  renouvellement, résiliation dans le portail, paiement échoué (carte de test 4000 0000 0000 0341),
-  fin d'essai sans paiement.
+- [x] Webhook de bout en bout en mode test (Stripe CLI, `STRIPE_WEBHOOK_SECRET`). **Fait le
+  2026-10-29**, chaque événement répondu 200 et l'état écrit en base :
+  inscription avec 4242 (`trialing`, bienvenue et alerte envoyées) ; fin d'essai payée (`active`
+  jusqu'en 2027, e-mail confirmé) ; résiliation en fin de période (drapeau posé, e-mail résilié) puis
+  annulation immédiate (`canceled`) ; fin d'essai avec 4000 0000 0000 0341 (`past_due`, e-mail
+  paiement échoué, bandeau vu à l'écran). Pas joué : la résiliation cliquée dans le portail
+  (mêmes événements que par l'API) et le renouvellement après un an (même événement).
+- Le compte Stripe a la version d'API par défaut **2015-10-16** : créer le webhook de production
+  avec la version la plus récente. Le code relit chaque abonnement par le SDK, il ne dépend pas
+  du format de l'événement.
 - [ ] Bouton « Réactiver » avec un vrai abonnement terminé.
-- [ ] Bandeaux « paiement échoué » et « lecture seule » vus à l'écran (seuls les tests les couvrent).
+- [ ] Bandeau « lecture seule » vu à l'écran (« paiement échoué » vu le 2026-10-29).
 - Paiement par carte via Stripe (Apple Pay et Google Pay compris si Stripe les propose). TWINT
   pas nécessaire (décision de PA, 2026-10-29).
 - [ ] Nom affiché sur la page de paiement : « Entreprise 1 » à remplacer (réglages publics du
