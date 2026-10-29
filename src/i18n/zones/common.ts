@@ -209,9 +209,6 @@ export const fr = {
   "common.tour.profilesTitle": "Profils et liens",
   "common.tour.profilesText":
     "Ajoute les profils de la famille. Dans la fiche de chacun, section Accès : son pseudo, son rôle et son lien d'activation.",
-  "common.tour.shoppingDayTitle": "Jour des courses",
-  "common.tour.shoppingDayText":
-    "La semaine du planning commence ce jour-là, la liste de courses couvre les sept jours qui suivent.",
   "common.tour.lookTitle": "Apparence",
   "common.tour.lookText":
     "Trois thèmes et quatre polices, pour toute la famille, appliqués tout de suite sur tous les téléphones.",
@@ -241,6 +238,26 @@ export const fr = {
   "common.steps.checkHint": "Courses, pendant les achats.",
   "common.steps.status": "Dire comment s'est passé un plat",
   "common.steps.statusHint": "Toucher un plat : Mangé, Pas mangé, Il en reste…",
+  "common.steps.email": "Ajouter ton e-mail",
+  "common.steps.emailHint": "Réglages, Mon compte\u00a0: utile si tu oublies ton mot de passe.",
+  "common.steps.members": "Ajouter les membres de la famille",
+  "common.steps.membersHint": "Réglages, Profils\u00a0: un profil par personne.",
+  "common.steps.joined": "Envoyer son lien à un membre",
+  "common.steps.joinedHint": "Dans sa fiche, section Accès\u00a0: le lien d'activation à partager.",
+  "common.steps.week": "Planifier une première semaine",
+  "common.steps.weekHint": "Semaine, «\u00a0+ Ajouter\u00a0»\u00a0: trois plats pour commencer.",
+  "common.steps.list": "Faire une première liste de courses",
+  "common.steps.listHint": "Courses\u00a0: coche les articles pendant les achats.",
+
+  // Family set-up, before the tour of a new admin
+  "common.setup.intro": "Salut {name}\u00a0! Trois réglages pour commencer, tu pourras les changer dans Réglages.",
+  "common.setup.day": "Quel jour fais-tu les courses\u00a0?",
+  "common.setup.dayHelp": "Les semaines du menu commencent ce jour-là.",
+  "common.setup.store": "Dans quel magasin\u00a0?",
+  "common.setup.storeHelp": "La liste de courses suit l'ordre de ses rayons.",
+  "common.setup.persons": "Combien êtes-vous à table\u00a0?",
+  "common.setup.personsHelp": "Les quantités des recettes en dépendent.",
+  "common.setup.save": "Continuer",
   // Names of products, aisles and usual items in both languages
   "common.nameFr": "Nom",
   "common.nameFrHint": "Le nom que voient les profils en français.",
@@ -445,9 +462,6 @@ export const de: { [K in keyof typeof fr]: string } = {
   "common.tour.profilesTitle": "Profile und Links",
   "common.tour.profilesText":
     "Füge die Profile der Familie hinzu. In jedem Profil, Bereich Zugang: Benutzername, Rolle und Aktivierungslink.",
-  "common.tour.shoppingDayTitle": "Einkaufstag",
-  "common.tour.shoppingDayText":
-    "Die Planungswoche beginnt an diesem Tag, die Einkaufsliste deckt die sieben Tage danach ab.",
   "common.tour.lookTitle": "Aussehen",
   "common.tour.lookText":
     "Drei Farbthemen und vier Schriften für die ganze Familie, sofort auf allen Handys.",
@@ -477,6 +491,26 @@ export const de: { [K in keyof typeof fr]: string } = {
   "common.steps.status": "Sagen, wie ein Gericht war",
   "common.steps.statusHint":
     "Tippe auf ein Gericht: Gegessen, Nicht gegessen, Reste übrig…",
+  "common.steps.email": "Deine E-Mail hinzufügen",
+  "common.steps.emailHint": "Einstellungen, Mein Konto: hilfreich, falls du dein Passwort vergisst.",
+  "common.steps.members": "Die Familienmitglieder hinzufügen",
+  "common.steps.membersHint": "Einstellungen, Profile: ein Profil pro Person.",
+  "common.steps.joined": "Einem Mitglied seinen Link schicken",
+  "common.steps.joinedHint": "In seinem Profil, Abschnitt Zugang: der Aktivierungslink zum Teilen.",
+  "common.steps.week": "Eine erste Woche planen",
+  "common.steps.weekHint": "Woche, «+ Hinzufügen»: drei Gerichte für den Anfang.",
+  "common.steps.list": "Eine erste Einkaufsliste erledigen",
+  "common.steps.listHint": "Einkauf: hake die Artikel beim Einkaufen ab.",
+
+  // Family set-up, before the tour of a new admin
+  "common.setup.intro": "Hallo {name}! Drei Einstellungen für den Start, du kannst sie später in den Einstellungen ändern.",
+  "common.setup.day": "An welchem Tag kaufst du ein?",
+  "common.setup.dayHelp": "Die Menüwochen beginnen an diesem Tag.",
+  "common.setup.store": "In welchem Laden?",
+  "common.setup.storeHelp": "Die Einkaufsliste folgt der Reihenfolge seiner Regale.",
+  "common.setup.persons": "Wie viele seid ihr am Tisch?",
+  "common.setup.personsHelp": "Die Mengen der Rezepte richten sich danach.",
+  "common.setup.save": "Weiter",
   "common.nameFr": "Name auf Französisch",
   "common.nameFrHint": "Den sehen die Profile auf Französisch. Leer gelassen: der deutsche Name.",
   "common.nameDe": "Name auf Deutsch",

@@ -174,6 +174,7 @@ describe("facts for the « Premiers pas » checklist", () => {
     });
     expect(await t.query(api.onboarding.facts, { token: "token-Max" })).toEqual(
       {
+        hasEmail: false,
         hasPhoto: false,
         likes: 0,
         wishes: 0,
@@ -216,6 +217,7 @@ describe("facts for the « Premiers pas » checklist", () => {
     });
     expect(await t.query(api.onboarding.facts, { token: "token-Max" })).toEqual(
       {
+        hasEmail: false,
         hasPhoto: false,
         likes: 2,
         wishes: 1,
@@ -259,5 +261,80 @@ describe("facts for the « Premiers pas » checklist", () => {
     expect(
       (await t.query(api.onboarding.facts, { token: "token-Max" })).statusesSet,
     ).toBe(0);
+  });
+
+  it("gives an admin the family counts, and the member's e-mail once confirmed", async () => {
+    const { t, member: max } = await setup();
+    const recipes = await t.query(api.recipes.list, { token: "token-Max" });
+    for (const slot of ["midi", "soir"] as const)
+      await t.mutation(api.meals.add, {
+        token: "token-Max",
+        date: DATE,
+        slot,
+        recipeId: recipes[0]._id,
+        persons: 2,
+      });
+    await t.mutation(api.shopping.toggle, {
+      token: "token-Max",
+      start: DATE,
+      itemKey: "x",
+      checked: true,
+      memberId: max,
+    });
+    // Unchecked again: no shopping done yet
+    await t.mutation(api.shopping.toggle, {
+      token: "token-Max",
+      start: DATE,
+      itemKey: "y",
+      checked: false,
+      memberId: max,
+    });
+    await t.run((ctx) => ctx.db.patch(max, { email: "max@example.ch" }));
+
+    const ada = await t.query(api.onboarding.facts, { token: "token-Ada" });
+    expect(ada.hasEmail).toBe(false);
+    // Max has an account, the baby a profile only
+    expect(ada.family).toEqual({
+      otherMembers: 2,
+      othersJoined: 1,
+      mealsPlanned: 2,
+      itemsChecked: 1,
+    });
+    const maxFacts = await t.query(api.onboarding.facts, { token: "token-Max" });
+    expect(maxFacts.hasEmail).toBe(true);
+    expect(maxFacts.family).toBeUndefined();
+  });
+
+  it("counts nothing from another family", async () => {
+    const { t } = await setup();
+    const other = await t.mutation(internal.families.create, {
+      name: "Voisins",
+      admin: "Zoé",
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("members", {
+        familyId: other.familyId,
+        name: "Léo",
+        emoji: "🙂",
+        color: "#A8C8E8",
+        order: 1,
+        role: "membre",
+        username: "leo",
+        passwordHash: "pbkdf2-sha256$1$00$00",
+      });
+      await ctx.db.insert("shoppingChecks", {
+        familyId: other.familyId,
+        periodStart: DATE,
+        itemKey: "z",
+        checked: true,
+      });
+    });
+    const ada = await t.query(api.onboarding.facts, { token: "token-Ada" });
+    expect(ada.family).toEqual({
+      otherMembers: 2,
+      othersJoined: 1,
+      mealsPlanned: 0,
+      itemsChecked: 0,
+    });
   });
 });

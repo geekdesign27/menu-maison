@@ -5,11 +5,13 @@ import {
   habitualsToStamp,
   LIKES_GOAL,
   ONBOARDING_HABITUAL,
+  WEEK_GOAL,
   shouldWelcome,
   showChecklist,
 } from "./onboarding";
 
 const nothing: OnboardingFacts = {
+  hasEmail: false,
   hasPhoto: false,
   likes: 0,
   wishes: 0,
@@ -18,6 +20,7 @@ const nothing: OnboardingFacts = {
   statusesSet: 0,
 };
 const everything: OnboardingFacts = {
+  hasEmail: true,
   hasPhoto: true,
   likes: 7,
   wishes: 1,
@@ -31,6 +34,7 @@ describe("firstSteps", () => {
     const steps = firstSteps(nothing, "todo");
     expect(steps.map((s) => s.id)).toEqual([
       "homeScreen",
+      "email",
       "photo",
       "likes",
       "wish",
@@ -68,6 +72,61 @@ describe("firstSteps", () => {
       id: "likes",
       done: true,
       progress: { count: 5, goal: LIKES_GOAL },
+    });
+  });
+});
+
+describe("firstSteps of an admin", () => {
+  const empty = { otherMembers: 0, othersJoined: 0, mealsPlanned: 0, itemsChecked: 0 };
+
+  it("sets the family up instead of the member tutorial", () => {
+    const steps = firstSteps({ ...nothing, family: empty }, "todo");
+    expect(steps.map((s) => s.id)).toEqual([
+      "homeScreen",
+      "email",
+      "members",
+      "joined",
+      "week",
+      "list",
+    ]);
+    expect(steps.every((s) => !s.done)).toBe(true);
+  });
+
+  it("ticks each step from the family's data, the e-mail from the admin's own", () => {
+    const steps = firstSteps(
+      {
+        ...nothing,
+        hasEmail: true,
+        family: { otherMembers: 2, othersJoined: 1, mealsPlanned: 4, itemsChecked: 1 },
+      },
+      "n/a",
+    );
+    expect(steps.every((s) => s.done)).toBe(true);
+  });
+
+  it("a profile added is not yet a member who joined", () => {
+    const steps = firstSteps(
+      { ...nothing, family: { ...empty, otherMembers: 1 } },
+      "n/a",
+    );
+    expect(steps.find((s) => s.id === "members")?.done).toBe(true);
+    expect(steps.find((s) => s.id === "joined")?.done).toBe(false);
+  });
+
+  it("needs three planned dishes for the first week, with the progress", () => {
+    const week = (mealsPlanned: number) =>
+      firstSteps({ ...nothing, family: { ...empty, mealsPlanned } }, "n/a").find(
+        (s) => s.id === "week",
+      );
+    expect(week(2)).toEqual({
+      id: "week",
+      done: false,
+      progress: { count: 2, goal: WEEK_GOAL },
+    });
+    expect(week(8)).toEqual({
+      id: "week",
+      done: true,
+      progress: { count: WEEK_GOAL, goal: WEEK_GOAL },
     });
   });
 });

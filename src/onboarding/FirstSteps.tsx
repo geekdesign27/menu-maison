@@ -27,6 +27,11 @@ const STEP_TEXT: Record<
     label: "common.steps.homeScreen",
     hint: "common.steps.homeScreenHint",
   },
+  email: {
+    label: "common.steps.email",
+    hint: "common.steps.emailHint",
+    to: "/reglages",
+  },
   photo: {
     label: "common.steps.photo",
     hint: "common.steps.photoHint",
@@ -56,6 +61,26 @@ const STEP_TEXT: Record<
     label: "common.steps.status",
     hint: "common.steps.statusHint",
     to: "/",
+  },
+  members: {
+    label: "common.steps.members",
+    hint: "common.steps.membersHint",
+    to: "/reglages",
+  },
+  joined: {
+    label: "common.steps.joined",
+    hint: "common.steps.joinedHint",
+    to: "/reglages",
+  },
+  week: {
+    label: "common.steps.week",
+    hint: "common.steps.weekHint",
+    to: "/",
+  },
+  list: {
+    label: "common.steps.list",
+    hint: "common.steps.listHint",
+    to: "/courses",
   },
 };
 

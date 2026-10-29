@@ -8,6 +8,7 @@ import { useRun } from "../lib/toast";
 import { Button, Sheet } from "../components/ui";
 import { tourSteps } from "./steps";
 import { runTour } from "./tour";
+import { FamilySetup } from "./FamilySetup";
 import { useT } from "../i18n/useT";
 
 export default function OnboardingHost({ welcome }: { welcome: boolean }) {
@@ -49,6 +50,9 @@ export default function OnboardingHost({ welcome }: { welcome: boolean }) {
   }, [phase]);
 
   if (phase !== "welcome") return null;
+  // A new admin sets the family up first; the questions replace the welcome card
+  if (account?.role === "admin")
+    return <FamilySetup onDone={() => setPhase("tour")} onLater={end} />;
   return (
     <Sheet
       open

@@ -4,7 +4,6 @@ import { useMutation } from "convex/react";
 import { ChevronRight, LogOut, Plus, Share2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { Lang } from "../../convex/domain/lang";
 import { dayName } from "../../convex/domain/dates";
 import { useBase, useSession, type Base } from "../lib/session";
 import { useRun, useToast } from "../lib/toast";
@@ -27,19 +26,9 @@ import { useT } from "../i18n/useT";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { SubscriptionPanel } from "../components/SubscriptionPanel";
 import { AccountPanel, FamilyDataPanel } from "../components/AccountPanel";
+import { dayButtonClass, dayButtonLabel, WEEKDAYS } from "../lib/weekdays";
 import { MemberSheet } from "../components/shopping/MemberSheet";
 import { AisleSheet } from "../components/shopping/AisleSheet";
-
-// Monday first, as on a Swiss calendar; values follow Date.getDay()
-const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
-
-/** « Lun », « Mar »… in French; « Mo », « Di »… in German. */
-function dayButtonLabel(weekday: number, lang: Lang) {
-  const long = dayName(weekday, lang);
-  return lang === "de"
-    ? long.slice(0, 2)
-    : long.charAt(0).toUpperCase() + long.slice(1, 3);
-}
 
 type Editing =
   | { kind: "member"; id?: Id<"members"> }
@@ -111,7 +100,7 @@ function SettingsContent({ base }: { base: Base }) {
 
       <SectionTitle>{t("common.settings.shoppingDay")}</SectionTitle>
       <Card className="p-4">
-        <div className="grid grid-cols-7 gap-1.5" data-tour="shopping-day">
+        <div className="grid grid-cols-7 gap-1.5">
           {WEEKDAYS.map((day) => (
             <button
               key={day}
@@ -121,11 +110,7 @@ function SettingsContent({ base }: { base: Base }) {
               onClick={() =>
                 settings.shoppingDay !== day && setNewShoppingDay(day)
               }
-              className={
-                settings.shoppingDay === day
-                  ? "min-h-12 rounded-2xl bg-carrot text-[15px] font-black text-white shadow-sm"
-                  : "min-h-12 rounded-2xl bg-cream text-[15px] font-extrabold text-ink ring-1 ring-line active:bg-carrot-soft"
-              }
+              className={dayButtonClass(settings.shoppingDay === day)}
             >
               {dayButtonLabel(day, lang)}
             </button>

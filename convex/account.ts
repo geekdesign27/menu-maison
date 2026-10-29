@@ -221,7 +221,8 @@ export const requestReset = mutation({
       });
       await sendOnce(ctx, {
         kind: "passwordReset",
-        key: `passwordReset:${member._id}:${now}`,
+        // Each request is its own e-mail, even two in the same millisecond
+        key: `passwordReset:${member._id}:${now}:${crypto.randomUUID()}`,
         to: email,
         lang: member.lang ?? args.lang,
         data: {

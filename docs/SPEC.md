@@ -175,7 +175,9 @@ Serveurs de dev via Portly.
   en route. Interrupteur des admins dans Gestion, Famille (`settings.onboarding`, activé pour
   les nouvelles familles ; l'activer marque les comptes existants comme habitués,
   `members.onboardingDoneAt = 0`). « Revoir le guide » dans Plus. Détail et captures :
-  `docs/guide/GUIDE.md`, section 6.
+  `docs/guide/GUIDE.md`, section 6. Un nouvel admin répond d'abord à trois questions (jour
+  des courses, magasin, personnes) et a ses propres « Premiers pas » pour mettre la famille
+  en route (lot S3d).
 - **Logo** (kit d'identité v1, « m » souriant avec fourchette) : `src/components/Logo.tsx`
   en `currentColor`, il prend la couleur du thème (connexion, gestion). L'icône d'onglet,
   l'icône d'écran d'accueil et le manifeste suivent aussi le thème (`public/brand/`,
@@ -315,7 +317,8 @@ Serveurs de dev via Portly.
   conversion des unités, doublons fusionnés).
 - `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
   refus de suppression.
-- `onboarding.ts` : étapes de « Premiers pas » d'après les actions du membre, carte de
+- `onboarding.ts` : étapes de « Premiers pas » d'après les actions du membre (ou de la
+  famille, pour un admin), carte de
   bienvenue, habitués à marquer quand le guide est activé.
 
 ## Règles

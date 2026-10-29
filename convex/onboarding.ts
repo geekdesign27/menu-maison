@@ -14,7 +14,10 @@ import {
   type OnboardingFacts,
 } from "./domain/onboarding";
 
-/** Counts of the member's own actions; the steps are worked out by domain/onboarding. */
+/**
+ * Counts of the member's own actions, and of the family's for an admin; the
+ * steps are worked out by domain/onboarding.
+ */
 export const facts = query({
   args: { token: v.string() },
   handler: async (ctx, { token }): Promise<OnboardingFacts> => {
@@ -24,22 +27,32 @@ export const facts = query({
       db.query("likes").filter(mine).collect(),
       db.query("wishes").filter(mine).collect(),
       db.query("meals").collect(),
-      db
-        .query("shoppingChecks")
-        .filter((q) => q.eq(q.field("checkedBy"), member._id))
-        .collect(),
+      db.query("shoppingChecks").collect(),
     ]);
-    return {
+    const facts: OnboardingFacts = {
+      hasEmail: !!member.email,
       hasPhoto: !!member.imageId,
       likes: likes.length,
       wishes: wishes.length,
       mealsAdded: meals.filter((m) => m.addedBy === member._id).length,
-      itemsChecked: checks.length,
+      itemsChecked: checks.filter((c) => c.checkedBy === member._id).length,
       // Back to « prévu » is not telling what happened to the dish
       statusesSet: meals.filter(
         (m) => m.statusBy === member._id && m.status !== "prévu",
       ).length,
     };
+    if (member.role !== "admin") return facts;
+    // Counts only: nothing about who the other members are
+    const others = (await db.query("members").collect()).filter(
+      (m) => m._id !== member._id,
+    );
+    facts.family = {
+      otherMembers: others.length,
+      othersJoined: others.filter((m) => !!m.passwordHash).length,
+      mealsPlanned: meals.length,
+      itemsChecked: checks.filter((c) => c.checked).length,
+    };
+    return facts;
   },
 });
 

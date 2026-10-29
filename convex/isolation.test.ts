@@ -886,8 +886,10 @@ describe("writes on another family's ids are refused", () => {
     await s.t.mutation(api.onboarding.setEnabled, { token: s.b.token, enabled: true });
     await s.t.mutation(api.onboarding.finish, { token: s.b.token });
     expect(await snapshotA()).toEqual(before);
-    // Family A's likes, wishes, meals and checks are not counted for B
+    // Family A's members, likes, wishes, meals and checks are not counted for B's admin
     expect(await s.t.query(api.onboarding.facts, { token: s.b.token })).toEqual({
+      hasEmail: false,
+      family: { otherMembers: 0, othersJoined: 0, mealsPlanned: 0, itemsChecked: 0 },
       hasPhoto: false,
       likes: 0,
       wishes: 0,

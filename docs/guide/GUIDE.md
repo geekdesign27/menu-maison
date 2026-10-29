@@ -368,6 +368,10 @@ Objectif : guider un nouveau sans gêner les habitués, et pouvoir le couper.
 
 - À la **première connexion** : une carte de bienvenue (« 1 minute pour faire le tour ? »),
   « Commencer » ou « Plus tard ».
+- Un **admin** voit à la place trois questions (jour des courses, magasin habituel, nombre
+  de personnes à table), préremplies avec les réglages de la famille. « Continuer » les
+  enregistre et lance le tour ; « Plus tard » ferme le guide sans rien changer. Une famille
+  qui arrive seule (inscription en ligne) démarre ainsi avec ses propres réglages.
 - Puis **6 bulles** posées sur les vrais écrans, avec « Suivant » et « Passer » (Échap
   aussi) :
   1. Semaine : « Ici, les repas de la semaine. Touche « + Ajouter » pour poser un plat. »
@@ -379,14 +383,18 @@ Objectif : guider un nouveau sans gêner les habitués, et pouvoir le couper.
   5. Frigo : « Les restes, et ce qu'il faut utiliser avant que ça se perde. »
   6. Recettes : « Dans Découvrir, like ce que tu aimes : ça aide à choisir les plats de la
      semaine. »
-- Pour un admin, **3 bulles de plus** : profils et liens (Réglages), jour des courses
-  (Réglages), apparence (Gestion, Famille sur ordinateur ; sur téléphone, la bulle dit où
+- Pour un admin, **2 bulles de plus** : profils et liens (Réglages), apparence (Gestion, Famille sur ordinateur ; sur téléphone, la bulle dit où
   la trouver).
 - Dans **Plus**, la checklist **« Premiers pas »**, cochée toute seule d'après ce que la
   personne a fait, qui disparaît une fois complète : ajouter l'app à l'écran d'accueil
   (téléphone seulement, vu sur cet appareil), mettre sa photo, mettre un cœur à 5 recettes,
-  noter une envie, ajouter un plat, cocher un article des courses, dire comment s'est passé
-  un plat.
+  ajouter son e-mail (pour un mot de passe oublié), mettre sa photo, mettre un cœur à
+  5 recettes, noter une envie, ajouter un plat, cocher un article des courses, dire comment
+  s'est passé un plat.
+- Un **admin** a sa propre liste, pour mettre la famille en route : écran d'accueil, son
+  e-mail, ajouter les membres de la famille, un membre s'est connecté avec son lien,
+  planifier une première semaine (3 plats prévus), faire une première liste de courses
+  (un article coché).
 
 <p>
 <img src="captures/ob-00-bienvenue.png" width="230" alt="Carte de bienvenue">

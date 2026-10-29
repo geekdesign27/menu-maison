@@ -69,12 +69,6 @@ const ADMIN_STEPS: StepDef[] = [
     title: "common.tour.profilesTitle",
     text: "common.tour.profilesText",
   },
-  {
-    route: "/reglages",
-    target: '[data-tour="shopping-day"]',
-    title: "common.tour.shoppingDayTitle",
-    text: "common.tour.shoppingDayText",
-  },
 ];
 
 /** Appearance is in Gestion, on a computer only: on a phone the bubble says where. */
