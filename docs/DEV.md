@@ -72,8 +72,8 @@ onglet Variables) `VITE_CONTACT_URL`, au format `mailto:…`, `tel:…` ou `http
 le bouton est masqué et la page invite à passer par la personne qui a fait découvrir l'app.
 
 **Ouverture des inscriptions** : fermées par défaut, deux interrupteurs à basculer ensemble.
-- `SIGNUP_OPEN=1` dans Convex (`npx convex env set SIGNUP_OPEN 1`, en dev et, le jour venu,
-  `--prod`) : sans lui, `startCheckout` refuse avec « Les inscriptions ouvrent bientôt. » et
+- `SIGNUP_OPEN=1` dans Convex (`npx convex env set SIGNUP_OPEN 1` en local et, le jour venu,
+  `--deployment resolute-squid-776` pour la production) : sans lui, `startCheckout` refuse avec « Les inscriptions ouvrent bientôt. » et
   `#/essai` affiche ce message au lieu du formulaire.
 - `VITE_SIGNUP_OPEN=1`, variable GitHub comme `VITE_CONTACT_URL` : sans elle, la section Tarif
   affiche « Ouverture prochaine » au lieu de « Essayer 7 jours gratuits ». En local

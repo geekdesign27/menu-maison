@@ -174,14 +174,16 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
 - [ ] Production : clé live, `SITE_URL=https://menumaison.ch`, webhook live vers
   `https://resolute-squid-776.eu-west-1.convex.site/stripe/webhook`, `STRIPE_PRICE_ID` et
   `STRIPE_PORTAL_CONFIG_ID` live, puis un vrai paiement de 20 CHF remboursé.
-- [ ] Ouvrir les inscriptions, en dernier : `npx convex env set SIGNUP_OPEN 1 --prod` et la
+- [ ] Ouvrir les inscriptions, en dernier : `npx convex env set SIGNUP_OPEN 1 --deployment resolute-squid-776` et la
   variable GitHub `VITE_SIGNUP_OPEN=1`, puis un déploiement (voir DEV.md).
 
 **E-mails**
 - [x] Compte Resend, domaine menumaison.ch vérifié (SPF, DKIM, DMARC chez Infomaniak),
-  `RESEND_API_KEY`, `ADMIN_ALERT_EMAIL` posés en local puis en production. **Fait le
-  2026-10-29** : envoi depuis bonjour@menumaison.ch reçu dans Gmail en boîte de réception,
-  SPF, DKIM et DMARC à « pass ». Les 15 modèles FR reçus une fois (expéditeur de test Resend).
+  `RESEND_API_KEY`, `ADMIN_ALERT_EMAIL` posés en local. **Fait le 2026-10-29** : envoi depuis
+  bonjour@menumaison.ch reçu dans Gmail en boîte de réception, SPF, DKIM et DMARC à « pass ».
+  Les 15 modèles FR reçus une fois (expéditeur de test Resend).
+- [ ] `RESEND_API_KEY`, `ADMIN_ALERT_EMAIL` et `SITE_URL` posés en **production**
+  (`--deployment resolute-squid-776`) : absents au 2026-10-29, aucun e-mail ne part de la prod.
 - [ ] Chaque e-mail reçu pour de vrai, en français et en allemand, dans Gmail, Outlook et
   Apple Mail (mode sombre compris) : bienvenue, fin d'essai, confirmé, paiement échoué, résilié.
 - [ ] Lien « Choisir mon mot de passe » de l'e-mail de bienvenue ouvert depuis un autre téléphone.
