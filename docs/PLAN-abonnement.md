@@ -176,14 +176,17 @@ Liste tenue depuis le 2026-10-28, à cocher avant d'ouvrir l'inscription au publ
   `STRIPE_PORTAL_CONFIG_ID` live, puis un vrai paiement de 20 CHF remboursé.
 
 **E-mails**
-- [ ] Compte Resend, domaine menumaison.ch vérifié (SPF, DKIM, DMARC chez Infomaniak),
-  `RESEND_API_KEY`, `ADMIN_ALERT_EMAIL` posés en local puis en production.
+- [x] Compte Resend, domaine menumaison.ch vérifié (SPF, DKIM, DMARC chez Infomaniak),
+  `RESEND_API_KEY`, `ADMIN_ALERT_EMAIL` posés en local puis en production. **Fait le
+  2026-10-29** : envoi depuis bonjour@menumaison.ch reçu dans Gmail en boîte de réception,
+  SPF, DKIM et DMARC à « pass ». Les 15 modèles FR reçus une fois (expéditeur de test Resend).
 - [ ] Chaque e-mail reçu pour de vrai, en français et en allemand, dans Gmail, Outlook et
   Apple Mail (mode sombre compris) : bienvenue, fin d'essai, confirmé, paiement échoué, résilié.
 - [ ] Lien « Choisir mon mot de passe » de l'e-mail de bienvenue ouvert depuis un autre téléphone.
 - [ ] Les 4 alertes reçues sur ton adresse.
 - [ ] Chez Resend : suivi des clics (click tracking) coupé pour le domaine (le lien de bienvenue
   contient un jeton) et compte protégé par la double authentification.
+  Suivi des clics et des ouvertures : coupés (vérifié le 2026-10-29). Reste la double authentification.
 - [ ] Antivirus de messagerie (Microsoft Safe Links…) : vérifier qu'ils ne cassent pas le lien de
   bienvenue (ils peuvent l'ouvrir avant la personne).
 - [ ] E-mails du compte reçus pour de vrai : mot de passe oublié, mot de passe changé, confirmation
