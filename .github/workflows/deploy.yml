@@ -50,8 +50,7 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_DEV }}
           VITE_SITE_ENV: dev
           VITE_CONTACT_URL: ${{ vars.VITE_CONTACT_URL }}
-          # Sign-ups always open on dev: Stripe there is in test mode
-          VITE_SIGNUP_OPEN: "1"
+          # No VITE_SIGNUP_OPEN, no SIGNUP_OPEN nor Stripe in Convex: no new family on dev
       # Kept out of search engines
       - run: |
           printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt

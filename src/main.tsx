@@ -1,4 +1,12 @@
-import { lazy, StrictMode, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  lazy,
+  StrictMode,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import "@fontsource-variable/nunito";
 import "./index.css";
@@ -12,7 +20,13 @@ import { entryFor, LANDING_TITLE, type Entry } from "./landing/entry";
 // Loaded apart: a visitor of the landing page never downloads the app (Convex,
 // every screen), and a family phone never downloads the landing page.
 const App = lazy(() => import("./App").then((m) => ({ default: m.App })));
-const Landing = lazy(() => import("./landing/Landing").then((m) => ({ default: m.Landing })));
+const Landing = lazy(() =>
+  import("./landing/Landing").then((m) => ({ default: m.Landing })),
+);
+// Test site only: never downloaded on menumaison.ch
+const DevGate = lazy(() =>
+  import("./components/DevGate").then((m) => ({ default: m.DevGate })),
+);
 
 function currentEntry(): Entry {
   return entryFor(window.location.hash, hasStoredToken());
@@ -47,9 +61,13 @@ function Root() {
     first.current = false;
   }, [entry]);
 
+  const surface = entry === "landing" ? <Landing /> : <App />;
+
   return (
     <>
-      <Suspense fallback={null}>{entry === "landing" ? <Landing /> : <App />}</Suspense>
+      <Suspense fallback={null}>
+        {IS_DEV_SITE ? <DevGate>{surface}</DevGate> : surface}
+      </Suspense>
       {/* Test version: a yellow line on top and a badge low on the left, both letting clicks through */}
       {IS_DEV_SITE && (
         <div aria-hidden className="pointer-events-none fixed inset-0 z-[1000]">

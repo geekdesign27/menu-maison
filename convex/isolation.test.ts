@@ -309,11 +309,20 @@ describe("writes on another family's ids are refused", () => {
     ],
     [
       "meals.notCookedPreview",
-      () => s.t.query(api.meals.notCookedPreview, { token: s.b.token, id: s.ids.mealId }),
+      () =>
+        s.t.query(api.meals.notCookedPreview, {
+          token: s.b.token,
+          id: s.ids.mealId,
+        }),
     ],
     [
       "meals.markNotCooked",
-      () => s.t.mutation(api.meals.markNotCooked, { token: s.b.token, id: s.ids.mealId, keep: [] }),
+      () =>
+        s.t.mutation(api.meals.markNotCooked, {
+          token: s.b.token,
+          id: s.ids.mealId,
+          keep: [],
+        }),
     ],
     [
       "meals.markNotCooked (keeps another family's ingredient)",
@@ -335,7 +344,11 @@ describe("writes on another family's ids are refused", () => {
     ],
     [
       "homeStock.remove",
-      () => s.t.mutation(api.homeStock.remove, { token: s.b.token, id: s.ids.stockId }),
+      () =>
+        s.t.mutation(api.homeStock.remove, {
+          token: s.b.token,
+          id: s.ids.stockId,
+        }),
     ],
     [
       "access.setRole",
@@ -364,27 +377,58 @@ describe("writes on another family's ids are refused", () => {
         }),
     ],
     // A family admin is not the super-admin: the whole space is refused
-    ["superadmin.families", () => s.t.query(api.superadmin.families, { token: s.b.token })],
-    ["visits.summary", () => s.t.query(api.visits.summary, { token: s.b.token, days: 7 })],
+    [
+      "superadmin.families",
+      () => s.t.query(api.superadmin.families, { token: s.b.token }),
+    ],
+    [
+      "visits.summary",
+      () => s.t.query(api.visits.summary, { token: s.b.token, days: 7 }),
+    ],
     [
       "superadmin.createOne",
-      () => s.t.mutation(api.superadmin.createOne, { token: s.b.token, name: "Pirates", admin: "Jack" }),
+      () =>
+        s.t.mutation(api.superadmin.createOne, {
+          token: s.b.token,
+          name: "Pirates",
+          admin: "Jack",
+        }),
     ],
     [
       "superadmin.adminLink",
-      () => s.t.mutation(api.superadmin.adminLink, { token: s.b.token, memberId: s.a.memberId }),
+      () =>
+        s.t.mutation(api.superadmin.adminLink, {
+          token: s.b.token,
+          memberId: s.a.memberId,
+        }),
     ],
     [
       "superadmin.setSuspended",
-      () => s.t.mutation(api.superadmin.setSuspended, { token: s.b.token, familyId: s.a.familyId, suspended: true }),
+      () =>
+        s.t.mutation(api.superadmin.setSuspended, {
+          token: s.b.token,
+          familyId: s.a.familyId,
+          suspended: true,
+        }),
     ],
     [
       "superadmin.setOffered",
-      () => s.t.mutation(api.superadmin.setOffered, { token: s.b.token, familyId: s.a.familyId, offered: false }),
+      () =>
+        s.t.mutation(api.superadmin.setOffered, {
+          token: s.b.token,
+          familyId: s.a.familyId,
+          offered: false,
+        }),
     ],
     [
       "superadmin.setAiCaps",
-      () => s.t.mutation(api.superadmin.setAiCaps, { token: s.b.token, familyId: s.a.familyId, capUsd: 100, dictationCap: 1000 }),
+      () =>
+        s.t.mutation(api.superadmin.setAiCaps, {
+          token: s.b.token,
+          familyId: s.a.familyId,
+          capUsd: 100,
+          dictationCap: 1000,
+        }),
     ],
     [
       "catalog.setMemberPhoto",
@@ -884,20 +928,30 @@ describe("writes on another family's ids are refused", () => {
 
   it("the guide switch and the end of the tour stay in the caller's family", async () => {
     const before = await snapshotA();
-    await s.t.mutation(api.onboarding.setEnabled, { token: s.b.token, enabled: true });
+    await s.t.mutation(api.onboarding.setEnabled, {
+      token: s.b.token,
+      enabled: true,
+    });
     await s.t.mutation(api.onboarding.finish, { token: s.b.token });
     expect(await snapshotA()).toEqual(before);
     // Family A's members, likes, wishes, meals and checks are not counted for B's admin
-    expect(await s.t.query(api.onboarding.facts, { token: s.b.token })).toEqual({
-      hasEmail: false,
-      family: { otherMembers: 0, othersJoined: 0, mealsPlanned: 0, itemsChecked: 0 },
-      hasPhoto: false,
-      likes: 0,
-      wishes: 0,
-      mealsAdded: 0,
-      itemsChecked: 0,
-      statusesSet: 0,
-    });
+    expect(await s.t.query(api.onboarding.facts, { token: s.b.token })).toEqual(
+      {
+        hasEmail: false,
+        family: {
+          otherMembers: 0,
+          othersJoined: 0,
+          mealsPlanned: 0,
+          itemsChecked: 0,
+        },
+        hasPhoto: false,
+        likes: 0,
+        wishes: 0,
+        mealsAdded: 0,
+        itemsChecked: 0,
+        statusesSet: 0,
+      },
+    );
   });
 
   // Public functions without a cross-family case, and why
@@ -909,7 +963,8 @@ describe("writes on another family's ids are refused", () => {
     "access.family": "public name of a family link, by design",
     "access.inviteInfo": "reads only the invitation of its link",
     "access.activate": "uses only the invitation of its link",
-    "families.rename": "renames the caller's own family only (tested in access.test.ts)",
+    "families.rename":
+      "renames the caller's own family only (tested in access.test.ts)",
     "catalog.base": "covered by the read test",
     "catalog.addMember": "inserts into the caller's family only",
     "catalog.addAisle":
@@ -940,26 +995,48 @@ describe("writes on another family's ids are refused", () => {
     "openFoodFacts.search": "public Open Food Facts search, no family data",
     "onboarding.facts": "covered by the read test",
     "onboarding.finish": "patches the caller only (covered: own family test)",
-    "onboarding.setEnabled": "settings and members of the caller's family only (covered: own family test)",
-    "catalogTranslate.missingCount": "counts the caller's family only, admins (catalogTranslate.test.ts)",
-    "billing.nameAvailable": "public sign-up form: says whether a family name is free, nothing else",
-    "billing.signupStatus": "public sign-up form: says whether sign-ups are open (SIGNUP_OPEN), nothing else",
-    "superadmin.emailPreviews": "example e-mails for the super-admin, no family data (requireSuperadmin)",
-    "billing.mine": "the caller's own family's subscription, admins only (billing.test.ts)",
-    "stripeNode.startFamilyCheckout": "Checkout for the caller's own family, admins only, family from the session",
-    "stripeNode.openPortal": "Stripe portal of the caller's own family's customer, admins only, family from the session",
-    "account.mine": "the caller's own account only, from the session (account.test.ts)",
-    "account.setEmail": "the caller's own profile only, from the session (account.test.ts)",
-    "account.removeEmail": "the caller's own profile only, from the session (account.test.ts)",
-    "account.confirmEmail": "uses only the profile of its link's token (account.test.ts)",
-    "account.requestReset": "public form: e-mails a link to the address typed, same answer for everyone (account.test.ts)",
-    "account.changePassword": "the caller's own password only, from the session (account.test.ts)",
-    "account.signOutOthers": "the caller's own other sessions only (account.test.ts)",
-    "familyData.exportAll": "the caller's own family only, admins only (account.test.ts)",
-    "stripeNode.deleteFamily": "the caller's own family only, admins only, its name typed (account.test.ts)",
-    "stripeNode.startCheckout": "public sign-up: opens a Stripe Checkout page, creates no family (billing.test.ts)",
+    "onboarding.setEnabled":
+      "settings and members of the caller's family only (covered: own family test)",
+    "catalogTranslate.missingCount":
+      "counts the caller's family only, admins (catalogTranslate.test.ts)",
+    "billing.nameAvailable":
+      "public sign-up form: says whether a family name is free, nothing else",
+    "billing.signupStatus":
+      "public sign-up form: says whether sign-ups are open (SIGNUP_OPEN), nothing else",
+    "superadmin.emailPreviews":
+      "example e-mails for the super-admin, no family data (requireSuperadmin)",
+    "billing.mine":
+      "the caller's own family's subscription, admins only (billing.test.ts)",
+    "stripeNode.startFamilyCheckout":
+      "Checkout for the caller's own family, admins only, family from the session",
+    "stripeNode.openPortal":
+      "Stripe portal of the caller's own family's customer, admins only, family from the session",
+    "account.mine":
+      "the caller's own account only, from the session (account.test.ts)",
+    "account.setEmail":
+      "the caller's own profile only, from the session (account.test.ts)",
+    "account.removeEmail":
+      "the caller's own profile only, from the session (account.test.ts)",
+    "account.confirmEmail":
+      "uses only the profile of its link's token (account.test.ts)",
+    "account.requestReset":
+      "public form: e-mails a link to the address typed, same answer for everyone (account.test.ts)",
+    "account.changePassword":
+      "the caller's own password only, from the session (account.test.ts)",
+    "account.signOutOthers":
+      "the caller's own other sessions only (account.test.ts)",
+    "familyData.exportAll":
+      "the caller's own family only, admins only (account.test.ts)",
+    "stripeNode.deleteFamily":
+      "the caller's own family only, admins only, its name typed (account.test.ts)",
+    "stripeNode.startCheckout":
+      "public sign-up: opens a Stripe Checkout page, creates no family (billing.test.ts)",
     "stripeNode.claim":
       "return page: Stripe confirms the session, the link is given only within 48 hours and before the admin's first sign-in (billing.test.ts)",
+    "devGate.enter":
+      "entry password of the test site: no family data, returns only a ticket (devGate.test.ts)",
+    "devGate.check":
+      "says whether a test-site ticket is valid, nothing else (devGate.test.ts)",
     "catalogTranslate.translateNow":
       "fills the caller's family only: internal apply checks the family of each id (catalogTranslate.test.ts)",
   };

@@ -117,4 +117,28 @@ le bouton est masqué et la page invite à passer par la personne qui a fait dé
    Sur chaque téléphone : ouvrir le lien d'invitation ou de la famille, se connecter, puis
    « Ajouter à l'écran d'accueil ».
 
-Chaque push sur `main` relance les tests, déploie les fonctions Convex et publie le front.
+Chaque push sur `main` relance les tests, puis met à jour la version de test en ligne. La
+production attend ensuite l'approbation de PA (voir ci-dessous).
+
+## Version de test en ligne (dev.menumaison.ch)
+
+- Trois étapes à chaque push sur `main` (`.github/workflows/deploy.yml`) : tests, puis dev,
+  puis production. La production attend l'approbation de PA : dans GitHub, onglet Actions,
+  ouvrir l'exécution, « Review deployments », cocher `production`, « Approve and deploy ».
+  Un nouveau push remplace une exécution qui attend encore.
+- Convex : projet `menu-maison-dev`, déploiement `fleet-aardvark-573`. Clé de déploiement :
+  secret GitHub `CONVEX_DEPLOY_KEY_DEV`. Sur ce Mac, nommer ce déploiement explicitement
+  (`--deployment fleet-aardvark-573`) : une référence de projet seule retombe sur le local.
+- Front : publié dans le dépôt `geekdesign27/menu-maison-dev` (branche `gh-pages`, clé de
+  déploiement `DEV_SITE_DEPLOY_KEY`), DNS `dev.menumaison.ch` en CNAME vers
+  `geekdesign27.github.io`. Fermé aux moteurs de recherche (robots.txt, `noindex`).
+- Ni Stripe, ni Resend, ni `SIGNUP_OPEN` : aucun paiement, aucun e-mail, aucune nouvelle
+  famille. Une famille de test se crée à la main :
+  `npx convex run families:create '{"name":"…","admin":"…"}' --deployment fleet-aardvark-573`.
+- Mot de passe d'entrée : `DEV_SITE_PASSWORD`, demandé une fois par appareil
+  (`src/components/DevGate.tsx`, `convex/devGate.ts`). Sans cette variable, l'écran reste
+  fermé. Dix essais en dix minutes, puis quinze minutes de blocage pour tout le monde.
+  C'est un rideau devant le site, pas la sécurité de l'app : chaque fonction exige toujours
+  une session.
+- Variables de la dev : `scripts/set-dev-secrets.sh` (mot de passe, adresse du site, clés
+  d'IA facultatives). Changer le mot de passe déconnecte tous les appareils de la dev.

@@ -1,44 +1,65 @@
 #!/bin/zsh
-# Sets the secrets of the online test version (dev.menumaison.ch) from the
-# clipboard, one at a time: the Convex deploy key goes to GitHub, the others
-# to the dev Convex deployment. Each value is checked by its prefix before
-# being sent, and never printed.
-# Usage: scripts/set-dev-secrets.sh <dev deployment name, e.g. happy-otter-123>
+# Sets up the online test version (dev.menumaison.ch, Convex fleet-aardvark-573).
+# No Stripe and no Resend there on purpose: no payment, no e-mail, no sign-up.
+# 1. the entry password, typed twice without being shown;
+# 2. the site address (not a secret, set automatically);
+# 3. optionally the AI keys (Claude, Groq), taken from the clipboard and checked
+#    by their prefix. Nothing is ever printed.
+# Usage: scripts/set-dev-secrets.sh
 cd "$(dirname "$0")/.." || exit 1
-DEPLOYMENT=$1
-if [[ -z $DEPLOYMENT || $DEPLOYMENT == resolute-squid-776 ]]; then
-  echo "Donne le nom du déploiement de menu-maison-dev (jamais celui de la production)."
-  exit 1
-fi
+DEPLOYMENT=fleet-aardvark-573
 
-# Waits until the clipboard holds a value starting with one of the prefixes
-copied() {
-  local label=$1; shift
-  local value
+# Pipes the value through stdin: never on the command line, never in the history
+put() {
+  print -rn -- "$2" | npx convex env set "$1" --deployment "$DEPLOYMENT" >/dev/null ||
+    { echo "  ✖ Échec pour $1. Rien d'autre n'a été modifié après." >&2; exit 1; }
+  echo "  ✔ $1 posé."
+}
+
+echo "Version de test en ligne : dev.menumaison.ch (Convex $DEPLOYMENT)"
+
+echo ""
+echo "▶ 1/3 Mot de passe d'entrée de la dev (16 caractères au moins)"
+echo "  Tape-le ou colle-le (⌘V), il ne s'affiche pas, puis Entrée."
+while true; do
+  read -rs "pw1?  Mot de passe : "; echo ""
+  read -rs "pw2?  Encore une fois : "; echo ""
+  if [[ $pw1 != "$pw2" ]]; then
+    echo "  ✖ Les deux saisies diffèrent. On recommence."
+  elif (( ${#pw1} < 16 )); then
+    echo "  ✖ Trop court (${#pw1} caractères). Au moins 16."
+  else
+    break
+  fi
+done
+put DEV_SITE_PASSWORD "$pw1"
+unset pw1 pw2
+
+echo ""
+echo "▶ 2/3 Adresse du site"
+put SITE_URL "https://dev.menumaison.ch"
+
+# Waits for a clipboard value starting with the prefix; « p » then Entrée skips it
+optional_key() {
+  local name=$1 label=$2 prefix=$3 answer value
   while true; do
-    echo "" >&2
-    echo "▶ $label" >&2
-    echo "  Copie-la (⌘C), puis appuie sur Entrée ici." >&2
-    read -r _
+    echo ""
+    echo "▶ $label"
+    echo "  Copie-la (⌘C) puis Entrée. Pour passer : p puis Entrée."
+    read -r answer
+    [[ $answer == p ]] && { echo "  … $name laissé de côté."; return; }
     value=$(pbpaste | tr -d '[:space:]')
-    for prefix in "$@"; do
-      [[ $value == ${prefix}* ]] && { print -r -- "$value"; return; }
-    done
-    echo "  ✖ Le presse-papiers ne commence pas par « $* ». Recopie la bonne clé." >&2
+    [[ $value == ${prefix}* ]] && { put "$name" "$value"; return; }
+    echo "  ✖ Le presse-papiers ne commence pas par « $prefix ». Recopie la bonne clé."
   done
 }
 
-ask() {
-  local name=$1 label=$2; shift 2
-  npx convex env set "$name" "$(copied "$label" "$@")" --deployment "$DEPLOYMENT"
-}
-
-copied "Clé de déploiement Convex du projet menu-maison-dev (prod:…)" prod: |
-  gh secret set CONVEX_DEPLOY_KEY_DEV --repo geekdesign27/menu-maison
-ask STRIPE_SECRET_KEY "Clé secrète Stripe de TEST (sk_test_… ou rk_test_…)" sk_test_ rk_test_
-ask STRIPE_WEBHOOK_SECRET "Secret du webhook Stripe de TEST (whsec_…)" whsec_
-ask RESEND_API_KEY "Clé API Resend de la dev (re_…)" re_
-
-echo -n | pbcopy
 echo ""
-echo "✔ Clés de la dev posées (GitHub et Convex $DEPLOYMENT). Presse-papiers vidé."
+echo "▶ 3/3 Clés d'IA, facultatives : sans elles, les fonctions d'IA (import de recettes notamment) ne marchent pas sur la dev."
+optional_key ANTHROPIC_API_KEY "Clé API Anthropic (sk-ant-…)" sk-ant-
+optional_key GROQ_API_KEY "Clé API Groq (gsk_…)" gsk_
+
+print -n "" | pbcopy
+echo ""
+echo "✔ Terminé. Presse-papiers vidé. Variables de la dev (noms seulement) :"
+npx convex env list --names-only --deployment "$DEPLOYMENT" 2>/dev/null

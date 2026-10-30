@@ -12,6 +12,7 @@ const ALLOWED = new Set([
   "account.signOutOthers", // ends the member's other sessions
   "account.confirmEmail", // the link's own profile, no session: confirms an address
   "account.requestReset", // public form: e-mails a link, writes no family data
+  "devGate.enter", // test site password: books an attempt, writes no family data
   "superadmin.createOne", // the super-admin space checks requireSuperadmin
   "superadmin.adminLink",
   "superadmin.setSuspended",
