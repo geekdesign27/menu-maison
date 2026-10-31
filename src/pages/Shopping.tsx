@@ -90,20 +90,16 @@ export function ShoppingPage() {
                 items: s.items
                   .map((i) =>
                     i.key === args.itemKey
-                      ? { ...i, checked: args.checked }
+                      ? { ...i, checked: args.checked, checkedBy: args.checked ? args.memberId : undefined }
                       : i,
                   )
                   .sort(compareItems),
               }
             : s,
         );
-        const checkedBy = { ...q.value.checkedBy };
-        if (args.checked) checkedBy[args.itemKey] = args.memberId;
-        else delete checkedBy[args.itemKey];
         local.setQuery(api.shopping.list, q.args, {
           ...q.value,
           sections,
-          checkedBy,
           remaining: sections.flatMap((s) => s.items).filter((i) => !i.checked)
             .length,
         });
@@ -293,7 +289,7 @@ export function ShoppingPage() {
                           item={item}
                           checker={
                             item.checked
-                              ? members.get(list.checkedBy[item.key] ?? "")
+                              ? members.get(item.checkedBy ?? "")
                               : undefined
                           }
                           onToggle={() => onToggle(item)}

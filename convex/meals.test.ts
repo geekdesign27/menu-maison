@@ -139,3 +139,25 @@ describe("a dish not cooked", () => {
     ).rejects.toThrow("Quantité");
   });
 });
+
+describe("the shopping list", () => {
+  it("still loads once an item counted in « boîte » or « pincée » is checked", async () => {
+    const { t, token, recipe } = await setup();
+    // Accented units end up in the item key (ing:<id>:boîte)
+    await t.run(async (ctx) => {
+      const r = (await ctx.db.get(recipe._id))!;
+      await ctx.db.patch(r._id, {
+        items: r.items.map((item, i) => (i === 0 ? { ...item, unit: "boîte" as const } : i === 1 ? { ...item, unit: "pincée" as const } : item)),
+      });
+    });
+    await t.mutation(api.meals.add, { token, date: SATURDAY, slot: "soir", recipeId: recipe._id, persons: 3 });
+    const accented = (await itemsOf(t, token, SATURDAY)).filter((i) => /[^\x20-\x7e]/.test(i.key));
+    expect(accented.length).toBe(2);
+    const memberId = await t.run(async (ctx) => (await ctx.db.query("members").first())!._id);
+    for (const item of accented)
+      await t.mutation(api.shopping.toggle, { token, start: SATURDAY, itemKey: item.key, checked: true, memberId });
+
+    const after = (await itemsOf(t, token, SATURDAY)).filter((i) => accented.some((a) => a.key === i.key));
+    expect(after.map((i) => [i.checked, i.checkedBy])).toEqual([[true, memberId], [true, memberId]]);
+  });
+});

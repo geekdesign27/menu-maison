@@ -107,12 +107,15 @@ export const list = query({
       skipped: skips.map((s) => s.itemKey),
       homeStock,
     });
-    const checkedBy = Object.fromEntries(
-      checks.filter((c) => c.checked).map((c) => [c.itemKey, c.checkedBy]),
-    );
+    // On each item, never as an object keyed by item key: Convex field names
+    // must be ASCII and keys carry units like « boîte » or « pincée »
+    const checkedBy = new Map(checks.filter((c) => c.checked).map((c) => [c.itemKey, c.checkedBy]));
     return {
       ...list,
-      checkedBy,
+      sections: list.sections.map((s) => ({
+        ...s,
+        items: s.items.map((i) => ({ ...i, checkedBy: checkedBy.get(i.key) })),
+      })),
       mealCount: meals.filter((m) => m.recipeId && !m.fromLeftoverOf && m.status !== MEAL_NOT_COOKED).length,
     };
   },
