@@ -22,7 +22,7 @@ import {
 // Base64 of a phone photo shrunk to 2000 px stays far below this
 const MAX_IMAGE_CHARS = 6_000_000;
 
-const SYSTEM = `Tu lis des tickets de caisse de supermarchés suisses (Aldi, Lidl, Coop, Migros, Denner) pour une application familiale de courses.
+const SYSTEM = `Tu lis des tickets de caisse de magasins suisses (Migros, Coop, Denner, Aldi, Lidl, Volg et autres enseignes) pour une application familiale de courses.
 
 Règles de lecture :
 - Lis chaque ligne d'article acheté, dans l'ordre du ticket.
@@ -31,7 +31,7 @@ Règles de lecture :
 - Sans indication, quantity vaut 1 et unitPrice est égal au total. Mets 0 pour weightKg et pricePerKg quand l'article n'est pas pesé.
 - kind : "bag" pour les sacs, "discount" pour un rabais (total négatif), "deposit" pour une consigne, sinon "product".
 - Ignore la partie paiement (carte, numéros de transaction, TVA) : ne recopie aucun numéro de carte.
-- chain : l'enseigne, sinon "Autre". date : la date du ticket au format AAAA-MM-JJ, ou "" si illisible. total : le montant à payer.
+- chain : l'enseigne de la liste, "Marche" pour un marché, "Specialise" pour un magasin spécialisé (bio, boucherie, fromagerie…), sinon "Autre". date : la date du ticket au format AAAA-MM-JJ, ou "" si illisible. total : le montant à payer.
 
 Correspondances (match) :
 - Le catalogue de la famille liste des produits génériques avec une clé (i… pour un ingrédient, s… pour un article hors recette). Ceux marqués [liste] sont sur la liste de courses de la semaine : préfère-les.

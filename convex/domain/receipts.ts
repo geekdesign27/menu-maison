@@ -2,16 +2,9 @@
 // price for one product at one chain, and remembering how a chain labels it.
 import type { Unit } from "./quantities";
 import { searchKey } from "./text";
+import { CHAINS, type Chain } from "./chains";
 
-export const CHAINS = [
-  "Aldi",
-  "Lidl",
-  "Coop",
-  "Migros",
-  "Denner",
-  "Autre",
-] as const;
-export type Chain = (typeof CHAINS)[number];
+export { CHAINS, type Chain };
 
 /** Bags, discounts and deposits never update a product price. */
 export type LineKind = "product" | "bag" | "discount" | "deposit";

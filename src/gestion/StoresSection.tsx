@@ -8,7 +8,7 @@ import { useBase, useSession } from "../lib/session";
 import { useRun } from "../lib/toast";
 import { plural } from "../lib/format";
 import { Badge, Button, cx, IconButton, Loading } from "../components/ui";
-import { ChainMark, priceLevelText } from "../components/shopping/chains";
+import { ChainMark, chainLabel, priceLevelText } from "../components/shopping/chains";
 import { AddStoreSheet } from "../pages/Stores";
 import { DataTable, type Column } from "./DataTable";
 import { GestionHeader } from "./GestionLayout";
@@ -41,7 +41,7 @@ export function StoresSection() {
       key: "chain",
       label: t("admin.stores.colChain"),
       sort: (s) => s.chain,
-      render: (s) => s.chain,
+      render: (s) => chainLabel(s.chain, lang),
     },
     {
       key: "price",

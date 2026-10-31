@@ -73,7 +73,7 @@ describe("parseReceipt", () => {
 
   it("falls back on safe values for unexpected fields", () => {
     const receipt = parseReceipt({
-      chain: "Manor",
+      chain: "Kaufland",
       date: "24.10.2026",
       lines: [
         {

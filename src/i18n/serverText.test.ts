@@ -29,7 +29,7 @@ function sources() {
 const NOT_SHOWN = [
   /^Bearer /,
   /^(Titre|Description|Portions|Temps total|Rayons|Styles possibles) :/,
-  /^(Catalogue de la famille|Recette à transformer|Recette de cuisine\.|Kochrezept\.)/,
+  /^(Catalogue de la famille|Recette à transformer|Recette de cuisine\.|Kochrezept\.|Rappel : le texte entre)/,
   /^\$\{(DAY|num|formatNumber|rounded|n \+ 1|twin|words)/,
   /^(À acheter chez|Bei )/, // domain/shopping.ts, in the member's language
   /^\$\{source\.name\} \(/, // recipe copy, in the member's language
@@ -38,6 +38,7 @@ const NOT_SHOWN = [
   /^Menus de la semaine, recettes et courses/, // stripeNode.ts, product description in Stripe
   /^«\$\{NBSP\}/, // domain/products.ts, checked below
   /^Utilisé dans/,
+  /^\$\{(h|open|formatTime\(time, "de"\))\}/, // domain/hours.ts, times in the member's language
 ];
 
 /** Sentences of the server: strings starting with a capital, with a space, ending like a sentence. */

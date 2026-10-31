@@ -10,6 +10,12 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
 1. Magasins suisses : Aldi, Lidl, Coop, Migros, Denner. Plusieurs succursales d'une même
    enseigne. Pour chaque magasin, ordonner les rayons comme dans la réalité, avec des
    exceptions par produit (tous les légumes ne sont pas au même endroit).
+   Complété le 2026-10-31 : enseignes suisses (`convex/domain/chains.ts`), en trois groupes
+   (supermarchés : Migros, Coop, Denner, Aldi, Lidl, Volg, Spar, Manor, Globus, Landi,
+   Aligro, Otto's ; proximité : Migrolino, Coop Pronto, avec ; autres commerces : magasin
+   spécialisé, marché, autre). Pastilles aux couleurs des logos (`chains.tsx`). Un marché ou
+   un magasin spécialisé peut avoir ses jours et heures d'ouverture (`stores.hours`,
+   `convex/domain/hours.ts`) ; la liste de courses indique s'il est ouvert.
 2. La liste de courses se réordonne quand on change de magasin.
 3. Menus types (semaines habituelles), applicables en un tap.
 4. On cuisine le soir pour le soir et pour le lendemain midi : nombre de personnes pour
@@ -68,6 +74,11 @@ courses du samedi matin**, en Suisse. Inspirée du fonctionnement de Planivore
    ligne d'origine sous chaque ingrédient. Photo du site importée (JPEG, PNG, WebP,
    4 Mo max), lien d'origine gardé (`recipes.sourceUrl`) et affiché sur la recette.
    Sécurité : https seulement, ni IP, ni nom local, ni port ; redirections revérifiées.
+   Injection de consignes (page, texte collé ou dictée qui s'adresse à Claude) : la source
+   est enfermée entre `<recette>` et `</recette>` (`fenceSource` retire les caractères
+   invisibles et toute balise imitée), la consigne la traite comme une donnée, et la réponse
+   est nettoyée champ par champ (ni lien, ni balise, ni clé hors catalogue, un seul emoji).
+   Rien n'est enregistré sans passer par l'éditeur.
 2. **Lot 2, dicter une recette** (même écran « Dicter ou importer ») : gros bouton micro,
    5 minutes au plus, « Terminer » ou « Annuler ». L'audio passe par le stockage Convex,
    est transcrit en français par Groq Whisper large-v3 (offre gratuite, clé
@@ -313,7 +324,7 @@ Serveurs de dev via Portly.
 - `receipts.ts` : lecture validée de la réponse de Claude, contrôle du total, prix d'un
   ingrédient depuis une ligne (kilo ou paquet), contenu de paquet plausible.
 - `recipeImport.ts` : contrôle du lien, lecture de la fiche recette d'une page,
-  réponse de Claude validée, brouillon (catalogue d'abord, quantités par portion,
+  source clôturée contre l'injection, réponse de Claude validée et nettoyée, brouillon (catalogue d'abord, quantités par portion,
   conversion des unités, doublons fusionnés).
 - `products.ts` : liste unifiée ingrédients + articles hors recette, filtres, motif de
   refus de suppression.

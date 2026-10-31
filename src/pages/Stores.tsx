@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "convex/react";
-import { ChevronRight, Plus, Star } from "lucide-react";
+import { ChevronRight, Clock, Plus, Star } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useBase, useSession } from "../lib/session";
@@ -26,10 +26,12 @@ import {
 import {
   CHAINS,
   ChainMark,
-  chainLabel,
+  ChainPicker,
   priceLevelText,
   type Chain,
 } from "../components/shopping/chains";
+import { namePrefill } from "../../convex/domain/chains";
+import { summarizeHours } from "../../convex/domain/hours";
 
 export function StoresPage() {
   const base = useBase();
@@ -77,6 +79,12 @@ export function StoresPage() {
                             >
                               {priceLevelText(s.priceFactor, lang)}
                             </Badge>
+                            {s.hours?.length ? (
+                              <Badge tone="sun">
+                                <Clock size={13} aria-hidden />
+                                {summarizeHours(s.hours, lang)}
+                              </Badge>
+                            ) : null}
                             {s.overrides.length > 0 && (
                               <Badge tone="carrot">
                                 {plural(
@@ -146,7 +154,7 @@ export function AddStoreSheet({
   const navigate = useNavigate();
   const paths = useAppPaths();
   const createStore = useMutation(api.catalog.createStore);
-  const [chain, setChain] = useState<Chain>("Aldi");
+  const [chain, setChain] = useState<Chain>("Migros");
   const [name, setName] = useState("");
   const [copyFrom, setCopyFrom] = useState<Id<"stores"> | undefined>();
   const [busy, setBusy] = useState(false);
@@ -154,9 +162,9 @@ export function AddStoreSheet({
 
   const pickChain = (c: Chain) => {
     setChain(c);
-    // Prefill the chain name while the field is empty or only holds a chain name
-    if (!name.trim() || CHAINS.some((x) => name.trim() === x)) {
-      setName(c === "Autre" ? "" : `${c} `);
+    // Prefill the chain name while the field is empty or only holds a prefill
+    if (!name.trim() || CHAINS.some((x) => name.trim() === namePrefill(x, lang).trim())) {
+      setName(namePrefill(c, lang));
     }
   };
 
@@ -182,22 +190,7 @@ export function AddStoreSheet({
       }
     >
       <div className="grid gap-5">
-        <div>
-          <span className="mb-1 block text-[15px] font-bold">{t("shopping.chain")}</span>
-          <div className="flex flex-wrap gap-2">
-            {CHAINS.map((c) => (
-              <Chip
-                key={c}
-                selected={chain === c}
-                onClick={() => pickChain(c)}
-                className="pl-1.5"
-              >
-                <ChainMark chain={c} size={28} />
-                {chainLabel(c, lang)}
-              </Chip>
-            ))}
-          </div>
-        </div>
+        <ChainPicker value={chain} onChange={pickChain} />
         <TextInput
           label={t("shopping.name")}
           value={name}

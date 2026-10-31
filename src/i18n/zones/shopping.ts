@@ -109,7 +109,13 @@ export const fr = {
   "shopping.oneMore": "Un de plus : {name}",
 
   // Chains and price level
-  "shopping.chainOther": "Autre",
+  "shopping.chainGroup.supermarket": "Supermarchés",
+  "shopping.chainGroup.convenience": "Magasins de proximité",
+  "shopping.chainGroup.shop": "Autres commerces",
+  "shopping.hours.openUntil": "Ouvert jusqu'à {time}",
+  "shopping.hours.opensToday": "Ouvre aujourd'hui à {time}",
+  "shopping.hours.opensTomorrow": "Fermé, ouvre demain à {time}",
+  "shopping.hours.opensOn": "Fermé, ouvre {day} à {time}",
   "shopping.chain": "Enseigne",
   "shopping.or": "ou",
   "shopping.priceAverage": "Prix dans la moyenne",
@@ -234,6 +240,18 @@ export const fr = {
   "shopping.store.notFoundText":
     "Il a peut-être été archivé. Retourne à la liste des magasins.",
   "shopping.store.name": "Nom du magasin",
+  "shopping.store.hours": "Jours et heures d'ouverture",
+  "shopping.store.hoursHelp":
+    "Facultatif : la liste de courses indique alors s'il est ouvert.",
+  "shopping.store.hoursEmpty": "Aucun horaire pour l'instant.",
+  "shopping.store.hoursDays": "Jours",
+  "shopping.store.hoursFrom": "De",
+  "shopping.store.hoursTo": "À",
+  "shopping.store.hoursAdd": "Ajouter cet horaire",
+  "shopping.store.hoursRemove": "Retirer l'horaire du {day}, {range}",
+  "shopping.store.hoursAdded": "Horaire ajouté.",
+  "shopping.store.hoursPickDay": "Choisis au moins un jour.",
+  "shopping.store.hoursOrder": "L'heure de fin doit suivre l'heure de début.",
   "shopping.store.walk": "Parcours dans le magasin",
   "shopping.store.walkHelp":
     "Range les rayons dans l'ordre où tu les croises, de l'entrée à la caisse. La liste de courses suit cet ordre.",
@@ -371,7 +389,13 @@ export const de: { [K in keyof typeof fr]: string } = {
   "shopping.oneMore": "Eins mehr: {name}",
 
   // Chains and price level
-  "shopping.chainOther": "Andere",
+  "shopping.chainGroup.supermarket": "Supermärkte",
+  "shopping.chainGroup.convenience": "Läden in der Nähe",
+  "shopping.chainGroup.shop": "Weitere Geschäfte",
+  "shopping.hours.openUntil": "Offen bis {time}",
+  "shopping.hours.opensToday": "Öffnet heute um {time}",
+  "shopping.hours.opensTomorrow": "Geschlossen, öffnet morgen um {time}",
+  "shopping.hours.opensOn": "Geschlossen, öffnet am {day} um {time}",
   "shopping.chain": "Kette",
   "shopping.or": "oder",
   "shopping.priceAverage": "Preise im Durchschnitt",
@@ -496,6 +520,18 @@ export const de: { [K in keyof typeof fr]: string } = {
   "shopping.store.notFoundText":
     "Vielleicht wurde er archiviert. Geh zurück zur Liste der Läden.",
   "shopping.store.name": "Name des Ladens",
+  "shopping.store.hours": "Öffnungstage und -zeiten",
+  "shopping.store.hoursHelp":
+    "Freiwillig: Die Einkaufsliste zeigt dann, ob geöffnet ist.",
+  "shopping.store.hoursEmpty": "Noch keine Öffnungszeiten.",
+  "shopping.store.hoursDays": "Tage",
+  "shopping.store.hoursFrom": "Von",
+  "shopping.store.hoursTo": "Bis",
+  "shopping.store.hoursAdd": "Diese Zeit hinzufügen",
+  "shopping.store.hoursRemove": "Zeit am {day} entfernen, {range}",
+  "shopping.store.hoursAdded": "Öffnungszeit hinzugefügt.",
+  "shopping.store.hoursPickDay": "Wähle mindestens einen Tag.",
+  "shopping.store.hoursOrder": "Das Ende muss nach dem Beginn liegen.",
   "shopping.store.walk": "Weg durch den Laden",
   "shopping.store.walkHelp":
     "Ordne die Abteilungen so, wie du an ihnen vorbeikommst, vom Eingang bis zur Kasse. Die Einkaufsliste folgt dieser Reihenfolge.",

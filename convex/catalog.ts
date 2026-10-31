@@ -18,7 +18,9 @@ function memberName(name: string) {
   if (!n) throw new ConvexError("Le prénom est obligatoire.");
   return n;
 }
-import { chainValidator, fontValidator, themeValidator, unitValidator } from "./schema";
+import { chainValidator, fontValidator, openingSlotValidator, themeValidator, unitValidator } from "./schema";
+import { DEFAULT_PRICE_FACTOR } from "./domain/chains";
+import { normalizeHours } from "./domain/hours";
 import { deletionBlocker } from "./domain/products";
 import { removeReceiptData } from "./lib";
 import { translateLater } from "./catalogTranslate";
@@ -238,15 +240,6 @@ export const renameAisle = mutation({
 
 // ---------- Stores ----------
 
-const DEFAULT_FACTORS: Record<string, number> = {
-  Aldi: 0.82,
-  Lidl: 0.82,
-  Denner: 0.88,
-  Migros: 1,
-  Coop: 1.05,
-  Autre: 1,
-};
-
 export const createStore = mutation({
   args: {
     token: v.string(),
@@ -267,7 +260,7 @@ export const createStore = mutation({
       name: clean,
       aisleOrder: source?.aisleOrder ?? aisles.map((a) => a._id),
       overrides: source?.overrides ?? [],
-      priceFactor: source?.priceFactor ?? DEFAULT_FACTORS[chain] ?? 1,
+      priceFactor: source?.priceFactor ?? DEFAULT_PRICE_FACTOR[chain],
       archived: false,
     });
   },
@@ -281,6 +274,7 @@ export const updateStore = mutation({
     chain: v.optional(chainValidator),
     aisleOrder: v.optional(v.array(v.id("aisles"))),
     priceFactor: v.optional(v.number()),
+    hours: v.optional(v.array(openingSlotValidator)),
     archived: v.optional(v.boolean()),
   },
   handler: async (ctx, { token, id, ...patch }) => {
@@ -303,6 +297,13 @@ export const updateStore = mutation({
     if (patch.aisleOrder && patch.aisleOrder.length > 100)
       throw new ConvexError("Trop de rayons.");
     if (patch.aisleOrder) await db.ownAll(patch.aisleOrder, "Rayon introuvable.");
+    if (patch.hours) {
+      try {
+        patch.hours = normalizeHours(patch.hours);
+      } catch (e) {
+        throw new ConvexError(e instanceof Error ? e.message : "Horaires invalides.");
+      }
+    }
     await db.patch(id, patch);
   },
 });

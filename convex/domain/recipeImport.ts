@@ -357,8 +357,52 @@ export interface Answer {
 
 const isUnit = (u: unknown): u is Unit =>
   typeof u === "string" && (UNITS as string[]).includes(u);
-const str = (v: unknown, max: number) =>
-  typeof v === "string" ? v.replace(/[—–]/g, "-").trim().slice(0, max) : "";
+
+// Control characters and characters that hide or reorder text on screen
+// (zero-width, bidirectional overrides): a classic way to slip in instructions.
+// The zero-width joiner stays: emojis such as 👩‍🍳 are built with it
+const INVISIBLE =
+  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u00ad\u200b\u200c\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g;
+// The fence around the source, in any bracket look-alike, with or without a slash
+const FENCE_TAG = /[<\uff1c\u2039\u3008]\s*\/?\s*recette\b[^>\uff1e\u203a\u3009\n]{0,40}[>\uff1e\u203a\u3009]?/gi;
+
+/**
+ * Text from outside (recipe page, pasted text, dictation) fenced as data for
+ * the prompt: invisible characters dropped and any fence tag inside it
+ * removed, so the source can never close the fence and speak as the app.
+ */
+export function fenceSource(text: string): string {
+  const clean = text.replace(INVISIBLE, "").replace(FENCE_TAG, "").trim();
+  return `<recette>\n${clean}\n</recette>`;
+}
+
+/**
+ * A text field of Claude's answer, made safe to show and save: no links, no
+ * markup, no invisible characters. A recipe never needs them; an injected
+ * instruction would use them to send the family somewhere else.
+ */
+function cleanField(v: unknown, max: number): string {
+  if (typeof v !== "string") return "";
+  return v
+    .replace(INVISIBLE, "")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1") // markdown link or image: keep the words
+    .replace(/<[^>]{0,200}>/g, "") // HTML tags
+    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, "") // web addresses
+    .replace(/[—–]/g, "-")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim()
+    .slice(0, max);
+}
+const str = cleanField;
+
+/** One emoji (with its modifiers) and nothing else; "" otherwise. */
+function emojiOnly(v: unknown): string {
+  const e = cleanField(v, 16);
+  return /\p{Extended_Pictographic}/u.test(e) && !/[\p{L}\p{N}\s]/u.test(e) ? e : "";
+}
+/** Catalog or aisle key as given in the prompt (« i12 », « a3 »); "" otherwise. */
+const keyOf = (v: unknown, prefix: "i" | "a") =>
+  typeof v === "string" && new RegExp(`^${prefix}\\d{1,4}$`).test(v) ? v : "";
 const num = (v: unknown) =>
   typeof v === "number" && Number.isFinite(v) ? v : 0;
 
@@ -376,10 +420,10 @@ export function parseAnswer(raw: unknown, tags: string[]): Answer {
           text: str(i.text, 200),
           quantity: Math.max(0, num(i.quantity)),
           unit: isUnit(i.unit) ? i.unit : "pc",
-          match: str(i.match, 10),
+          match: keyOf(i.match, "i"),
           newName: str(i.newName, 80),
           newUnit: isUnit(i.newUnit) ? i.newUnit : "pc",
-          newAisle: str(i.newAisle, 10),
+          newAisle: keyOf(i.newAisle, "a"),
         },
       ];
     });
@@ -388,7 +432,7 @@ export function parseAnswer(raw: unknown, tags: string[]): Answer {
     throw new Error("Aucune recette trouvée à cette adresse.");
   return {
     name,
-    emoji: str(r.emoji, 16) || "🍲",
+    emoji: emojiOnly(r.emoji) || "🍲",
     description: str(r.description, 500),
     tags: (Array.isArray(r.tags) ? r.tags : []).filter((t): t is string =>
       tags.includes(t as string),

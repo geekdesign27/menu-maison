@@ -33,6 +33,7 @@ import {
   Sheet,
 } from "../components/ui";
 import { ChainMark } from "../components/shopping/chains";
+import { StoreOpenNow } from "../components/shopping/StoreOpenNow";
 import { ShoppingRow } from "../components/shopping/ShoppingRow";
 import { QuickAdd } from "../components/shopping/QuickAdd";
 import { AislePicker } from "../components/shopping/AislePicker";
@@ -184,6 +185,7 @@ export function ShoppingPage() {
       )}
 
       <StoreChips stores={stores} currentId={store?._id} onChoose={choose} />
+      <StoreOpenNow hours={store?.hours} />
 
       {!list || !base ? (
         <Loading label={t("shopping.loadingList")} />

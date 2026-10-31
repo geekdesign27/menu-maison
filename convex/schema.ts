@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { CHAINS } from "./domain/chains";
 
 /** Base units used for quantities. Aggregation converts kg→g and l→ml. */
 export const unitValidator = v.union(
@@ -53,14 +54,13 @@ export const offValidator = v.object({
   fetchedAt: v.number(),
 });
 
-export const chainValidator = v.union(
-  v.literal("Aldi"),
-  v.literal("Lidl"),
-  v.literal("Coop"),
-  v.literal("Migros"),
-  v.literal("Denner"),
-  v.literal("Autre"),
-);
+export const chainValidator = v.union(...CHAINS.map((c) => v.literal(c)));
+// Opening hours of a market or small shop (domain/hours.ts)
+export const openingSlotValidator = v.object({
+  day: v.number(), // 0 = Sunday … 6 = Saturday
+  open: v.string(), // "HH:MM"
+  close: v.string(),
+});
 
 export const themeValidator = v.union(
   v.literal("carotte"),
@@ -260,6 +260,7 @@ export default defineSchema({
       v.object({ ingredientId: v.id("ingredients"), aisleId: v.id("aisles") }),
     ),
     priceFactor: v.number(), // 1 = average; 0.85 = cheaper chain
+    hours: v.optional(v.array(openingSlotValidator)), // markets and small shops only
     archived: v.boolean(),
   }).index("by_family", ["familyId"]),
 

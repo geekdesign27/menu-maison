@@ -37,7 +37,7 @@ import {
   TextInput,
   Sheet,
 } from "../components/ui";
-import { ChainMark, CHAINS, type Chain } from "../components/shopping/chains";
+import { ChainMark, CHAINS, chainLabel, type Chain } from "../components/shopping/chains";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { IngredientSheet } from "../components/shopping/IngredientSheet";
 import { StapleSheet } from "../components/shopping/StapleSheet";
@@ -264,7 +264,7 @@ export function ProductsContent({
             <option value="">{t("recipes.chains")}</option>
             {CHAINS.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {chainLabel(c, lang)}
               </option>
             ))}
           </Select>

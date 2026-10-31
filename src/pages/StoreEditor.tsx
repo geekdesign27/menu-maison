@@ -20,7 +20,6 @@ import { useAppPaths } from "../lib/paths";
 import {
   Button,
   Card,
-  Chip,
   cx,
   EmptyState,
   IconButton,
@@ -32,11 +31,12 @@ import {
   TextInput,
 } from "../components/ui";
 import {
-  CHAINS,
-  ChainMark,
+  ChainPicker,
   chainLabel,
   priceLevelText,
 } from "../components/shopping/chains";
+import { HoursEditor } from "../components/shopping/HoursEditor";
+import { hasOpeningHours } from "../../convex/domain/chains";
 import { AislePicker } from "../components/shopping/AislePicker";
 import { ConfirmSheet } from "../components/shopping/ConfirmSheet";
 import { useUpdateStore } from "../components/shopping/useUpdateStore";
@@ -58,7 +58,9 @@ export function StoreEditorPage() {
       title={store?.name ?? t("shopping.store.fallback")}
       subtitle={
         store
-          ? t("shopping.store.chainOf", { chain: chainLabel(store.chain, lang) })
+          ? hasOpeningHours(store.chain)
+            ? chainLabel(store.chain, lang)
+            : t("shopping.store.chainOf", { chain: chainLabel(store.chain, lang) })
           : undefined
       }
       back={<BackButton fallback={paths.stores} />}
@@ -148,26 +150,13 @@ function StoreForm({ store, base }: { store: Doc<"stores">; base: Base }) {
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           enterKeyHint="done"
         />
-        <div>
-          <span className="mb-1 block text-[15px] font-bold">{t("shopping.chain")}</span>
-          <div className="flex flex-wrap gap-2">
-            {CHAINS.map((c) => (
-              <Chip
-                key={c}
-                selected={store.chain === c}
-                onClick={() =>
-                  c !== store.chain &&
-                  run(() => update({ token, id: store._id, chain: c }))
-                }
-                className="pl-1.5"
-              >
-                <ChainMark chain={c} size={28} />
-                {chainLabel(c, lang)}
-              </Chip>
-            ))}
-          </div>
-        </div>
+        <ChainPicker
+          value={store.chain}
+          onChange={(c) => run(() => update({ token, id: store._id, chain: c }))}
+        />
       </Card>
+
+      {(hasOpeningHours(store.chain) || !!store.hours?.length) && <HoursEditor store={store} />}
 
       <SectionTitle>{t("shopping.store.walk")}</SectionTitle>
       <p className="mb-3 px-1 text-[15px] text-muted">

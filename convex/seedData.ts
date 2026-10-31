@@ -1,4 +1,5 @@
 import { TAGS } from "./domain/tags";
+import type { Chain } from "./domain/chains";
 /**
  * Seed data for Menu Maison: aisles, ingredients, recipes, stores, members.
  * All content is original (written for this app, not copied from any source).
@@ -20,7 +21,7 @@ export type Unit =
   | "pincée"
   | "tranche";
 
-export type Chain = "Aldi" | "Lidl" | "Coop" | "Migros" | "Denner" | "Autre";
+export type { Chain } from "./domain/chains";
 
 /** Array order = default walking order when no store is selected. */
 export interface SeedAisle {
