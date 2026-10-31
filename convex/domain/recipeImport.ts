@@ -359,45 +359,58 @@ const isUnit = (u: unknown): u is Unit =>
   typeof u === "string" && (UNITS as string[]).includes(u);
 
 // Control characters and characters that hide or reorder text on screen
-// (zero-width, bidirectional overrides): a classic way to slip in instructions.
-// The zero-width joiner stays: emojis such as 👩‍🍳 are built with it
-const INVISIBLE =
-  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u00ad\u200b\u200c\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g;
+// (zero-width, bidirectional overrides, fillers, Unicode « tag » letters and
+// supplementary variation selectors that smuggle invisible ASCII): a classic
+// way to slip in instructions
+const HIDDEN =
+  "\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f\\u00ad\\u034f\\u115f\\u1160\\u180e\\u200b\\u200c\\u200e\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\u3164\\ufeff\\uffa0\\u{e0000}-\\u{e007f}\\u{e0100}-\\u{e01ef}";
+const INVISIBLE = new RegExp(`[${HIDDEN}]`, "gu");
+// Same, plus the zero-width joiner: « </rec‍ette> » or « http‍s:// » would read as the real thing.
+// Only an emoji keeps it (👩‍🍳 is built with it).
+const INVISIBLE_AND_JOINER = new RegExp(`[${HIDDEN}\\u200d]`, "gu");
 // The fence around the source, in any bracket look-alike, with or without a slash
-const FENCE_TAG = /[<\uff1c\u2039\u3008]\s*\/?\s*recette\b[^>\uff1e\u203a\u3009\n]{0,40}[>\uff1e\u203a\u3009]?/gi;
+const FENCE_TAG = /[<\uff1c\u2039\u3008]\s*(?:\/\s*)?recette\b[^>\uff1e\u203a\u3009\n]{0,40}[>\uff1e\u203a\u3009]?/gi;
 
 /**
  * Text from outside (recipe page, pasted text, dictation) fenced as data for
- * the prompt: invisible characters dropped and any fence tag inside it
- * removed, so the source can never close the fence and speak as the app.
+ * the prompt: capped (cost of the call), invisible characters dropped and any
+ * fence tag inside it removed, so the source can never close the fence and
+ * speak as the app.
  */
 export function fenceSource(text: string): string {
-  const clean = text.replace(INVISIBLE, "").replace(FENCE_TAG, "").trim();
+  const clean = text
+    .slice(0, MAX_RECIPE_TEXT)
+    .replace(INVISIBLE_AND_JOINER, "")
+    .replace(FENCE_TAG, "")
+    .trim();
   return `<recette>\n${clean}\n</recette>`;
 }
 
 /**
- * A text field of Claude's answer, made safe to show and save: no links, no
- * markup, no invisible characters. A recipe never needs them; an injected
- * instruction would use them to send the family somewhere else.
+ * A text field of Claude's answer, made safe to show and save: one line, no
+ * links, addresses, markup or invisible characters. A recipe never needs them;
+ * an injected instruction would use them to send the family somewhere else.
  */
-function cleanField(v: unknown, max: number): string {
+function cleanField(v: unknown, max: number, keep = INVISIBLE_AND_JOINER): string {
   if (typeof v !== "string") return "";
   return v
-    .replace(INVISIBLE, "")
+    .slice(0, max * 2) // bounds the work of the patterns below
+    .replace(keep, "")
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1") // markdown link or image: keep the words
-    .replace(/<[^>]{0,200}>/g, "") // HTML tags
-    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, "") // web addresses
+    .replace(/<\/?[a-z][^>]{0,200}>/gi, "") // HTML tags, not « <200 °C »
+    .replace(/(?:https?:\/\/|www\.)\S+/gi, "") // web addresses
+    .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "") // e-mail addresses
+    .replace(/\b[\w-]+(?:\.[\w-]+)*\.(?:ch|com|fr|net|org|de|it|io|ly|info|shop|app)\b(?:\/\S*)?/g, "") // bare domains
     .replace(/[—–]/g, "-")
-    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t\n\r\f\v]+/g, " ") // one line; non-breaking spaces stay
     .trim()
     .slice(0, max);
 }
-const str = cleanField;
+const str = (v: unknown, max: number) => cleanField(v, max);
 
 /** One emoji (with its modifiers) and nothing else; "" otherwise. */
 function emojiOnly(v: unknown): string {
-  const e = cleanField(v, 16);
+  const e = cleanField(v, 16, INVISIBLE);
   return /\p{Extended_Pictographic}/u.test(e) && !/[\p{L}\p{N}\s]/u.test(e) ? e : "";
 }
 /** Catalog or aisle key as given in the prompt (« i12 », « a3 »); "" otherwise. */
@@ -418,7 +431,7 @@ export function parseAnswer(raw: unknown, tags: string[]): Answer {
       return [
         {
           text: str(i.text, 200),
-          quantity: Math.max(0, num(i.quantity)),
+          quantity: Math.min(100_000, Math.max(0, num(i.quantity))),
           unit: isUnit(i.unit) ? i.unit : "pc",
           match: keyOf(i.match, "i"),
           newName: str(i.newName, 80),
